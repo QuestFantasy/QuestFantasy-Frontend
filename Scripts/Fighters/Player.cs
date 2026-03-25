@@ -24,12 +24,30 @@ public class Player : Fighter
 		Attributes.TotalSpd = (Job?.BaseAbilities?.Spd ?? 0) + (EquippedWeapon?.WeaponAbilities?.Spd ?? 0) + (Equipped?.TotalSpd() ?? 0);
 		Attributes.TotalVit = (Job?.BaseAbilities?.Vit ?? 0) + (EquippedWeapon?.WeaponAbilities?.Vit ?? 0) + (Equipped?.TotalVit() ?? 0);
 	}
-    // TODO: set Job function
-    public override void UpdateAttributes()
-    {
-        Attributes.TotalAtk = (Job?.BaseStats?.Atk ?? 0) + (EquippedWeapon?.Atk ?? 0) + (Equipped?.TotalAtk() ?? 0);
-        Attributes.TotalDef = (Job?.BaseStats?.Def ?? 0) + (EquippedWeapon?.Def ?? 0) + (Equipped?.TotalDef() ?? 0);
-        Attributes.TotalSpd = (Job?.BaseStats?.Spd ?? 0) + (EquippedWeapon?.Spd ?? 0) + (Equipped?.TotalSpd() ?? 0);
-        Attributes.TotalVit = (Job?.BaseStats?.Vit ?? 0) + (EquippedWeapon?.Vit ?? 0) + (Equipped?.TotalVit() ?? 0);
-    }
-}}
+
+	public override void Move()
+	{
+		_velocity = Vector2.Zero;
+
+		if (Input.IsActionPressed("ui_right"))
+			_velocity.x += 1;
+		if (Input.IsActionPressed("ui_left"))
+			_velocity.x -= 1;
+		if (Input.IsActionPressed("ui_down"))
+			_velocity.y += 1;
+		if (Input.IsActionPressed("ui_up"))
+			_velocity.y -= 1;
+
+		if (_velocity.Length() > 0)
+		{
+			var baseSpd = Attributes?.TotalSpd ?? 0;
+			float actualSpeed = (baseSpd + 1) * SpeedMultiplier;
+			_velocity = _velocity.Normalized() * actualSpeed;
+		}
+		Position += _velocity;
+	}
+	public override void _PhysicsProcess(float delta)
+	{
+		Move();
+	}
+}
