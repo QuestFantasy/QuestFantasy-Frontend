@@ -1,5 +1,5 @@
 using Godot;
-using System;
+using QuestFantasy.Characters;
 
 public class Main : Node2D
 {
