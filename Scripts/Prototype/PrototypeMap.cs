@@ -798,8 +798,27 @@ public class PrototypeMap : Node2D
 		}
 	}
 
+	// Cache for tile key strings to avoid allocating a new string for each coordinate pair.
+	private static readonly Dictionary<int, string> _tileKeyCache = new Dictionary<int, string>();
+
+	// Allocation-free integer key for a tile coordinate pair.
+	private int TileKeyInt(int tileX, int tileY)
+	{
+		return tileX + tileY * WorldTileWidth;
+	}
+
 	private string TileKey(int tileX, int tileY)
 	{
-		return tileX + ":" + tileY;
+		int key = TileKeyInt(tileX, tileY);
+
+		if (_tileKeyCache.TryGetValue(key, out string cached))
+		{
+			return cached;
+		}
+
+		// Create the string once for this coordinate pair and cache it.
+		string value = tileX.ToString() + ":" + tileY.ToString();
+		_tileKeyCache[key] = value;
+		return value;
 	}
 }
