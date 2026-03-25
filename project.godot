@@ -11,6 +11,7 @@ config_version=4
 [application]
 
 config/name="QueryFantasy"
+run/main_scene="res://main.tscn"
 config/icon="res://icon.png"
 
 [gui]
@@ -19,7 +20,7 @@ common/drop_mouse_on_gui_input_disabled=true
 
 [mono]
 
-project/assembly_name="QueryFantasy"
+project/assembly_name="QuestFantasy"
 
 [physics]
 
