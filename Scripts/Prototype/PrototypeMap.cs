@@ -65,9 +65,17 @@ public class PrototypeMap : Node2D
 	{
 		int roomX = Mathf.Clamp((int)roomIndex.x, 0, RoomsX - 1);
 		int roomY = Mathf.Clamp((int)roomIndex.y, 0, RoomsY - 1);
+
+		float localX = roomX * RoomTileSize * TileSize;
+		float localY = roomY * RoomTileSize * TileSize;
+
+		// Convert from local map coordinates to global/world coordinates.
+		float globalX = GlobalPosition.x + localX;
+		float globalY = GlobalPosition.y + localY;
+
 		return new Rect2(
-			roomX * RoomTileSize * TileSize,
-			roomY * RoomTileSize * TileSize,
+			globalX,
+			globalY,
 			RoomTileSize * TileSize,
 			RoomTileSize * TileSize
 		);
