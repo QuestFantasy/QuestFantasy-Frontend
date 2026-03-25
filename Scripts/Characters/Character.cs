@@ -9,7 +9,6 @@ namespace QuestFantasy.Characters
         public Status CurrentStatus { get; set; }
         public Abilities Abilities;
         public Element Element { get; private set; }
-        public HP HP;
         public Attributes Attributes;
         public virtual void UpdateAttributes()
         { }
