@@ -49,19 +49,19 @@ public class EquippedItems
     }
     public int TotalAtk()
     {
-        return (Head?.Stats.Atk ?? 0) + (Body?.Stats.Atk ?? 0) + (Arms?.Stats.Atk ?? 0) + (Legs?.Stats.Atk ?? 0) + (Shoes?.Stats.Atk ?? 0);
+        return (Head?.EquipmentAbilities?.Atk ?? 0) + (Body?.EquipmentAbilities?.Atk ?? 0) + (Arms?.EquipmentAbilities?.Atk ?? 0) + (Legs?.EquipmentAbilities?.Atk ?? 0) + (Shoes?.EquipmentAbilities?.Atk ?? 0);
     }
     public int TotalDef()
     {
-        return (Head?.Stats.Def ?? 0) + (Body?.Stats.Def ?? 0) + (Arms?.Stats.Def ?? 0) + (Legs?.Stats.Def ?? 0) + (Shoes?.Stats.Def ?? 0);
+        return (Head?.EquipmentAbilities?.Def ?? 0) + (Body?.EquipmentAbilities?.Def ?? 0) + (Arms?.EquipmentAbilities?.Def ?? 0) + (Legs?.EquipmentAbilities?.Def ?? 0) + (Shoes?.EquipmentAbilities?.Def ?? 0);
     }
     public int TotalSpd()
     {
-        return (Head?.Stats.Spd ?? 0) + (Body?.Stats.Spd ?? 0) + (Arms?.Stats.Spd ?? 0) + (Legs?.Stats.Spd ?? 0) + (Shoes?.Stats.Spd ?? 0);
+        return (Head?.EquipmentAbilities?.Spd ?? 0) + (Body?.EquipmentAbilities?.Spd ?? 0) + (Arms?.EquipmentAbilities?.Spd ?? 0) + (Legs?.EquipmentAbilities?.Spd ?? 0) + (Shoes?.EquipmentAbilities?.Spd ?? 0);
     }
     public int TotalVit()
     {
-        return (Head?.Stats.Vit ?? 0) + (Body?.Stats.Vit ?? 0) + (Arms?.Stats.Vit ?? 0) + (Legs?.Stats.Vit ?? 0) + (Shoes?.Stats.Vit ?? 0);
+        return (Head?.EquipmentAbilities?.Vit ?? 0) + (Body?.EquipmentAbilities?.Vit ?? 0) + (Arms?.EquipmentAbilities?.Vit ?? 0) + (Legs?.EquipmentAbilities?.Vit ?? 0) + (Shoes?.EquipmentAbilities?.Vit ?? 0);
     }
 
 }
@@ -70,5 +70,5 @@ public class EquippedItems
 public class Equipment : Item
 {
     public EquipmentType EquipmentType { get; set; }
-    public Abilities Stats { get; set; }
+    public Abilities EquipmentAbilities { get; set; }
 }
