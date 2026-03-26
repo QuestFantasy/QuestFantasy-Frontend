@@ -3,8 +3,8 @@ using QuestFantasy.Characters;
 
 public class Main : Node2D
 {
-	private PrototypeMap _map;
-	private PrototypePlayer _player;
+	private Map _map;
+	private MapPlayer _player;
 
 	public override void _Ready()
 	{
@@ -13,7 +13,7 @@ public class Main : Node2D
 
 	private void BuildPlayablePrototype()
 	{
-		_map = new PrototypeMap();
+		_map = new Map();
 		_map.TileSize = 24;
 		_map.RoomTileSize = 100;
 		_map.RoomsX = 2;
@@ -21,7 +21,7 @@ public class Main : Node2D
 		AddChild(_map);
 		_map.RegenerateWithRandomSeed();
 
-		_player = new PrototypePlayer();
+		_player = new MapPlayer();
 		AddChild(_player);
 		_player.Position = _map.GetSpawnWorldPosition();
 		_player.SetMap(_map);
