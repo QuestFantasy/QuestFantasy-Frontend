@@ -1,7 +1,7 @@
 public enum MapScenarioType
 {
-	Grassland,
-	Mountain,
-	Lava,
-	Sea
+    Grassland,
+    Mountain,
+    Lava,
+    Sea
 }

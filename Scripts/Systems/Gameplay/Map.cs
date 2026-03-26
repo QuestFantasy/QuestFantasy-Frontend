@@ -23,11 +23,11 @@ namespace QuestFantasy.Systems.Gameplay
         public List<Item> Items { get; private set; } = new List<Item>();
         public Vector2 Entrance { get; private set; }
         public List<Exit> Exits { get; private set; } = new List<Exit>();
-        
+
         public void DungeonGenerate(Vector2 size, int enemyCount, int itemCount, int exitCount, Vector2 entrance)
         {
         }
-        
+
         public void Quit(Exit exit)
         {
         }
