@@ -1,4 +1,4 @@
-public enum PrototypeTileType
+public enum MapTileType
 {
     Floor,
     Wall,
