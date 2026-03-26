@@ -1,12 +1,14 @@
-using Godot;
 using System.Collections.Generic;
+
+using Godot;
+
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
 
 namespace QuestFantasy.Characters
 {
-    public class Player : Fighter
+    public class Player : Character
     {
         [Export] public float SpeedMultiplier = 50f; // pixels per spd point
         private Vector2 _velocity = Vector2.Zero;
@@ -19,7 +21,7 @@ namespace QuestFantasy.Characters
         private EquippedItems Equipped { get; set; }
         public int Gold { get; private set; }
 
-        private Bag Inventory;
+        private readonly Bag Inventory;
 
         // TODO: set Job function
         public override void UpdateAttributes()

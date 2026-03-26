@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+
 using QuestFantasy.Core.Base;
 
 namespace QuestFantasy.Core.Data.Attributes

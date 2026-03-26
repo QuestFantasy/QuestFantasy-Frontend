@@ -1,5 +1,5 @@
-using QuestFantasy.Core.Base;
 using QuestFantasy.Characters;
+using QuestFantasy.Core.Base;
 
 namespace QuestFantasy.Core.Data.Items
 {
