@@ -1,5 +1,7 @@
-using Godot;
 using System.Collections.Generic;
+
+using Godot;
+
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
@@ -19,7 +21,7 @@ namespace QuestFantasy.Characters
         private EquippedItems Equipped { get; set; }
         public int Gold { get; private set; }
 
-        private Bag Inventory;
+        private readonly Bag Inventory;
 
         // TODO: set Job function
         public override void UpdateAttributes()
