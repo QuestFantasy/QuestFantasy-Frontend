@@ -6,7 +6,7 @@ using QuestFantasy.Systems.Inventory;
 
 namespace QuestFantasy.Characters
 {
-    public class Player : Fighter
+    public class Player : Character
     {
         [Export] public float SpeedMultiplier = 50f; // pixels per spd point
         private Vector2 _velocity = Vector2.Zero;
