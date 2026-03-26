@@ -1,7 +1,7 @@
 public enum ScenarioType
 {
-	Grassland,
-	Mountain,
-	Lava,
-	Sea
+    Grassland,
+    Mountain,
+    Lava,
+    Sea
 }
