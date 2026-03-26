@@ -7,7 +7,7 @@ public class PrototypeMap : Node2D
 	[Export] public int RoomTileSize = 100;
 	[Export] public int RoomsX = 2;
 	[Export] public int RoomsY = 2;
-	[Export] public int Seed = 20260325;
+	[Export] public int Seed = 0;
 	[Export] public int StartExitInsetTiles = 6;
 	[Export] public float BorderWallThicknessRatio = 0.08f;
 	[Export] public float ObstacleFillRate = 0.14f;
@@ -15,6 +15,8 @@ public class PrototypeMap : Node2D
 	[Export] public float ExitTriggerRadius = 24f;
 	[Export] public int HazardClusterMinTiles = 15;
 	[Export] public int HazardClusterMaxTiles = 120;
+	[Export] public string BoxClosedTexturePath = "res://Assets/Box/Box_Closed.png";
+	[Export] public string BoxOpenTexturePath = "res://Assets/Box/Box_Open.png";
 
 	private PrototypeTileType[,] _tiles;
 	private bool[,] _protectedPath;
@@ -22,8 +24,14 @@ public class PrototypeMap : Node2D
 	private Vector2[,] _roomStartTiles;
 	private Vector2[,] _roomExitTiles;
 	private readonly Dictionary<string, Vector2> _portalLinks = new Dictionary<string, Vector2>();
+	private readonly List<Vector2> _boxTiles = new List<Vector2>();
 	private ImageTexture _mapTexture;
+	private Texture _boxClosedTexture;
+	private Texture _boxOpenTexture;
+	private bool[,] _openedBoxes;
 	private RandomNumberGenerator _random;
+	private static readonly RandomNumberGenerator _seedRandom = new RandomNumberGenerator();
+	private static bool _seedRandomInitialized;
 
 	public int WorldTileWidth => RoomsX * RoomTileSize;
 	public int WorldTileHeight => RoomsY * RoomTileSize;
@@ -38,15 +46,22 @@ public class PrototypeMap : Node2D
 			return;
 		}
 
+		if (Seed <= 0)
+		{
+			Seed = GenerateRandomSeed();
+		}
+
 		_random = new RandomNumberGenerator();
-		_random.Seed = (ulong)Mathf.Max(1, Seed);
+		_random.Seed = (ulong)Seed;
 
 		_tiles = new PrototypeTileType[WorldTileWidth, WorldTileHeight];
 		_protectedPath = new bool[WorldTileWidth, WorldTileHeight];
 		_roomScenarios = new ScenarioType[RoomsX, RoomsY];
 		_roomStartTiles = new Vector2[RoomsX, RoomsY];
 		_roomExitTiles = new Vector2[RoomsX, RoomsY];
+		_openedBoxes = new bool[WorldTileWidth, WorldTileHeight];
 		_portalLinks.Clear();
+		_boxTiles.Clear();
 
 		GenerateScenarioGrid();
 		FillBaseFloor();
@@ -58,7 +73,15 @@ public class PrototypeMap : Node2D
 		EnsureCriticalTiles();
 
 		BuildMapTexture();
+		LoadBoxTextures();
+		RebuildBoxTileList();
 		Update();
+	}
+
+	public void RegenerateWithRandomSeed()
+	{
+		Seed = GenerateRandomSeed();
+		Generate();
 	}
 
 	public Rect2 GetRoomBoundsPixels(Vector2 roomIndex)
@@ -200,6 +223,63 @@ public class PrototypeMap : Node2D
 		}
 
 		DrawTextureRect(_mapTexture, new Rect2(Vector2.Zero, new Vector2(WorldPixelWidth, WorldPixelHeight)), false);
+		DrawBoxes();
+	}
+
+	public bool TryOpenNearbyBox(Vector2 worldPosition, float maxDistanceTiles = 1.15f)
+	{
+		if (_tiles == null || _openedBoxes == null)
+		{
+			return false;
+		}
+
+		Vector2 center = WorldToTile(worldPosition);
+		int cx = (int)center.x;
+		int cy = (int)center.y;
+		float maxDistanceSquared = maxDistanceTiles * maxDistanceTiles;
+		float bestDistance = float.MaxValue;
+		Vector2 bestTile = Vector2.Zero;
+		bool found = false;
+
+		for (int x = cx - 1; x <= cx + 1; x++)
+		{
+			for (int y = cy - 1; y <= cy + 1; y++)
+			{
+				if (x < 0 || y < 0 || x >= WorldTileWidth || y >= WorldTileHeight)
+				{
+					continue;
+				}
+
+				if (_tiles[x, y] != PrototypeTileType.Box || _openedBoxes[x, y])
+				{
+					continue;
+				}
+
+				float dx = x - cx;
+				float dy = y - cy;
+				float distanceSquared = dx * dx + dy * dy;
+				if (distanceSquared > maxDistanceSquared)
+				{
+					continue;
+				}
+
+				if (distanceSquared < bestDistance)
+				{
+					bestDistance = distanceSquared;
+					bestTile = new Vector2(x, y);
+					found = true;
+				}
+			}
+		}
+
+		if (!found)
+		{
+			return false;
+		}
+
+		_openedBoxes[(int)bestTile.x, (int)bestTile.y] = true;
+		Update();
+		return true;
 	}
 
 	private void GenerateScenarioGrid()
@@ -828,5 +908,60 @@ public class PrototypeMap : Node2D
 		string value = tileX.ToString() + ":" + tileY.ToString();
 		_tileKeyCache[key] = value;
 		return value;
+	}
+
+	private static int GenerateRandomSeed()
+	{
+		if (!_seedRandomInitialized)
+		{
+			_seedRandom.Randomize();
+			_seedRandomInitialized = true;
+		}
+
+		return _seedRandom.RandiRange(1, int.MaxValue);
+	}
+
+	private void LoadBoxTextures()
+	{
+		_boxClosedTexture = GD.Load<Texture>(BoxClosedTexturePath);
+		_boxOpenTexture = GD.Load<Texture>(BoxOpenTexturePath);
+
+		if (_boxClosedTexture == null || _boxOpenTexture == null)
+		{
+			GD.Print("PrototypeMap: box textures not found, using fallback box color.");
+		}
+	}
+
+	private void RebuildBoxTileList()
+	{
+		_boxTiles.Clear();
+		for (int x = 0; x < WorldTileWidth; x++)
+		{
+			for (int y = 0; y < WorldTileHeight; y++)
+			{
+				if (_tiles[x, y] == PrototypeTileType.Box)
+				{
+					_boxTiles.Add(new Vector2(x, y));
+				}
+			}
+		}
+	}
+
+	private void DrawBoxes()
+	{
+		if (_boxTiles.Count == 0 || _boxClosedTexture == null || _boxOpenTexture == null)
+		{
+			return;
+		}
+
+		for (int i = 0; i < _boxTiles.Count; i++)
+		{
+			Vector2 tile = _boxTiles[i];
+			int tx = (int)tile.x;
+			int ty = (int)tile.y;
+			Texture texture = _openedBoxes[tx, ty] ? _boxOpenTexture : _boxClosedTexture;
+			Rect2 tileRect = new Rect2(tx * TileSize, ty * TileSize, TileSize, TileSize);
+			DrawTextureRect(texture, tileRect, false);
+		}
 	}
 }

@@ -19,7 +19,7 @@ public class Main : Node2D
 		_map.RoomsX = 2;
 		_map.RoomsY = 2;
 		AddChild(_map);
-		_map.Generate();
+		_map.RegenerateWithRandomSeed();
 
 		_player = new PrototypePlayer();
 		AddChild(_player);
