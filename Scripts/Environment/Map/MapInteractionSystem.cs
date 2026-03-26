@@ -3,8 +3,7 @@ using Godot;
 public class MapInteractionSystem
 {
     // If we must spawn on top of a portal tile, nudge slightly to avoid instant re-trigger.
-    // 0.24f means 24% of one tile width; small enough to stay in the same tile visually.
-    private const float PortalArrivalNudgeTiles = 0.24f;
+    // See GameConstants.PORTAL_ARRIVAL_NUDGE_TILES for the value and explanation.
 
     public bool IsAtRoomExit(MapTileData data, Vector2 worldPosition, Vector2 roomIndex, float exitTriggerRadius)
     {
@@ -35,9 +34,8 @@ public class MapInteractionSystem
             destinationWorld = data.TileToWorldCenter((int)arrivalTile.x, (int)arrivalTile.y);
             if (arrivalTile == destinationTile)
             {
-                // 6) Nudge right by 0.24 tile to reduce immediate retrigger on next frame.
-                // `f` in 0.24f marks a float literal in C#.
-                destinationWorld += new Vector2(data.TileSize * PortalArrivalNudgeTiles, 0f);
+                // 6) Nudge right to reduce immediate re-trigger on next frame.
+                destinationWorld += new Vector2(data.TileSize * GameConstants.PORTAL_ARRIVAL_NUDGE_TILES, 0f);
             }
 
             return true;
@@ -47,8 +45,12 @@ public class MapInteractionSystem
         return false;
     }
 
-    public bool TryOpenNearbyBox(MapTileData data, Vector2 worldPosition, float maxDistanceTiles = 1.15f)
+    public bool TryOpenNearbyBox(MapTileData data, Vector2 worldPosition, float maxDistanceTiles = -1f)
     {
+        if (maxDistanceTiles < 0)
+        {
+            maxDistanceTiles = GameConstants.BOX_INTERACTION_MAX_DISTANCE_TILES;
+        }
         Vector2 center = data.WorldToTile(worldPosition);
         int cx = (int)center.x;
         int cy = (int)center.y;

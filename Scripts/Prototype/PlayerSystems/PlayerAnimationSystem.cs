@@ -80,8 +80,8 @@ public class PlayerAnimationSystem
         }
 
         Rect2 rect = new Rect2(-bodySize / 2f, bodySize);
-        owner.DrawRect(rect, new Color(0.95f, 0.95f, 0.98f));
-        owner.DrawRect(rect.Grow(-2), new Color(0.28f, 0.28f, 0.35f), false, 2f);
+        owner.DrawRect(rect, GameConstants.MapColors.DebugBodyFill);
+        owner.DrawRect(rect.Grow(-2), GameConstants.MapColors.DebugBodyOutline, false, 2f);
     }
 
     private void ApplyCurrentFrame(float facingX)

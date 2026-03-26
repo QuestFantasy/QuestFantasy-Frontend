@@ -1,20 +1,37 @@
 using Godot;
 
+/// <summary>
+/// Handles player character movement logic, including collision detection and axis-aligned movement.
+/// 
+/// Design Notes:
+/// - Uses axis-aligned movement: attempts X axis first, then Y axis
+/// - Each axis calculates independently from the original position, preventing one axis from affecting the other
+/// - If one axis is blocked, movement on the other axis can still proceed (sliding effect)
+/// </summary>
 public class PlayerMovementController
 {
     public void TryMove(Node2D actor, Map map, Vector2 deltaMove, Vector2 bodySize)
     {
-        Vector2 nextX = new Vector2(actor.Position.x + deltaMove.x, actor.Position.y);
+        // Save original position to allow independent calculation for both axes
+        Vector2 originalPos = actor.Position;
+        Vector2 newPos = originalPos;
+
+        // Attempt movement along X axis
+        Vector2 nextX = new Vector2(originalPos.x + deltaMove.x, originalPos.y);
         if (map.CanMoveTo(GetBodyRect(nextX, bodySize)))
         {
-            actor.Position = nextX;
+            newPos.x = nextX.x;
         }
 
-        Vector2 nextY = new Vector2(actor.Position.x, actor.Position.y + deltaMove.y);
+        // Attempt movement along Y axis (based on original Y, unaffected by X axis)
+        Vector2 nextY = new Vector2(originalPos.x, originalPos.y + deltaMove.y);
         if (map.CanMoveTo(GetBodyRect(nextY, bodySize)))
         {
-            actor.Position = nextY;
+            newPos.y = nextY.y;
         }
+
+        // Apply new position atomically
+        actor.Position = newPos;
     }
 
     private Rect2 GetBodyRect(Vector2 centerPosition, Vector2 bodySize)

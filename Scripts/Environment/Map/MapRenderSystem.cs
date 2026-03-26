@@ -45,13 +45,13 @@ public class MapRenderSystem
     {
         switch (data.Tiles[tileX, tileY])
         {
-            case MapTileType.Start: return new Color(0.95f, 0.88f, 0.24f);
-            case MapTileType.Exit: return new Color(0.62f, 0.24f, 0.87f);
-            case MapTileType.Wall: return new Color(0.12f, 0.12f, 0.15f);
-            case MapTileType.Box: return new Color(0.54f, 0.34f, 0.15f);
-            case MapTileType.Portal: return new Color(0.88f, 0.26f, 0.80f);
-            case MapTileType.Lava: return new Color(0.88f, 0.34f, 0.12f);
-            case MapTileType.Water: return new Color(0.20f, 0.50f, 0.86f);
+            case MapTileType.Start: return GameConstants.MapColors.RoomStart;
+            case MapTileType.Exit: return GameConstants.MapColors.RoomExit;
+            case MapTileType.Wall: return GameConstants.MapColors.Wall;
+            case MapTileType.Box: return GameConstants.MapColors.Box;
+            case MapTileType.Portal: return GameConstants.MapColors.Portal;
+            case MapTileType.Lava: return GameConstants.MapColors.Lava;
+            case MapTileType.Water: return GameConstants.MapColors.Water;
             default: return GetScenarioFloorColor(GetScenarioByTile(data, tileX, tileY));
         }
     }
@@ -60,10 +60,10 @@ public class MapRenderSystem
     {
         switch (scenario)
         {
-            case MapScenarioType.Grassland: return new Color(0.40f, 0.66f, 0.36f);
-            case MapScenarioType.Mountain: return new Color(0.50f, 0.52f, 0.55f);
-            case MapScenarioType.Lava: return new Color(0.46f, 0.28f, 0.18f);
-            default: return new Color(0.34f, 0.56f, 0.74f);
+            case MapScenarioType.Grassland: return GameConstants.MapColors.ScenarioGrassland;
+            case MapScenarioType.Mountain: return GameConstants.MapColors.ScenarioMountain;
+            case MapScenarioType.Lava: return GameConstants.MapColors.ScenarioLava;
+            default: return GameConstants.MapColors.ScenarioSea;
         }
     }
 

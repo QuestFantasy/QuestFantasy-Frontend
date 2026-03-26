@@ -1,5 +1,13 @@
 using Godot;
 
+/// <summary>
+/// Tracks the player's room location and portal state.
+/// 
+/// Responsibilities:
+/// - Maintains the current room index
+/// - Manages portal cooldown mechanics
+/// - Handles room transitions and exit-room logic
+/// </summary>
 public class PlayerRoomTracker
 {
     private Vector2 _currentRoomIndex = Vector2.Zero;
@@ -26,9 +34,13 @@ public class PlayerRoomTracker
         }
     }
 
+    /// <summary>
+    /// Sets the portal cooldown duration (in seconds).
+    /// Uses Mathf.Max to prevent accidental cooldown reduction if one already exists.
+    /// </summary>
     public void SetPortalCooldown(float seconds)
     {
-        _portalCooldown = seconds;
+        _portalCooldown = Mathf.Max(_portalCooldown, seconds);
     }
 
     public bool TryUpdateRoomByPosition(Map map, Vector2 position)
@@ -59,7 +71,7 @@ public class PlayerRoomTracker
         map.RegenerateWithRandomSeed();
         _currentRoomIndex = Vector2.Zero;
         nextPosition = map.GetSpawnWorldPosition();
-        _portalCooldown = 0.5f;
+        SetPortalCooldown(GameConstants.PORTAL_TELEPORT_COOLDOWN);
         return true;
     }
 
@@ -89,7 +101,16 @@ public class PlayerRoomTracker
         }
 
         _currentRoomIndex = map.GetRoomIndexByWorldPosition(destinationPosition);
-        _portalCooldown = 0.5f;
+        SetPortalCooldown(GameConstants.PORTAL_TELEPORT_COOLDOWN);
         return true;
+    }
+
+    /// <summary>
+    /// Applies interference cooldown to portals, typically called when the player performs other interactions (such as opening boxes).
+    /// This prevents accidental portal activation during other gameplay actions.
+    /// </summary>
+    public void InterferPortalWithInteraction()
+    {
+        SetPortalCooldown(GameConstants.INTERACTION_PORTAL_INTERFERENCE);
     }
 }

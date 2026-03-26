@@ -1,5 +1,16 @@
 using Godot;
 
+/// <summary>
+/// Main controller class for the player character.
+/// 
+/// Responsibilities:
+/// - Input handling
+/// - Movement and animation updates
+/// - Camera management
+/// - Room and portal state logic
+/// 
+/// System Components: InputHandler, MovementController, AnimationSystem, CameraManager, RoomTracker
+/// </summary>
 public class MapPlayer : Node2D
 {
     [Export] public float MoveSpeed = 240f;
@@ -67,7 +78,7 @@ public class MapPlayer : Node2D
         {
             if (_map.TryOpenNearbyBox(Position))
             {
-                _roomTracker.SetPortalCooldown(0.05f);
+                _roomTracker.InterferPortalWithInteraction();
             }
         }
 
@@ -105,16 +116,28 @@ public class MapPlayer : Node2D
             return;
         }
 
+        // Prioritize handling room exit (completion)
+        if (_roomTracker.TryHandleExit(_map, Position, out Vector2 exitNextPosition))
+        {
+            TransitionToNewLocation(exitNextPosition);
+            return;  // Prevent simultaneous room transitions within the same frame
+        }
+
+        // Then handle intra-room transitions
         if (_roomTracker.TryUpdateRoomByPosition(_map, Position))
         {
             LockCameraToRoom(_roomTracker.CurrentRoomIndex);
         }
+    }
 
-        if (_roomTracker.TryHandleExit(_map, Position, out Vector2 nextPosition))
-        {
-            Position = nextPosition;
-            LockCameraToRoom(_roomTracker.CurrentRoomIndex);
-        }
+    /// <summary>
+    /// Atomically transitions to a new location, ensuring position, room index, and camera bounds are updated synchronously.
+    /// </summary>
+    private void TransitionToNewLocation(Vector2 newWorldPosition)
+    {
+        Position = newWorldPosition;
+        _roomTracker.InitializeFromPosition(_map, Position);
+        LockCameraToRoom(_roomTracker.CurrentRoomIndex);
     }
 
     private void RespawnAtCurrentRoomStart()
@@ -132,8 +155,7 @@ public class MapPlayer : Node2D
     {
         if (_roomTracker.TryHandlePortal(_map, Position, out Vector2 destinationWorld))
         {
-            Position = destinationWorld;
-            LockCameraToRoom(_roomTracker.CurrentRoomIndex);
+            TransitionToNewLocation(destinationWorld);
         }
     }
 

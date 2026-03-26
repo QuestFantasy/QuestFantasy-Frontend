@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Characters;
 
 public class Main : Node2D
