@@ -10,6 +10,12 @@ namespace QuestFantasy.Characters
         public Abilities Abilities;
         public Element Element { get; private set; }
         public Attributes Attributes;
+
+        public virtual void Attack()
+        {
+            // TODO: Implement attack logic
+        }
+
         public virtual void UpdateAttributes()
         { }
     }

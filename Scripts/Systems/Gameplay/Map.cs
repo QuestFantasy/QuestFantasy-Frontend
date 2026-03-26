@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+
 using Godot;
+
+using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Items;
-using QuestFantasy.Characters;
 
 namespace QuestFantasy.Systems.Gameplay
 {
