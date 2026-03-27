@@ -32,19 +32,19 @@ public class PlayerInputHandler
     public Vector2 GetMovementInput()
     {
         Vector2 input = Vector2.Zero;
-        if (Input.IsActionPressed("ui_right"))
+        if (Input.IsKeyPressed((int)KeyList.D))
         {
             input.x += 1f;
         }
-        if (Input.IsActionPressed("ui_left"))
+        if (Input.IsKeyPressed((int)KeyList.A))
         {
             input.x -= 1f;
         }
-        if (Input.IsActionPressed("ui_down"))
+        if (Input.IsKeyPressed((int)KeyList.S))
         {
             input.y += 1f;
         }
-        if (Input.IsActionPressed("ui_up"))
+        if (Input.IsKeyPressed((int)KeyList.W))
         {
             input.y -= 1f;
         }
