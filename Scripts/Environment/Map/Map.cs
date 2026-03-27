@@ -18,6 +18,8 @@ public class Map : Node2D
     public float ExitTriggerRadius { get => GenerationConfig.ExitTriggerRadius; set => GenerationConfig.ExitTriggerRadius = value; }
     public int HazardClusterMinTiles { get => GenerationConfig.HazardClusterMinTiles; set => GenerationConfig.HazardClusterMinTiles = value; }
     public int HazardClusterMaxTiles { get => GenerationConfig.HazardClusterMaxTiles; set => GenerationConfig.HazardClusterMaxTiles = value; }
+    public int BoxCountMin { get => GenerationConfig.BoxCountMin; set => GenerationConfig.BoxCountMin = value; }
+    public int BoxCountMax { get => GenerationConfig.BoxCountMax; set => GenerationConfig.BoxCountMax = value; }
     public string BoxClosedTexturePath { get => GenerationConfig.BoxClosedTexturePath; set => GenerationConfig.BoxClosedTexturePath = value; }
     public string BoxOpenTexturePath { get => GenerationConfig.BoxOpenTexturePath; set => GenerationConfig.BoxOpenTexturePath = value; }
 
@@ -243,6 +245,8 @@ public class Map : Node2D
             ExitTriggerRadius = GenerationConfig.ExitTriggerRadius,
             HazardClusterMinTiles = GenerationConfig.HazardClusterMinTiles,
             HazardClusterMaxTiles = GenerationConfig.HazardClusterMaxTiles,
+            BoxCountMin = GenerationConfig.BoxCountMin,
+            BoxCountMax = GenerationConfig.BoxCountMax,
             BoxClosedTexturePath = GenerationConfig.BoxClosedTexturePath,
             BoxOpenTexturePath = GenerationConfig.BoxOpenTexturePath
         };

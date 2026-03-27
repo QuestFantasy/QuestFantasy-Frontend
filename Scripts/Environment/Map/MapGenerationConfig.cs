@@ -28,6 +28,10 @@ public class MapGenerationConfig : Resource
     [Export] public int HazardClusterMinTiles = 15;
     // Maximum tiles in one hazard cluster.
     [Export] public int HazardClusterMaxTiles = 120;
+    // Minimum number of boxes to place per room.
+    [Export] public int BoxCountMin = 5;
+    // Maximum number of boxes to place per room.
+    [Export] public int BoxCountMax = 20;
     // Texture used for unopened boxes.
     [Export] public string BoxClosedTexturePath = "res://Assets/Box/Box_Closed.png";
     // Texture used for opened boxes.
@@ -73,6 +77,11 @@ public class MapGenerationConfig : Resource
         if (HazardClusterMinTiles <= 0 || HazardClusterMaxTiles < HazardClusterMinTiles)
         {
             error = "Hazard cluster bounds are invalid.";
+            return false;
+        }
+        if (BoxCountMin <= 0 || BoxCountMax < BoxCountMin)
+        {
+            error = "Box count bounds are invalid.";
             return false;
         }
 
