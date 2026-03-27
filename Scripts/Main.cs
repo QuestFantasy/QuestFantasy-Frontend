@@ -4,40 +4,27 @@ using QuestFantasy.Characters;
 
 public class Main : Node2D
 {
-    private Node2D _player;
-    private PackedScene _playerScene;
+    private Map _map;
+    private MapPlayer _player;
 
     public override void _Ready()
     {
-        _playerScene = (PackedScene)GD.Load("res://Scenes/Entities/player.tscn");
-        SpawnPlayer();
-        SetProcess(true);
+        BuildPlayablePrototype();
     }
 
-    public override void _Process(float delta)
+    private void BuildPlayablePrototype()
     {
-        if (_player == null)
-            return;
+        _map = new Map();
+        _map.TileSize = 24;
+        _map.RoomTileSize = 100;
+        _map.RoomsX = 2;
+        _map.RoomsY = 2;
+        AddChild(_map);
+        _map.RegenerateWithRandomSeed();
 
-        var rect = GetViewport().GetVisibleRect();
-        var pos = _player.Position;
-        if (pos.x < 0 || pos.y < 0 || pos.x > rect.Size.x || pos.y > rect.Size.y)
-        {
-            _player.QueueFree();
-            _player = null;
-            SpawnPlayer();
-        }
-    }
-
-    private void SpawnPlayer()
-    {
-        if (_playerScene == null)
-            return;
-
-        var inst = (Node2D)_playerScene.Instance();
-        AddChild(inst);
-        var rect = GetViewport().GetVisibleRect();
-        inst.Position = rect.Size / 2;
-        _player = inst;
+        _player = new MapPlayer();
+        AddChild(_player);
+        _player.Position = _map.GetSpawnWorldPosition();
+        _player.SetMap(_map);
     }
 }
