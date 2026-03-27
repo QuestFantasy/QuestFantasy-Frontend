@@ -7,6 +7,7 @@ using Godot;
 /// - Uses axis-aligned movement: attempts X axis first, then Y axis
 /// - Each axis calculates independently from the original position, preventing one axis from affecting the other
 /// - If one axis is blocked, movement on the other axis can still proceed (sliding effect)
+/// - Collision detection only checks the lower half of the character body, allowing head to pass through terrain
 /// </summary>
 public class PlayerMovementController
 {
@@ -36,6 +37,12 @@ public class PlayerMovementController
 
     private Rect2 GetBodyRect(Vector2 centerPosition, Vector2 bodySize)
     {
-        return new Rect2(centerPosition - bodySize / 2f, bodySize);
+        // Only check the lower half of the body for collision detection
+        // This allows the character's head to pass through terrain
+        float lowerBodyHeight = bodySize.y / 2f;
+        Vector2 lowerBodyStart = centerPosition - bodySize / 2f;
+        lowerBodyStart.y += bodySize.y / 2f; // Move to start of lower half
+
+        return new Rect2(lowerBodyStart, new Vector2(bodySize.x, lowerBodyHeight));
     }
 }

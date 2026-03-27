@@ -195,6 +195,7 @@ public class MapGenerator
                 data.GetRoomTileBounds(roomX, roomY, out int sx, out int sy, out int ex, out int ey);
                 MapScenarioType scenario = data.RoomScenarios[roomX, roomY];
 
+                // First pass: place walls only
                 for (int x = sx + 1; x < ex; x++)
                 {
                     for (int y = sy + 1; y < ey; y++)
@@ -207,14 +208,46 @@ public class MapGenerator
                         {
                             continue;
                         }
-                        data.Tiles[x, y] = PickSolidObstacleForScenario(scenario);
+                        // Only place walls, not boxes
+                        MapTileType obstacle = PickSolidObstacleForScenario(scenario);
+                        if (obstacle == MapTileType.Wall)
+                        {
+                            data.Tiles[x, y] = MapTileType.Wall;
+                        }
                     }
                 }
 
+                // Second pass: place boxes with fixed count
+                PlaceBoxesInRoom(data, roomX, roomY);
                 PlaceHazardClustersForRoom(data, roomX, roomY, scenario);
             }
         }
     }
+
+    private void PlaceBoxesInRoom(MapTileData data, int roomX, int roomY)
+    {
+        int boxCount = _random.RandiRange(_config.BoxCountMin, _config.BoxCountMax);
+        int placed = 0;
+        int attempts = 0;
+        int maxAttempts = boxCount * 10; // Prevent infinite loop
+
+        data.GetRoomTileBounds(roomX, roomY, out int sx, out int sy, out int ex, out int ey);
+
+        while (placed < boxCount && attempts < maxAttempts)
+        {
+            attempts++;
+            int x = _random.RandiRange(sx + 1, ex - 1);
+            int y = _random.RandiRange(sy + 1, ey - 1);
+
+            // Can only place box on unprotected floor tiles
+            if (!data.ProtectedPath[x, y] && data.Tiles[x, y] == MapTileType.Floor)
+            {
+                data.SetTile(x, y, MapTileType.Box);
+                placed++;
+            }
+        }
+    }
+
 
     private void PlaceHazardClustersForRoom(MapTileData data, int roomX, int roomY, MapScenarioType scenario)
     {
