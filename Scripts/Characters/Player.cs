@@ -21,7 +21,7 @@ namespace QuestFantasy.Characters
         private EquippedItems Equipped { get; set; }
         public int Gold { get; private set; }
 
-        private readonly Bag Inventory;
+        private readonly Bag Inventory = new Bag();
 
         // TODO: set Job function
         public override void UpdateAttributes()
@@ -32,7 +32,7 @@ namespace QuestFantasy.Characters
             Attributes.TotalVit = (Job?.BaseAbilities?.Vit ?? 0) + (EquippedWeapon?.WeaponAbilities?.Vit ?? 0) + (Equipped?.TotalVit() ?? 0);
         }
 
-        public override void Move()
+        public void Move(float delta)
         {
             _velocity = Vector2.Zero;
 
@@ -51,11 +51,11 @@ namespace QuestFantasy.Characters
                 float actualSpeed = (baseSpd + 1) * SpeedMultiplier;
                 _velocity = _velocity.Normalized() * actualSpeed;
             }
-            Position += _velocity;
+            Position += _velocity * delta;
         }
         public override void _PhysicsProcess(float delta)
         {
-            Move();
+            Move(delta);
         }
     }
 }
