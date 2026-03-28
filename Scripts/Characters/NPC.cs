@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
 
 namespace QuestFantasy.Characters
