@@ -6,6 +6,7 @@ public class AuthFlowController : Node
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
 
     public event Action Authenticated;
+    public event Action LoggedOut;
 
     private AuthApiClient _authApiClient;
     private AuthView _authView;
@@ -62,16 +63,22 @@ public class AuthFlowController : Node
         }
     }
 
-    private void OnRegisterSubmitted(string username, string email, string password)
+    private void OnRegisterSubmitted(string username, string email, string password, string confirmPassword)
     {
         if (_authApiClient.IsBusy)
         {
             return;
         }
 
+        if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
+        {
+            _authView.SetStatus("Password and confirmation must match.");
+            return;
+        }
+
         SetAuthBusy(true);
         _authView.SetStatus("Registering...");
-        if (!_authApiClient.Register(username, email, password, OnRegisterCompleted))
+        if (!_authApiClient.Register(username, email, password, confirmPassword, OnRegisterCompleted))
         {
             SetAuthBusy(false);
             _authView.SetStatus("Another request is already in progress.");
@@ -113,6 +120,7 @@ public class AuthFlowController : Node
 
         AuthStorage.ClearToken();
         _authToken = string.Empty;
+        _authView.ClearInputs();
         _authView.SetStatus("Your session is no longer valid. Please log in again.");
         _authView.ShowView();
     }
@@ -157,6 +165,53 @@ public class AuthFlowController : Node
         AuthStorage.SaveToken(_authToken);
         _authView.SetStatus("Verifying session...");
         ValidateSavedToken();
+    }
+
+    public void RequestLogout()
+    {
+        if (_authApiClient.IsBusy)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_authToken))
+        {
+            FinalizeLogout("You have been logged out.");
+            return;
+        }
+
+        if (!_authApiClient.Logout(_authToken, OnLogoutCompleted))
+        {
+            _authView.SetStatus("Could not send logout request. Please try again.");
+        }
+    }
+
+    private void OnLogoutCompleted(AuthApiResult result)
+    {
+        if (!result.NetworkOk)
+        {
+            GD.PrintErr("Logout request failed: " + result.ErrorMessage);
+            _authView.SetStatus("Network issue during logout. Please try again.");
+            return;
+        }
+
+        if (!result.IsSuccessStatus(200, 401))
+        {
+            _authView.SetStatus(result.GetApiErrorMessage("Logout failed. Please try again."));
+            return;
+        }
+
+        FinalizeLogout("Logout successful. Please log in to continue.");
+    }
+
+    private void FinalizeLogout(string message)
+    {
+        AuthStorage.ClearToken();
+        _authToken = string.Empty;
+        _authView.ClearInputs();
+        _authView.SetStatus(message);
+        _authView.ShowView();
+        LoggedOut?.Invoke();
     }
 
     private void SetAuthBusy(bool isBusy)
