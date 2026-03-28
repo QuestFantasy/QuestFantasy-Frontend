@@ -4,6 +4,8 @@ namespace QuestFantasy.Characters.PlayerSystems
 {
     public class PlayerInputHandler
     {
+        private bool _lastMouseButtonState = false;
+
         public void EnsureInteractInputAction()
         {
             if (!InputMap.HasAction("interact"))
@@ -29,6 +31,17 @@ namespace QuestFantasy.Characters.PlayerSystems
         public bool IsInteractPressed()
         {
             return Input.IsActionJustPressed("interact");
+        }
+
+        /// <summary>
+        /// Check if skill activation input is triggered (left mouse button - single click detection)
+        /// </summary>
+        public bool IsSkillActivationPressed()
+        {
+            bool currentMouseState = Input.IsMouseButtonPressed(1);
+            bool justPressed = currentMouseState && !_lastMouseButtonState;
+            _lastMouseButtonState = currentMouseState;
+            return justPressed;
         }
 
         public Vector2 GetMovementInput()

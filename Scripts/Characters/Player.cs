@@ -234,12 +234,12 @@ namespace QuestFantasy.Characters
         }
 
         /// <summary>
-        /// Handle skill activation input
+        /// Handle skill activation input (Left mouse button)
         /// </summary>
         private void HandleSkillInput()
         {
-            // Use Space key for basic attack (first skill)
-            if (Input.IsActionJustPressed("ui_accept") && CurrentSkills.Count > 0)
+            // Use left mouse button for basic attack (first skill)
+            if (_inputHandler.IsSkillActivationPressed() && CurrentSkills.Count > 0)
             {
                 // Find nearest enemy within skill range to attack
                 Character nearestTarget = FindNearestEnemyInRange(CurrentSkills[0]);
