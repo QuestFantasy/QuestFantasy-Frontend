@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 
 using Godot;
 
 using QuestFantasy.Characters.PlayerSystems;
+using QuestFantasy.Core.Data;
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Core.Data.Skills;
@@ -21,37 +23,49 @@ namespace QuestFantasy.Characters
     /// </summary>
     public class Player : Character
     {
-        [Export] public float MoveSpeed = 240f;
-        [Export] public Vector2 BodySizeInTiles = new Vector2(1.0f, 1.9f);
-        [Export] public Vector2 CollisionBodyScale = new Vector2(0.88f, 0.94f);
-        [Export] public Vector2 CameraZoom = new Vector2(0.7f, 0.7f);
+        [Export] public float MoveSpeed = GameConstants.PLAYER_DEFAULT_MOVE_SPEED;
+        [Export] public Vector2 BodySizeInTiles = GameConstants.PLAYER_BODY_SIZE_IN_TILES;
+        [Export] public Vector2 CollisionBodyScale = GameConstants.PLAYER_COLLISION_SCALE;
+        [Export] public Vector2 CameraZoom = GameConstants.PLAYER_CAMERA_DEFAULT_ZOOM;
         
         // Stand animation
         [Export] public string StandFrame1Path = "res://Assets/Characters/stand.png";
         [Export] public string StandFrame2Path = "res://Assets/Characters/stand2.png";
         
-        // Walk animation (2 frames only) - very slow for visibility
-        [Export] public float WalkAnimationFps = 3f;
+        // Walk animation
+        [Export] public float WalkAnimationFps = GameConstants.PLAYER_WALK_ANIMATION_FPS;
         [Export] public string WalkFrame1Path = "res://Assets/Characters/walk.png";
         [Export] public string WalkFrame2Path = "res://Assets/Characters/walk1.png";
         
-        // Attack animation - slower
-        [Export] public float AttackAnimationFps = 5f;
+        // Attack animation
+        [Export] public float AttackAnimationFps = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
         [Export] public string AttackFrame1Path = "res://Assets/Characters/attack.png";
         [Export] public string AttackFrame2Path = "res://Assets/Characters/attack1.png";
         [Export] public string AttackFrame3Path = "res://Assets/Characters/attack2.png";
         
-        [Export] public float SpeedMultiplier = 50f; // Legacy: pixels per spd point
+        [Export] public float SpeedMultiplier = GameConstants.PLAYER_SPEED_TO_PIXELS_MULTIPLIER;
 
-        public Jobs Job { get; private set; }
-        public int Exp { get; private set; }
         public Jobs CurrentJob { get; private set; }
-        public List<Skills> CurrentSkills { get; private set; } = new List<Skills>();
-        private Weapon EquippedWeapon { get; set; }
-        private EquippedItems Equipped { get; set; }
-        public int Gold { get; private set; }
+        
+        private int _experience;
+        public int Experience => _experience;
+        public event Action<int> OnExperienceChanged;
+        
+        private int _gold;
+        public int Gold => _gold;
+        public event Action<int> OnGoldChanged;
+        
+        public IReadOnlyList<Skills> CurrentSkills => _currentSkills.AsReadOnly();
+        private List<Skills> _currentSkills = new List<Skills>();
+        
+        private Weapon _equippedWeapon;
+        private EquippedItems _equipped = new EquippedItems();
+        public Weapon EquippedWeapon => _equippedWeapon;
+        public EquippedItems EquippedItems => _equipped;
 
-        private readonly Bag Inventory = new Bag();
+        private readonly Bag _inventory = new Bag();
+        public IReadOnlyList<Item> InventoryItems => _inventory.Items.AsReadOnly();
+        public event Action<Item> OnInventoryChanged;
 
         // Prototype systems integration
         private readonly PlayerInputHandler _inputHandler = new PlayerInputHandler();
@@ -83,64 +97,69 @@ namespace QuestFantasy.Characters
             // Validate movement speed
             if (MoveSpeed <= 0)
             {
-                GD.PrintErr("[Player] MoveSpeed must be > 0, setting to default 240");
-                MoveSpeed = 240f;
+                GD.PrintErr("[Player] MoveSpeed must be > 0, resetting to default");
+                MoveSpeed = GameConstants.PLAYER_DEFAULT_MOVE_SPEED;
             }
 
             // Validate animation FPS
             if (WalkAnimationFps <= 0)
             {
-                GD.PrintErr("[Player] WalkAnimationFps must be > 0, setting to default 10");
-                WalkAnimationFps = 10f;
+                GD.PrintErr("[Player] WalkAnimationFps must be > 0, resetting to default");
+                WalkAnimationFps = GameConstants.PLAYER_WALK_ANIMATION_FPS;
             }
 
             if (AttackAnimationFps <= 0)
             {
-                GD.PrintErr("[Player] AttackAnimationFps must be > 0, setting to default 15");
-                AttackAnimationFps = 15f;
+                GD.PrintErr("[Player] AttackAnimationFps must be > 0, resetting to default");
+                AttackAnimationFps = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
             }
 
             // Validate body size
             if (BodySizeInTiles.x <= 0 || BodySizeInTiles.y <= 0)
             {
-                GD.PrintErr("[Player] BodySizeInTiles must be > 0, setting to default (1, 1.9)");
-                BodySizeInTiles = new Vector2(1.0f, 1.9f);
+                GD.PrintErr("[Player] BodySizeInTiles must be > 0, resetting to default");
+                BodySizeInTiles = GameConstants.PLAYER_BODY_SIZE_IN_TILES;
             }
 
             // Validate collision body scale (should be between 0 and 1)
             if (CollisionBodyScale.x <= 0 || CollisionBodyScale.x > 1 || 
                 CollisionBodyScale.y <= 0 || CollisionBodyScale.y > 1)
             {
-                GD.PrintErr("[Player] CollisionBodyScale should be between 0 and 1, setting to default (0.88, 0.94)");
-                CollisionBodyScale = new Vector2(0.88f, 0.94f);
+                GD.PrintErr("[Player] CollisionBodyScale should be between 0 and 1, resetting to default");
+                CollisionBodyScale = GameConstants.PLAYER_COLLISION_SCALE;
             }
 
             // Validate camera zoom
             if (CameraZoom.x <= 0 || CameraZoom.y <= 0)
             {
-                GD.PrintErr("[Player] CameraZoom must be > 0, setting to default (0.7, 0.7)");
-                CameraZoom = new Vector2(0.7f, 0.7f);
+                GD.PrintErr("[Player] CameraZoom must be > 0, resetting to default");
+                CameraZoom = GameConstants.PLAYER_CAMERA_DEFAULT_ZOOM;
             }
 
             // Validate speed multiplier
             if (SpeedMultiplier <= 0)
             {
-                GD.PrintErr("[Player] SpeedMultiplier must be > 0, setting to default 50");
-                SpeedMultiplier = 50f;
+                GD.PrintErr("[Player] SpeedMultiplier must be > 0, resetting to default");
+                SpeedMultiplier = GameConstants.PLAYER_SPEED_TO_PIXELS_MULTIPLIER;
             }
 
             // Validate animation frame paths are not empty
+            ValidateAnimationPaths();
+        }
+        
+        private void ValidateAnimationPaths()
+        {
             if (string.IsNullOrEmpty(StandFrame1Path) || string.IsNullOrEmpty(StandFrame2Path))
             {
-                GD.Print("[Player] WARNING: Stand animation frame paths are missing");
+                GD.PrintErr("[Player] WARNING: Stand animation frame paths are missing");
             }
             if (string.IsNullOrEmpty(WalkFrame1Path) || string.IsNullOrEmpty(WalkFrame2Path))
             {
-                GD.Print("[Player] WARNING: Walk animation frame paths are missing");
+                GD.PrintErr("[Player] WARNING: Walk animation frame paths are missing");
             }
             if (string.IsNullOrEmpty(AttackFrame1Path) || string.IsNullOrEmpty(AttackFrame2Path) || string.IsNullOrEmpty(AttackFrame3Path))
             {
-                GD.Print("[Player] WARNING: Attack animation frame paths are missing");
+                GD.PrintErr("[Player] WARNING: Attack animation frame paths are missing");
             }
         }
 
@@ -177,10 +196,13 @@ namespace QuestFantasy.Characters
         /// </summary>
         private void InitializeSkills()
         {
+            if (_currentSkills == null)
+                _currentSkills = new List<Skills>();
+            
             // Add basic attack skill by default
             var basicAttack = new QuestFantasy.Core.Data.Skills.BasicAttackSkill();
             basicAttack.EffectRenderer = new Core.Data.Assets.BasicAttackEffectRenderer();
-            CurrentSkills.Add(basicAttack);
+            _currentSkills.Add(basicAttack);
         }
 
         /// <summary>
@@ -206,10 +228,16 @@ namespace QuestFantasy.Characters
 
         public override void UpdateAttributes()
         {
-            Attributes.TotalAtk = (Job?.BaseAbilities?.Atk ?? 0) + (EquippedWeapon?.WeaponAbilities?.Atk ?? 0) + (Equipped?.TotalAtk() ?? 0);
-            Attributes.TotalDef = (Job?.BaseAbilities?.Def ?? 0) + (EquippedWeapon?.WeaponAbilities?.Def ?? 0) + (Equipped?.TotalDef() ?? 0);
-            Attributes.TotalSpd = (Job?.BaseAbilities?.Spd ?? 0) + (EquippedWeapon?.WeaponAbilities?.Spd ?? 0) + (Equipped?.TotalSpd() ?? 0);
-            Attributes.TotalVit = (Job?.BaseAbilities?.Vit ?? 0) + (EquippedWeapon?.WeaponAbilities?.Vit ?? 0) + (Equipped?.TotalVit() ?? 0);
+            if (Attributes == null)
+            {
+                GD.PrintErr("[Player] Attributes not initialized");
+                return;
+            }
+            
+            Attributes.TotalAtk = (CurrentJob?.BaseAbilities?.Atk ?? 0) + (_equippedWeapon?.WeaponAbilities?.Atk ?? 0) + (_equipped?.TotalAtk() ?? 0);
+            Attributes.TotalDef = (CurrentJob?.BaseAbilities?.Def ?? 0) + (_equippedWeapon?.WeaponAbilities?.Def ?? 0) + (_equipped?.TotalDef() ?? 0);
+            Attributes.TotalSpd = (CurrentJob?.BaseAbilities?.Spd ?? 0) + (_equippedWeapon?.WeaponAbilities?.Spd ?? 0) + (_equipped?.TotalSpd() ?? 0);
+            Attributes.TotalVit = (CurrentJob?.BaseAbilities?.Vit ?? 0) + (_equippedWeapon?.WeaponAbilities?.Vit ?? 0) + (_equipped?.TotalVit() ?? 0);
         }
 
         public override void _PhysicsProcess(float delta)
@@ -286,7 +314,7 @@ namespace QuestFantasy.Characters
             UpdateRoomStateAndHandleExit();
 
             // Update skill cooldowns
-            foreach (var skill in CurrentSkills)
+            foreach (var skill in _currentSkills)
             {
                 skill.CoolDown.Update(delta);
             }
@@ -298,10 +326,10 @@ namespace QuestFantasy.Characters
         private void HandleSkillInput()
         {
             // Use left mouse button for basic attack (first skill)
-            if (_inputHandler.IsSkillActivationPressed() && CurrentSkills.Count > 0 && !_isAttacking)
+            if (_inputHandler.IsSkillActivationPressed() && _currentSkills.Count > 0 && !_isAttacking)
             {
                 // Find nearest enemy within skill range to attack
-                Character nearestTarget = FindNearestEnemyInRange(CurrentSkills[0]);
+                Character nearestTarget = FindNearestEnemyInRange(_currentSkills[0]);
                 
                 // Start attack animation (can perform even without target)
                 _isAttacking = true;
@@ -310,7 +338,7 @@ namespace QuestFantasy.Characters
                 // Execute the skill if target found
                 if (nearestTarget != null)
                 {
-                    CurrentSkills[0].TryExecute(this, nearestTarget);
+                    _currentSkills[0].TryExecute(this, nearestTarget);
                     GD.Print($"[Player] Attacking target: {nearestTarget.EntityName}");
                 }
                 else
@@ -450,26 +478,66 @@ namespace QuestFantasy.Characters
             return GetBodySizePixels() * CollisionBodyScale;
         }
 
-        /// <summary>
-        /// Use a specific skill on a target
-        /// </summary>
         public bool UseSkill(int skillIndex, Character target)
         {
-            if (skillIndex < 0 || skillIndex >= CurrentSkills.Count)
+            if (skillIndex < 0 || skillIndex >= _currentSkills.Count)
                 return false;
 
-            return CurrentSkills[skillIndex].TryExecute(this, target);
+            return _currentSkills[skillIndex].TryExecute(this, target);
         }
 
-        /// <summary>
-        /// Add a new skill to the player's skill list
-        /// </summary>
         public void LearnSkill(Skills skill)
         {
-            if (skill != null && !CurrentSkills.Contains(skill))
+            if (skill == null)
             {
-                CurrentSkills.Add(skill);
+                GD.PrintErr("[Player] Cannot learn a null skill");
+                return;
             }
+            
+            if (!_currentSkills.Contains(skill))
+            {
+                _currentSkills.Add(skill);
+                GD.Print($"[Player] Learned skill: {skill.Name}");
+            }
+        }
+        
+        public void GainExperience(int amount)
+        {
+            if (amount < 0)
+            {
+                GD.PrintErr("[Player] Cannot gain negative experience");
+                return;
+            }
+            
+            _experience += amount;
+            OnExperienceChanged?.Invoke(_experience);
+            GD.Print($"[Player] Gained {amount} EXP (Total: {_experience})");
+        }
+        
+        public void AddGold(int amount)
+        {
+            if (amount < 0)
+            {
+                GD.PrintErr("[Player] Cannot add negative gold");
+                return;
+            }
+            
+            _gold += amount;
+            OnGoldChanged?.Invoke(_gold);
+            GD.Print($"[Player] Gained {amount} Gold (Total: {_gold})");
+        }
+        
+        public void AddItem(Item item)
+        {
+            if (item == null)
+            {
+                GD.PrintErr("[Player] Cannot add null item");
+                return;
+            }
+            
+            _inventory.Items.Add(item);
+            OnInventoryChanged?.Invoke(item);
+            GD.Print($"[Player] Added item: {item.Name}");
         }
 
         /// <summary>

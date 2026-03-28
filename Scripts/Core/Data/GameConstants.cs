@@ -2,9 +2,65 @@ using Godot;
 
 /// <summary>
 /// Centralized game logic constants to avoid Magic Numbers scattered throughout the codebase.
+/// All magic numbers should be defined here for easy adjustment and balancing.
 /// </summary>
 public static class GameConstants
 {
+    // ==================== Player Configuration ====================
+    /// <summary>Player movement speed in pixels per second.</summary>
+    public const float PLAYER_DEFAULT_MOVE_SPEED = 240f;
+    
+    /// <summary>Conversion factor from speed stat points to pixels per second.</summary>
+    public const float PLAYER_SPEED_TO_PIXELS_MULTIPLIER = 50f;
+
+    /// <summary>Default player body dimensions in tiles.</summary>
+    public static readonly Vector2 PLAYER_BODY_SIZE_IN_TILES = new Vector2(1.0f, 1.9f);
+    
+    /// <summary>Default player collision body scale relative to sprite size.</summary>
+    public static readonly Vector2 PLAYER_COLLISION_SCALE = new Vector2(0.88f, 0.94f);
+
+    /// <summary>Default camera zoom level for the player.</summary>
+    public static readonly Vector2 PLAYER_CAMERA_DEFAULT_ZOOM = new Vector2(0.7f, 0.7f);
+
+    // ==================== Player Animation ====================
+    /// <summary>Frames per second for walk animation.</summary>
+    public const float PLAYER_WALK_ANIMATION_FPS = 3f;
+
+    /// <summary>Frames per second for attack animation.</summary>
+    public const float PLAYER_ATTACK_ANIMATION_FPS = 5f;
+
+    /// <summary>Frames per second for idle/stand animation.</summary>
+    public const float PLAYER_STAND_ANIMATION_FPS = 2f;
+
+    // ==================== Combat ====================
+    /// <summary>Basic attack skill range in pixels.</summary>
+    public const float BASIC_ATTACK_RANGE = 60f;
+
+    /// <summary>Basic attack cooldown duration in seconds.</summary>
+    public const float BASIC_ATTACK_COOLDOWN = 0.3f;
+
+    /// <summary>Minimum damage variance (-10%).</summary>
+    public const float DAMAGE_VARIANCE_MIN = 0.9f;
+
+    /// <summary>Maximum damage variance (+10%).</summary>
+    public const float DAMAGE_VARIANCE_MAX = 1.1f;
+
+    /// <summary>Defense stat damage reduction multiplier.</summary>
+    public const float DEFENSE_DAMAGE_REDUCTION_FACTOR = 0.5f;
+
+    // ==================== Status Effects ====================
+    /// <summary>Attack reduction for Burn status.</summary>
+    public const float STATUS_BURN_ATK_RATE = 0.5f;
+
+    /// <summary>Defense reduction for Poison status.</summary>
+    public const float STATUS_POISON_DEF_RATE = 0.5f;
+
+    /// <summary>Speed reduction for Paralysis status.</summary>
+    public const float STATUS_PARALYSIS_SPD_RATE = 0.5f;
+
+    /// <summary>Stat multiplier for crowd control effects (Freeze, Sleep, Stun).</summary>
+    public const float STATUS_CC_STAT_MULTIPLIER = 0f;
+
     // ==================== Portal & Teleport ====================
     /// <summary>Cooldown duration (in seconds) after portal activation to prevent consecutive triggers.</summary>
     public const float PORTAL_TELEPORT_COOLDOWN = 0.5f;
