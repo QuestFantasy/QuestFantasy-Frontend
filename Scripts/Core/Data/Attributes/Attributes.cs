@@ -8,6 +8,7 @@ namespace QuestFantasy.Core.Data.Attributes
         public float AgainstGet(Element targetElement)
         {
             // Calculate effectiveness against another element (input is the Defender's element)
+            if (targetElement == null) return 1f;
 
             if (ElementType == ElementsTypes.Normal) return 1f;
             if (ElementType == ElementsTypes.Earth)
@@ -50,6 +51,10 @@ namespace QuestFantasy.Core.Data.Attributes
         }
         public void TakeDamage(float rate, int attackerAtk, int Def, Status attackerStatus, Status defenderStatus)
         {
+            if (attackerStatus == null || defenderStatus == null)
+            {
+                return; // Cannot calculate damage without status information
+            }
             const float DAMAGE_RATE = 1f;
             CurrentHP -= (int)((attackerAtk * attackerStatus.AtkRate() - defenderStatus.DefRate() * Def) * DAMAGE_RATE * rate);
             if (CurrentHP < 0)

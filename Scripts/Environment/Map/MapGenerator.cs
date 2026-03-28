@@ -123,15 +123,18 @@ public class MapGenerator
 
         int currentX = startX;
         int currentY = startY;
-        var visited = new HashSet<string>();
+        // Use bool array instead of HashSet<string> for better performance
+        bool[,] visited = new bool[ex - sx + 1, ey - sy + 1];
         int maxSteps = data.RoomTileSize * data.RoomTileSize * 2;
+        bool reachedExit = false;
 
         for (int step = 0; step < maxSteps; step++)
         {
             CarveDisk(data, currentX, currentY, halfWidth);
-            visited.Add(data.TileKey(currentX, currentY));
+            visited[currentX - sx, currentY - sy] = true;
             if (currentX == exitX && currentY == exitY)
             {
+                reachedExit = true;
                 break;
             }
 
@@ -158,7 +161,7 @@ public class MapGenerator
 
                 float distance = Mathf.Abs(nx - exitX) + Mathf.Abs(ny - exitY);
                 float jitter = _random.RandfRange(0f, 4f);
-                float revisit = visited.Contains(data.TileKey(nx, ny)) ? 6f : 0f;
+                float revisit = visited[nx - sx, ny - sy] ? 6f : 0f;
                 float score = distance + jitter + revisit;
                 if (score < bestScore)
                 {
@@ -170,6 +173,7 @@ public class MapGenerator
 
             if (bestX == currentX && bestY == currentY)
             {
+                // Stuck: break and use fallback corridor
                 break;
             }
 
@@ -177,9 +181,10 @@ public class MapGenerator
             currentY = bestY;
         }
 
-        if (!(currentX == exitX && currentY == exitY))
+        // If we didn't reach the exit, carve a guaranteed corridor as fallback
+        if (!reachedExit)
         {
-            CarveCorridor(data, startX, startY, exitX, exitY, halfWidth);
+            CarveCorridor(data, currentX, currentY, exitX, exitY, halfWidth);
         }
 
         CarveDisk(data, startX, startY, 2);
