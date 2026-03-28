@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+
 using Godot;
+
 using QuestFantasy.Core.Base;
 
 namespace QuestFantasy.Core.Data.Attributes

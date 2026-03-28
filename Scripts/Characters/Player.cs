@@ -37,7 +37,7 @@ namespace QuestFantasy.Characters
 
         // ==================== Character Systems ====================
         public Jobs CurrentJob { get; private set; }
-        
+
         // Subsystems
         private PlayerCombatSystem _combatSystem;
         private PlayerInventorySystem _inventorySystem;
@@ -76,13 +76,13 @@ namespace QuestFantasy.Characters
         {
             // Initialize configuration
             InitializeConfiguration();
-            
+
             // Initialize subsystems
             InitializeSubsystems();
-            
+
             // Initialize entity
             InitializeEntity();
-            
+
             // Set up physics processing
             SetPhysicsProcess(true);
         }
@@ -125,7 +125,7 @@ namespace QuestFantasy.Characters
                 AttackFrame2Path = AttackFrame2Path,
                 AttackFrame3Path = AttackFrame3Path
             };
-            
+
             _animationConfig.Validate();
         }
 
@@ -140,7 +140,7 @@ namespace QuestFantasy.Characters
             // Initialize combat system
             _combatSystem = new PlayerCombatSystem();
             _combatSystem.Initialize();
-            _combatSystem.OnAttackPerformed += (skillName) => 
+            _combatSystem.OnAttackPerformed += (skillName) =>
             {
                 GD.Print($"[Player] Used skill: {skillName}");
             };
@@ -169,7 +169,7 @@ namespace QuestFantasy.Characters
         {
             _inputHandler.EnsureInteractInputAction();
             _cameraManager.Initialize(this, CameraZoom);
-            _animationSystem.Initialize(this, 
+            _animationSystem.Initialize(this,
                 _animationConfig.StandFrame1Path, _animationConfig.StandFrame2Path,
                 _animationConfig.WalkFrame1Path, _animationConfig.WalkFrame2Path,
                 _animationConfig.AttackFrame1Path, _animationConfig.AttackFrame2Path, _animationConfig.AttackFrame3Path,
@@ -188,7 +188,7 @@ namespace QuestFantasy.Characters
         /// <summary>
         /// Get a read-only list of inventory items
         /// </summary>
-        public System.Collections.Generic.IReadOnlyList<Item> InventoryItems => 
+        public System.Collections.Generic.IReadOnlyList<Item> InventoryItems =>
             _inventorySystem?.Inventory?.Items.AsReadOnly() ?? new System.Collections.Generic.List<Item>().AsReadOnly();
 
         /// <summary>
@@ -219,7 +219,7 @@ namespace QuestFantasy.Characters
                 GD.PrintErr("[Player] Attributes not initialized");
                 return;
             }
-            
+
             var jobBonuses = CurrentJob?.BaseAbilities ?? new Abilities();
             var equipmentBonuses = _equipmentSystem?.GetAllEquipmentBonuses() ?? new Abilities();
 

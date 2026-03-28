@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Attributes;
@@ -65,13 +66,13 @@ namespace QuestFantasy.Core.Data.Items
 
             var slots = new[] { Head, Body, Arms, Legs, Shoes };
             int total = 0;
-            
+
             foreach (var equipment in slots)
             {
                 if (equipment?.EquipmentAbilities != null)
                     total += statSelector(equipment.EquipmentAbilities);
             }
-            
+
             return total;
         }
 
@@ -88,12 +89,12 @@ namespace QuestFantasy.Core.Data.Items
     {
         public EquipmentType EquipmentType { get; set; }
         public Abilities EquipmentAbilities { get; set; }
-        
+
         public Equipment()
         {
             ItemType = ItemType.Equipment;
         }
-        
+
         public override void Use(Player player)
         {
             if (player == null)
@@ -101,7 +102,7 @@ namespace QuestFantasy.Core.Data.Items
                 GD.PrintErr($"[Equipment] {Name}: Cannot equip on null player");
                 return;
             }
-            
+
             int atkBonus = EquipmentAbilities?.Atk ?? 0;
             int defBonus = EquipmentAbilities?.Def ?? 0;
             GD.Print($"[Equipment] {player.EntityName} equipped {Name} (+{atkBonus} ATK, +{defBonus} DEF)");

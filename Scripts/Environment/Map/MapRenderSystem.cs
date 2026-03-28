@@ -12,9 +12,9 @@ public class MapRenderSystem
     public void Rebuild(MapTileData data, string boxClosedTexturePath, string boxOpenTexturePath)
     {
         // Check if we can skip rebuild
-        if (_cachedData == data && 
-            _cachedClosedPath == boxClosedTexturePath && 
-            _cachedOpenPath == boxOpenTexturePath && 
+        if (_cachedData == data &&
+            _cachedClosedPath == boxClosedTexturePath &&
+            _cachedOpenPath == boxOpenTexturePath &&
             _mapTexture != null)
         {
             return; // Already built with same parameters
@@ -142,7 +142,7 @@ public class MapRenderSystem
 
             // Calculate world position (top-left of tile)
             Vector2 worldPos = new Vector2(tileX * data.TileSize, tileY * data.TileSize);
-            
+
             // Scale texture to fill the entire tile
             Vector2 boxSize = new Vector2(data.TileSize, data.TileSize);
             Rect2 destRect = new Rect2(worldPos, boxSize);
@@ -158,7 +158,7 @@ public class MapRenderSystem
             int tileX = (int)boxTile.x;
             int tileY = (int)boxTile.y;
 
-            Color boxColor = data.OpenedBoxes[tileX, tileY] 
+            Color boxColor = data.OpenedBoxes[tileX, tileY]
                 ? new Color(0.7f, 0.7f, 0.7f)  // Gray for opened boxes
                 : GameConstants.MapColors.Box;
 

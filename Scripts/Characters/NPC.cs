@@ -1,5 +1,7 @@
 using System;
+
 using Godot;
+
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
 
@@ -13,9 +15,9 @@ namespace QuestFantasy.Characters
         public string Dialogue { get; set; } = "Hello, traveler!";
         public Bag ShopInventory { get; private set; } = new Bag();
         public bool IsShopkeeper { get; set; }
-        
+
         public event Action<NPC> OnInteractionTriggered;
-        
+
         public override void _Ready()
         {
             // Initialize base character attributes
@@ -32,7 +34,7 @@ namespace QuestFantasy.Characters
                 GD.PrintErr($"[NPC] {EntityName}: Cannot interact with null player");
                 return;
             }
-            
+
             GD.Print($"[NPC] {EntityName} says: {Dialogue}");
             OnInteractionTriggered?.Invoke(this);
         }
@@ -64,7 +66,7 @@ namespace QuestFantasy.Characters
             player.AddGold(-tradePrice);
             player.AddItem(shopItem);
             GD.Print($"[NPC] {EntityName}: Thank you for your business!");
-            
+
             return true;
         }
 

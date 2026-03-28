@@ -58,7 +58,7 @@ namespace QuestFantasy.Core.Data.Attributes
         {
             int newMaxHP = vit * VIT_TO_HP_RATE;
             MaxHP = newMaxHP;
-            
+
             // Adjust current HP if it exceeds new max
             if (CurrentHP > MaxHP)
             {

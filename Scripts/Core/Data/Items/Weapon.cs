@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Attributes;
 
@@ -13,12 +14,12 @@ namespace QuestFantasy.Core.Data.Items
     {
         public WeaponType WeaponType { get; set; }
         public Abilities WeaponAbilities { get; set; }
-        
+
         public Weapon()
         {
             ItemType = ItemType.Weapon;
         }
-        
+
         public override void Use(Player player)
         {
             if (player == null)
@@ -26,7 +27,7 @@ namespace QuestFantasy.Core.Data.Items
                 GD.PrintErr($"[Weapon] {Name}: Cannot use weapon on null player");
                 return;
             }
-            
+
             GD.Print($"[Weapon] {player.EntityName} equipped {Name} (+{WeaponAbilities?.Atk ?? 0} ATK)");
             base.Use(player);
         }

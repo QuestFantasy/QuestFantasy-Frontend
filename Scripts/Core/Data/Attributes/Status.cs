@@ -9,7 +9,7 @@ namespace QuestFantasy.Core.Data.Attributes
     public class Status
     {
         public StatusType StatusType { get; set; }
-        
+
         /// <summary>
         /// Duration in seconds. Value of 0 or less means permanent until removed.
         /// </summary>
@@ -72,7 +72,7 @@ namespace QuestFantasy.Core.Data.Attributes
                     return 1f;
             }
         }
-        
+
         /// <summary>
         /// Update status duration. Returns true if status is still active.
         /// </summary>

@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 
@@ -40,7 +41,7 @@ namespace QuestFantasy.Core.Data.Attributes
     public class Skills : NameAndDescription
     {
         public Cooldown CoolDown;
-        
+
         /// <summary>
         /// Optional effect renderer for visual assets. Can be set by designers/artists.
         /// </summary>

@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Core.Data.Attributes;
 
 namespace QuestFantasy.Characters
@@ -11,16 +12,16 @@ namespace QuestFantasy.Characters
     {
         public int ExperienceReward { get; set; }
         public int LootGoldReward { get; set; }
-        
+
         public override void _Ready()
         {
             // Initialize base character attributes
             InitializeCharacter();
-            
+
             // Set up monster-specific defaults
             if (ExperienceReward <= 0)
                 ExperienceReward = 10;
-            
+
             if (LootGoldReward <= 0)
                 LootGoldReward = 5;
         }
@@ -39,12 +40,12 @@ namespace QuestFantasy.Characters
 
             // Simple level-based scaling: +1 per level
             int levelBonus = (int)(Level - 1);
-            
+
             Attributes.TotalAtk = Abilities.Atk + levelBonus;
             Attributes.TotalDef = Abilities.Def + levelBonus;
             Attributes.TotalSpd = Abilities.Spd + levelBonus;
             Attributes.TotalVit = Abilities.Vit + levelBonus;
-            
+
             // Update HP based on vitality
             if (Attributes.HP != null)
                 Attributes.HP.UpdateMax(Attributes.TotalVit);

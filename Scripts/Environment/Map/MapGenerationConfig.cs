@@ -99,15 +99,15 @@ public class MapGenerationConfig : Resource
         RoomTileSize = Mathf.Max(10, RoomTileSize);
         RoomsX = Mathf.Max(1, RoomsX);
         RoomsY = Mathf.Max(1, RoomsY);
-        
+
         BorderWallThicknessRatio = Mathf.Clamp(BorderWallThicknessRatio, 0.01f, 0.49f);
         ObstacleFillRate = Mathf.Clamp(ObstacleFillRate, 0f, 0.6f);
         PortalPairChance = Mathf.Clamp(PortalPairChance, 0f, 1f);
         ExitTriggerRadius = Mathf.Max(1f, ExitTriggerRadius);
-        
+
         HazardClusterMinTiles = Mathf.Max(1, HazardClusterMinTiles);
         HazardClusterMaxTiles = Mathf.Max(HazardClusterMinTiles, HazardClusterMaxTiles);
-        
+
         BoxCountMin = Mathf.Max(0, BoxCountMin);
         BoxCountMax = Mathf.Max(BoxCountMin, BoxCountMax);
     }

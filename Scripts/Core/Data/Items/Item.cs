@@ -1,5 +1,7 @@
 using System;
+
 using Godot;
+
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 
@@ -16,7 +18,7 @@ namespace QuestFantasy.Core.Data.Items
         public int Price { get; protected set; }
         public ItemType ItemType { get; protected set; }
         public int Quantity { get; set; } = 1;
-        
+
         public event Action<Item> OnItemUsed;
 
         /// <summary>
@@ -29,11 +31,11 @@ namespace QuestFantasy.Core.Data.Items
                 GD.PrintErr($"[Item] {Name}: Cannot use item on null player");
                 return;
             }
-            
+
             GD.Print($"[Item] {Name} used by {player.EntityName}");
             OnItemUsed?.Invoke(this);
         }
-        
+
         /// <summary>
         /// Validate if this item can be used
         /// </summary>

@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Attributes;
 
@@ -11,13 +12,13 @@ namespace QuestFantasy.Characters
     public abstract class Character : Creature
     {
         public long Level { get; protected set; }
-        
+
         public Status CurrentStatus { get; set; }
-        
+
         public Abilities Abilities { get; protected set; }
-        
+
         public Element Element { get; protected set; }
-        
+
         public Attributes Attributes { get; protected set; }
 
         /// <summary>
@@ -28,16 +29,16 @@ namespace QuestFantasy.Characters
         {
             if (Abilities == null)
                 Abilities = new Abilities();
-            
+
             if (Attributes == null)
                 Attributes = new Attributes();
-            
+
             if (Element == null)
                 Element = new Element { ElementType = ElementsTypes.Normal };
-            
+
             if (CurrentStatus == null)
                 CurrentStatus = new Status { StatusType = StatusType.Normal };
-            
+
             Level = 1;
         }
 
@@ -62,7 +63,7 @@ namespace QuestFantasy.Characters
                 return;
             }
         }
-        
+
         /// <summary>
         /// Apply damage to this character.
         /// </summary>
@@ -73,13 +74,13 @@ namespace QuestFantasy.Characters
                 GD.PrintErr($"[Character] {EntityName}: Cannot take damage, HP not initialized");
                 return;
             }
-            
+
             if (damage < 0)
             {
                 GD.PrintErr($"[Character] {EntityName}: Damage cannot be negative");
                 return;
             }
-            
+
             Attributes.HP.TakeDamage(damage);
         }
     }

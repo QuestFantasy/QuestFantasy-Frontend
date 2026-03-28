@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Core.Data.Attributes;
 
 namespace QuestFantasy.Characters.PlayerSystems

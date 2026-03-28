@@ -1,4 +1,5 @@
 using Godot;
+
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Attributes;

@@ -33,7 +33,7 @@ namespace QuestFantasy.Core.Data.Attributes
                 Godot.GD.PrintErr("[Abilities] Cannot increase by negative values");
                 return;
             }
-            
+
             Atk += atk;
             Def += def;
             Spd += spd;
@@ -50,13 +50,13 @@ namespace QuestFantasy.Core.Data.Attributes
                 Godot.GD.PrintErr("[Abilities] Cannot decrease by negative values");
                 return;
             }
-            
+
             Atk = System.Math.Max(0, Atk - atk);
             Def = System.Math.Max(0, Def - def);
             Spd = System.Math.Max(0, Spd - spd);
             Vit = System.Math.Max(0, Vit - vit);
         }
-        
+
         /// <summary>
         /// Get total ability value
         /// </summary>

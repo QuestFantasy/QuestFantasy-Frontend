@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Godot;
+
 using QuestFantasy.Core.Data.Items;
 
 namespace QuestFantasy.Systems.Inventory
@@ -14,22 +15,22 @@ namespace QuestFantasy.Systems.Inventory
     public class Bag
     {
         public List<Item> Items { get; set; } = new List<Item>();
-        
+
         /// <summary>
         /// Maximum number of item slots in this bag. 0 = unlimited.
         /// </summary>
         public int MaxSlots { get; set; } = 20;
-        
+
         /// <summary>
         /// Current number of occupied slots
         /// </summary>
         public int UsedSlots => Items.Count;
-        
+
         /// <summary>
         /// Check if bag has space for a new item
         /// </summary>
         public bool HasSpace() => MaxSlots <= 0 || UsedSlots < MaxSlots;
-        
+
         /// <summary>
         /// Add an item to the bag
         /// </summary>
@@ -40,18 +41,18 @@ namespace QuestFantasy.Systems.Inventory
                 GD.PrintErr("[Bag] Cannot add null item");
                 return false;
             }
-            
+
             if (!HasSpace())
             {
                 GD.PrintErr("[Bag] Bag is full!");
                 return false;
             }
-            
+
             Items.Add(item);
             GD.Print($"[Bag] Added {item.Name} (Slots: {UsedSlots}/{MaxSlots})");
             return true;
         }
-        
+
         /// <summary>
         /// Remove an item from the bag
         /// </summary>
@@ -59,10 +60,10 @@ namespace QuestFantasy.Systems.Inventory
         {
             if (item == null)
                 return false;
-            
+
             return Items.Remove(item);
         }
-        
+
         /// <summary>
         /// Find item by name
         /// </summary>
@@ -70,7 +71,7 @@ namespace QuestFantasy.Systems.Inventory
         {
             return Items.FirstOrDefault(i => i.Name == itemName);
         }
-        
+
         /// <summary>
         /// Get all items of a specific type
         /// </summary>
@@ -78,7 +79,7 @@ namespace QuestFantasy.Systems.Inventory
         {
             return Items.Where(i => i.ItemType == type).ToList();
         }
-        
+
         /// <summary>
         /// Clear all items from bag
         /// </summary>

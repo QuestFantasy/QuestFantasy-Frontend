@@ -65,7 +65,7 @@ namespace QuestFantasy.Characters.PlayerSystems
                 GD.PrintErr("[PlayerAnimationConfig] WARNING: Walk animation frame paths are missing");
             }
 
-            if (string.IsNullOrEmpty(AttackFrame1Path) || string.IsNullOrEmpty(AttackFrame2Path) || 
+            if (string.IsNullOrEmpty(AttackFrame1Path) || string.IsNullOrEmpty(AttackFrame2Path) ||
                 string.IsNullOrEmpty(AttackFrame3Path))
             {
                 GD.PrintErr("[PlayerAnimationConfig] WARNING: Attack animation frame paths are missing");

@@ -9,13 +9,13 @@ public static class GameConstants
     // ==================== Player Configuration ====================
     /// <summary>Player movement speed in pixels per second.</summary>
     public const float PLAYER_DEFAULT_MOVE_SPEED = 240f;
-    
+
     /// <summary>Conversion factor from speed stat points to pixels per second.</summary>
     public const float PLAYER_SPEED_TO_PIXELS_MULTIPLIER = 50f;
 
     /// <summary>Default player body dimensions in tiles.</summary>
     public static readonly Vector2 PLAYER_BODY_SIZE_IN_TILES = new Vector2(1.0f, 1.9f);
-    
+
     /// <summary>Default player collision body scale relative to sprite size.</summary>
     public static readonly Vector2 PLAYER_COLLISION_SCALE = new Vector2(0.88f, 0.94f);
 

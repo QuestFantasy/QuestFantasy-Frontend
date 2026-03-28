@@ -15,13 +15,13 @@ namespace QuestFantasy.Characters.PlayerSystems
     public class PlayerAnimationSystem
     {
         private Sprite _sprite;
-        
+
         // Stand animations
         private Texture[] _standFrames;
-        
+
         // Walk animations  
         private Texture[] _walkFrames;
-        
+
         // Attack animations
         private Texture[] _attackFrames;
 
@@ -31,7 +31,7 @@ namespace QuestFantasy.Characters.PlayerSystems
         private bool _hasAllFrames = false;
         private float _attackHoldTimer = 0f; // Extra time to hold last attack frame
 
-        public void Initialize(Node2D owner, string standFrame1Path, string standFrame2Path, 
+        public void Initialize(Node2D owner, string standFrame1Path, string standFrame2Path,
                                string walkFrame1Path, string walkFrame2Path,
                                string attackFrame1Path, string attackFrame2Path, string attackFrame3Path,
                                Vector2 bodySize)
@@ -66,7 +66,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             _standFrames = new[] { standFrame1, standFrame2 };
             _walkFrames = new[] { walkFrame1, walkFrame2 };
             _attackFrames = new[] { attackFrame1, attackFrame2, attackFrame3 };
-            
+
             RefreshScale(bodySize);
             ApplyCurrentFrame(1f);
         }
@@ -136,7 +136,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             // Very slow stand animation for idle breathing effect
             float frameDuration = 1.0f; // 1.0 second per frame
             _animationTimer += delta;
-            
+
             if (_animationTimer >= frameDuration)
             {
                 _animationTimer -= frameDuration;
@@ -154,7 +154,7 @@ namespace QuestFantasy.Characters.PlayerSystems
 
             float frameDuration = 1f / Mathf.Max(1f, walkAnimationFps);
             _animationTimer += delta;
-            
+
             if (_animationTimer >= frameDuration)
             {
                 _animationTimer -= frameDuration;
@@ -174,7 +174,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             _frameIndex = 0;
             _animationTimer = 0f;
             _attackHoldTimer = 0f;
-            
+
             GD.Print($"[PlayerAnimationSystem] Playing attack animation with {_attackFrames.Length} frames");
         }
 
