@@ -140,9 +140,12 @@ public class MapRenderSystem
 
             Texture textureToUse = data.OpenedBoxes[tileX, tileY] ? _boxOpenTexture : _boxClosedTexture;
 
-            // Calculate world position (center of tile)
-            Vector2 worldPos = data.TileToWorldCenter(tileX, tileY);
-            Rect2 destRect = new Rect2(worldPos - textureToUse.GetSize() / 2f, textureToUse.GetSize());
+            // Calculate world position (top-left of tile)
+            Vector2 worldPos = new Vector2(tileX * data.TileSize, tileY * data.TileSize);
+            
+            // Scale texture to fill the entire tile
+            Vector2 boxSize = new Vector2(data.TileSize, data.TileSize);
+            Rect2 destRect = new Rect2(worldPos, boxSize);
 
             node.DrawTextureRect(textureToUse, destRect, false);
         }

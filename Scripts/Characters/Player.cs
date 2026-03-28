@@ -25,10 +25,22 @@ namespace QuestFantasy.Characters
         [Export] public Vector2 BodySizeInTiles = new Vector2(1.0f, 1.9f);
         [Export] public Vector2 CollisionBodyScale = new Vector2(0.88f, 0.94f);
         [Export] public Vector2 CameraZoom = new Vector2(0.7f, 0.7f);
-        [Export] public float WalkAnimationFps = 10f;
-        [Export] public string WalkFrame1Path = "res://Assets/Characters/character_R1.png";
-        [Export] public string WalkFrame2Path = "res://Assets/Characters/character_R2.png";
-        [Export] public string WalkFrame3Path = "res://Assets/Characters/character_R3.png";
+        
+        // Stand animation
+        [Export] public string StandFrame1Path = "res://Assets/Characters/stand.png";
+        [Export] public string StandFrame2Path = "res://Assets/Characters/stand2.png";
+        
+        // Walk animation (2 frames only) - very slow for visibility
+        [Export] public float WalkAnimationFps = 3f;
+        [Export] public string WalkFrame1Path = "res://Assets/Characters/walk.png";
+        [Export] public string WalkFrame2Path = "res://Assets/Characters/walk1.png";
+        
+        // Attack animation - slower
+        [Export] public float AttackAnimationFps = 5f;
+        [Export] public string AttackFrame1Path = "res://Assets/Characters/attack.png";
+        [Export] public string AttackFrame2Path = "res://Assets/Characters/attack1.png";
+        [Export] public string AttackFrame3Path = "res://Assets/Characters/attack2.png";
+        
         [Export] public float SpeedMultiplier = 50f; // Legacy: pixels per spd point
 
         public Jobs Job { get; private set; }
@@ -50,6 +62,7 @@ namespace QuestFantasy.Characters
         private float _lastFacingX = 1f;
 
         private Map _map;
+        private bool _isAttacking = false;
 
         public override void _Ready()
         {
@@ -81,6 +94,12 @@ namespace QuestFantasy.Characters
                 WalkAnimationFps = 10f;
             }
 
+            if (AttackAnimationFps <= 0)
+            {
+                GD.PrintErr("[Player] AttackAnimationFps must be > 0, setting to default 15");
+                AttackAnimationFps = 15f;
+            }
+
             // Validate body size
             if (BodySizeInTiles.x <= 0 || BodySizeInTiles.y <= 0)
             {
@@ -109,6 +128,20 @@ namespace QuestFantasy.Characters
                 GD.PrintErr("[Player] SpeedMultiplier must be > 0, setting to default 50");
                 SpeedMultiplier = 50f;
             }
+
+            // Validate animation frame paths are not empty
+            if (string.IsNullOrEmpty(StandFrame1Path) || string.IsNullOrEmpty(StandFrame2Path))
+            {
+                GD.Print("[Player] WARNING: Stand animation frame paths are missing");
+            }
+            if (string.IsNullOrEmpty(WalkFrame1Path) || string.IsNullOrEmpty(WalkFrame2Path))
+            {
+                GD.Print("[Player] WARNING: Walk animation frame paths are missing");
+            }
+            if (string.IsNullOrEmpty(AttackFrame1Path) || string.IsNullOrEmpty(AttackFrame2Path) || string.IsNullOrEmpty(AttackFrame3Path))
+            {
+                GD.Print("[Player] WARNING: Attack animation frame paths are missing");
+            }
         }
 
         /// <summary>
@@ -118,7 +151,11 @@ namespace QuestFantasy.Characters
         {
             _inputHandler.EnsureInteractInputAction();
             _cameraManager.Initialize(this, CameraZoom);
-            _animationSystem.Initialize(this, WalkFrame1Path, WalkFrame2Path, WalkFrame3Path, GetBodySizePixels());
+            _animationSystem.Initialize(this, 
+                StandFrame1Path, StandFrame2Path,
+                WalkFrame1Path, WalkFrame2Path,
+                AttackFrame1Path, AttackFrame2Path, AttackFrame3Path,
+                GetBodySizePixels());
             Update();
         }
 
@@ -200,13 +237,28 @@ namespace QuestFantasy.Characters
                 }
             }
 
-            // Handle skill input (Space for basic attack, or customizable)
+            // Handle skill input (Left mouse button)
             HandleSkillInput();
 
-            // Get movement input and apply movement
+            // Update attack animation
+            if (_isAttacking)
+            {
+                bool attackFinished = _animationSystem.UpdateAttackAnimation(delta, AttackAnimationFps, _lastFacingX);
+                if (attackFinished)
+                {
+                    _isAttacking = false;
+                    GD.Print("[Player] Attack animation finished");
+                }
+            }
+            else
+            {
+                // Animation timer to help visualize attack
+            }
+
+            // Get movement input and apply movement (but not during attack)
             Vector2 input = _inputHandler.GetMovementInput();
 
-            if (input.LengthSquared() > 0)
+            if (input.LengthSquared() > 0 && !_isAttacking) // Only move when not attacking
             {
                 if (Mathf.Abs(input.x) > 0.01f)
                 {
@@ -215,11 +267,18 @@ namespace QuestFantasy.Characters
 
                 Vector2 velocity = input.Normalized() * MoveSpeed;
                 _movementController.TryMove(this, _map, velocity * delta, GetCollisionBodySizePixels());
-                _animationSystem.UpdateWalkAnimation(true, delta, WalkAnimationFps, _lastFacingX);
+            }
+
+            // Update animation based on movement and attack state
+            if (_isAttacking)
+            {
+                // Attack animation already updated above
             }
             else
             {
-                _animationSystem.UpdateWalkAnimation(false, delta, WalkAnimationFps, _lastFacingX);
+                // Update walking or idle animation
+                bool isMoving = input.LengthSquared() > 0;
+                _animationSystem.UpdateAnimation(isMoving, delta, WalkAnimationFps, _lastFacingX);
             }
 
             // Handle portal and room transitions
@@ -239,13 +298,24 @@ namespace QuestFantasy.Characters
         private void HandleSkillInput()
         {
             // Use left mouse button for basic attack (first skill)
-            if (_inputHandler.IsSkillActivationPressed() && CurrentSkills.Count > 0)
+            if (_inputHandler.IsSkillActivationPressed() && CurrentSkills.Count > 0 && !_isAttacking)
             {
                 // Find nearest enemy within skill range to attack
                 Character nearestTarget = FindNearestEnemyInRange(CurrentSkills[0]);
+                
+                // Start attack animation (can perform even without target)
+                _isAttacking = true;
+                _animationSystem.PlayAttackAnimation();
+                
+                // Execute the skill if target found
                 if (nearestTarget != null)
                 {
                     CurrentSkills[0].TryExecute(this, nearestTarget);
+                    GD.Print($"[Player] Attacking target: {nearestTarget.EntityName}");
+                }
+                else
+                {
+                    GD.Print("[Player] Empty swing - no enemies nearby");
                 }
             }
         }
