@@ -71,12 +71,13 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return false;
             }
 
-            if (player == null || target == null)
+            if (player == null)
             {
-                GD.PrintErr("[PlayerCombatSystem] Player or target is null");
+                GD.PrintErr("[PlayerCombatSystem] Player is null");
                 return false;
             }
 
+            // Target can be null for empty swing attacks
             bool success = _currentSkills[skillIndex].TryExecute(player, target);
             if (success)
             {

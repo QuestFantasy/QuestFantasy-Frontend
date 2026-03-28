@@ -38,12 +38,20 @@ namespace QuestFantasy.Core.Data.Skills
         /// <summary>
         /// Calculate and apply damage to target.
         /// Damage formula: (Attacker ATK - Defender DEF × 0.5) × random variance
+        /// If target is null, perform an empty swing (no damage dealt).
         /// </summary>
         public override void Effect(Player player, Character target)
         {
-            if (player == null || target == null)
+            if (player == null)
             {
-                GD.PrintErr("BasicAttackSkill: Cannot execute attack with null parameters");
+                GD.PrintErr("BasicAttackSkill: Cannot execute attack with null player");
+                return;
+            }
+
+            // Allow empty swing if no target
+            if (target == null)
+            {
+                GD.Print("[BasicAttackSkill] Empty swing - no targets in range");
                 return;
             }
 

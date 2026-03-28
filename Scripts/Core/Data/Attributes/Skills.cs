@@ -62,20 +62,31 @@ namespace QuestFantasy.Core.Data.Attributes
 
         /// <summary>
         /// Main skill execution method. Call this to use the skill.
+        /// Target can be null for empty swing attacks.
         /// </summary>
         public virtual bool TryExecute(Player player, Character target)
         {
             if (!CoolDown.IsReady)
                 return false;
 
-            if (!IsTargetInRange(player.Position, target.Position))
+            // If target exists, check if it's in range
+            if (target != null && !IsTargetInRange(player.Position, target.Position))
                 return false;
 
             Effect(player, target);
             CoolDown.Start(GetCooldownDuration());
 
             // Render visual effect if renderer is available
-            EffectRenderer?.RenderEffect(player.Position, target.Position);
+            if (target != null && EffectRenderer != null)
+            {
+                EffectRenderer.RenderEffect(player.Position, target.Position);
+            }
+            else if (target == null && EffectRenderer != null)
+            {
+                // For empty swing, render effect at player position looking in facing direction
+                Vector2 effectPosition = player.Position + Vector2.Right.Rotated(player.Rotation) * MaxRange;
+                EffectRenderer.RenderEffect(player.Position, effectPosition);
+            }
 
             return true;
         }

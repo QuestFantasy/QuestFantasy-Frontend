@@ -61,20 +61,13 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return;
             }
 
-            // Find target
+            // Find target (optional - can attack with no target)
             Character targetCharacter = _combatSystem.FindNearestEnemyInRange(
                 player.Position,
                 basicSkill,
                 map);
 
-            // Only proceed if we have a target
-            if (targetCharacter == null)
-            {
-                GD.Print("[PlayerCombatController] No targets in range");
-                return;
-            }
-
-            // Execute the attack
+            // Execute the attack with or without a target
             _animationController.PlayAttackAnimation();
 
             bool success = _combatSystem.UseSkill(0, player, targetCharacter);
@@ -85,7 +78,14 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return;
             }
 
-            GD.Print($"[PlayerCombatController] Successfully attacked {targetCharacter.EntityName}");
+            if (targetCharacter != null)
+            {
+                GD.Print($"[PlayerCombatController] Successfully attacked {targetCharacter.EntityName}");
+            }
+            else
+            {
+                GD.Print("[PlayerCombatController] Performed attack - no targets in range (empty swing)");
+            }
         }
 
         /// <summary>
