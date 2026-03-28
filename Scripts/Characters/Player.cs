@@ -53,10 +53,62 @@ namespace QuestFantasy.Characters
 
         public override void _Ready()
         {
+            // Validate export parameters
+            ValidateParameters();
+            
             InitializeEntity();
             InitializePlayerSystems();
             InitializeSkills();
             SetPhysicsProcess(true);
+        }
+
+        /// <summary>
+        /// Validate and clamp exported parameters to safe values
+        /// </summary>
+        private void ValidateParameters()
+        {
+            // Validate movement speed
+            if (MoveSpeed <= 0)
+            {
+                GD.PrintErr("[Player] MoveSpeed must be > 0, setting to default 240");
+                MoveSpeed = 240f;
+            }
+
+            // Validate animation FPS
+            if (WalkAnimationFps <= 0)
+            {
+                GD.PrintErr("[Player] WalkAnimationFps must be > 0, setting to default 10");
+                WalkAnimationFps = 10f;
+            }
+
+            // Validate body size
+            if (BodySizeInTiles.x <= 0 || BodySizeInTiles.y <= 0)
+            {
+                GD.PrintErr("[Player] BodySizeInTiles must be > 0, setting to default (1, 1.9)");
+                BodySizeInTiles = new Vector2(1.0f, 1.9f);
+            }
+
+            // Validate collision body scale (should be between 0 and 1)
+            if (CollisionBodyScale.x <= 0 || CollisionBodyScale.x > 1 || 
+                CollisionBodyScale.y <= 0 || CollisionBodyScale.y > 1)
+            {
+                GD.PrintErr("[Player] CollisionBodyScale should be between 0 and 1, setting to default (0.88, 0.94)");
+                CollisionBodyScale = new Vector2(0.88f, 0.94f);
+            }
+
+            // Validate camera zoom
+            if (CameraZoom.x <= 0 || CameraZoom.y <= 0)
+            {
+                GD.PrintErr("[Player] CameraZoom must be > 0, setting to default (0.7, 0.7)");
+                CameraZoom = new Vector2(0.7f, 0.7f);
+            }
+
+            // Validate speed multiplier
+            if (SpeedMultiplier <= 0)
+            {
+                GD.PrintErr("[Player] SpeedMultiplier must be > 0, setting to default 50");
+                SpeedMultiplier = 50f;
+            }
         }
 
         /// <summary>
@@ -203,12 +255,52 @@ namespace QuestFantasy.Characters
         /// </summary>
         private Character FindNearestEnemyInRange(Skills skill)
         {
-            if (_map == null)
+            if (_map == null || skill == null)
                 return null;
 
-            // TODO: Implement based on your game's NPC/Monster tracking system
-            // For now, return null
-            return null;
+            float skillRange = skill.MaxRange;
+            Character nearestEnemy = null;
+            float nearestDistance = float.MaxValue;
+
+            // Get all children of the map node and look for Character instances
+            // TODO: Implement a proper enemy management system for better performance
+            if (_map.GetChildCount() > 0)
+            {
+                var allChildren = GetAllNodesOfType<Character>(_map);
+                foreach (var character in allChildren)
+                {
+                    if (character == null || character == this)
+                        continue;
+
+                    float distance = Position.DistanceTo(character.Position);
+                    if (distance <= skillRange && distance < nearestDistance)
+                    {
+                        nearestEnemy = character;
+                        nearestDistance = distance;
+                    }
+                }
+            }
+
+            return nearestEnemy;
+        }
+
+        /// <summary>
+        /// Helper to recursively find all nodes of a specific type
+        /// </summary>
+        private List<T> GetAllNodesOfType<T>(Node root) where T : Node
+        {
+            var result = new List<T>();
+            if (root is T tNode)
+            {
+                result.Add(tNode);
+            }
+
+            foreach (Node child in root.GetChildren())
+            {
+                result.AddRange(GetAllNodesOfType<T>(child));
+            }
+
+            return result;
         }
 
         public override void _Draw()

@@ -12,6 +12,13 @@ namespace QuestFantasy.Core.Data.Skills
     /// </summary>
     public class BasicAttackSkill : Attributes.Skills
     {
+        /// <summary>
+        /// Damage formula parameters
+        /// </summary>
+        private const float DAMAGE_VARIANCE_MIN = 0.9f;  // -10%
+        private const float DAMAGE_VARIANCE_MAX = 1.1f;  // +10%
+        private const float DAMAGE_REDUCTION_FACTOR = 0.5f; // Defense reduces damage
+
         public BasicAttackSkill()
         {
             Name = "Basic Attack";
@@ -19,36 +26,54 @@ namespace QuestFantasy.Core.Data.Skills
         }
 
         /// <summary>
-        /// Attack range in pixels. Default is 50 pixels.
+        /// Attack range in pixels.
         /// </summary>
-        public override float MaxRange => 50f;
+        public override float MaxRange => 60f;
 
         /// <summary>
         /// Cooldown duration in seconds.
         /// </summary>
-        public override float GetCooldownDuration() => 0.5f;
+        public override float GetCooldownDuration() => 0.3f;
 
         /// <summary>
-        /// Calculate damage and apply to target.
-        /// Damage formula: (Attacker ATK - Defender DEF) * random variance
+        /// Calculate and apply damage to target.
+        /// Damage formula: (Attacker ATK - Defender DEF × 0.5) × random variance
         /// </summary>
         public override void Effect(Player player, Character target)
         {
             if (player == null || target == null)
+            {
+                GD.PrintErr("BasicAttackSkill: Cannot execute attack with null parameters");
                 return;
+            }
 
-            // Calculate base damage
+            // Get attacker and defender stats
             int attackerAtk = player.Attributes?.TotalAtk ?? 1;
             int defenderDef = target.Attributes?.TotalDef ?? 0;
-            
-            int baseDamage = Mathf.Max(1, attackerAtk - defenderDef);
-            
+
+            // Calculate base damage: Defense reduces damage by 50% of its value
+            int baseDamage = Mathf.Max(1, attackerAtk - Mathf.FloorToInt(defenderDef * DAMAGE_REDUCTION_FACTOR));
+
             // Add damage variance (±10%)
-            float variance = GD.Randf() * 0.2f + 0.9f; // 0.9 to 1.1
+            float variance = GD.Randf() * (DAMAGE_VARIANCE_MAX - DAMAGE_VARIANCE_MIN) + DAMAGE_VARIANCE_MIN;
             int finalDamage = Mathf.RoundToInt(baseDamage * variance);
 
-            // TODO: Apply damage to target using HP system
-            GD.Print($"{player.EntityName} attacks {target.EntityName} for {finalDamage} damage!");
+            // Apply damage to target
+            if (target.Attributes?.HP != null)
+            {
+                target.Attributes.HP.TakeDamage(finalDamage);
+                GD.Print($"[COMBAT] {player.EntityName} attacks {target.EntityName} for {finalDamage} damage! Target HP: {target.Attributes.HP.CurrentHP}/{target.Attributes.HP.MaxHP}");
+
+                // Check if target died
+                if (!target.Attributes.HP.IsAlive)
+                {
+                    GD.Print($"[COMBAT] {target.EntityName} has been defeated!");
+                }
+            }
+            else
+            {
+                GD.PrintErr($"BasicAttackSkill: Target {target.EntityName} has no HP system");
+            }
         }
     }
 }
