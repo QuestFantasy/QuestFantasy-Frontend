@@ -56,16 +56,21 @@ namespace QuestFantasy.Characters
         public event Action<int> OnGoldChanged;
         public event Action<Item> OnInventoryChanged;
 
-        // Prototype systems integration
+        // ==================== Core Controllers ====================
+        // Each controller handles a specific aspect of player behavior
+        private PlayerPhysicsController _physicsController;
+        private PlayerAnimationController _animationController;
+        private PlayerCombatController _combatController;
+        private PlayerInteractionController _interactionController;
+
+        // ==================== Prototype systems (used by controllers) ====================
         private readonly PlayerInputHandler _inputHandler = new PlayerInputHandler();
         private readonly PlayerMovementController _movementController = new PlayerMovementController();
         private readonly PlayerAnimationSystem _animationSystem = new PlayerAnimationSystem();
         private readonly PlayerCameraManager _cameraManager = new PlayerCameraManager();
         private readonly PlayerRoomTracker _roomTracker = new PlayerRoomTracker();
-        private float _lastFacingX = 1f;
 
         private Map _map;
-        private bool _isAttacking = false;
 
         public override void _Ready()
         {
@@ -132,7 +137,7 @@ namespace QuestFantasy.Characters
             // Initialize character base
             InitializeCharacter();
 
-            // Create subsystems
+            // Initialize combat system
             _combatSystem = new PlayerCombatSystem();
             _combatSystem.Initialize();
             _combatSystem.OnAttackPerformed += (skillName) => 
@@ -140,13 +145,21 @@ namespace QuestFantasy.Characters
                 GD.Print($"[Player] Used skill: {skillName}");
             };
 
+            // Initialize inventory system
             _inventorySystem = new PlayerInventorySystem(initialGold: 0, maxInventorySlots: 20);
             _inventorySystem.OnExperienceChanged += (exp) => OnExperienceChanged?.Invoke(exp);
             _inventorySystem.OnGoldChanged += (gold) => OnGoldChanged?.Invoke(gold);
             _inventorySystem.OnInventoryChanged += (item) => OnInventoryChanged?.Invoke(item);
 
+            // Initialize equipment system
             _equipmentSystem = new PlayerEquipmentSystem();
             _equipmentSystem.OnEquipmentChanged += UpdateAttributes;
+
+            // Initialize controllers
+            _animationController = new PlayerAnimationController(_animationSystem, _animationConfig);
+            _physicsController = new PlayerPhysicsController(_movementController, _roomTracker, _cameraManager);
+            _combatController = new PlayerCombatController(_combatSystem, _inputHandler, _animationController);
+            _interactionController = new PlayerInteractionController(_inputHandler, _physicsController);
         }
 
         /// <summary>
@@ -221,125 +234,35 @@ namespace QuestFantasy.Characters
             if (_map == null)
                 return;
 
-            // Update room tracking
-            _roomTracker.Tick(delta);
+            // Get current movement input
+            Vector2 movementInput = _inputHandler.GetMovementInput();
 
-            // Handle respawn input
-            if (_inputHandler.IsRespawnPressed())
-            {
-                RespawnAtCurrentRoomStart();
-            }
+            // 1. Handle physics and movement
+            _physicsController.Update(
+                this,
+                _map,
+                movementInput,
+                GetCollisionBodySizePixels(),
+                MoveSpeed,
+                delta);
 
-            // Handle interaction input
-            if (_inputHandler.IsInteractPressed())
-            {
-                if (_map.TryOpenNearbyBox(Position))
-                {
-                    _roomTracker.InterferPortalWithInteraction();
-                }
-            }
+            // 2. Handle animations
+            _animationController.Update(movementInput, delta);
 
-            // Handle skill input (Left mouse button)
-            HandleSkillInput();
+            // 3. Handle combat and skills
+            _combatController.HandleSkillInput(this, _map);
 
-            // Update attack animation
-            if (_isAttacking)
-            {
-                bool attackFinished = _animationSystem.UpdateAttackAnimation(delta, _animationConfig.AttackAnimationFps, _lastFacingX);
-                if (attackFinished)
-                {
-                    _isAttacking = false;
-                    GD.Print("[Player] Attack animation finished");
-                }
-            }
+            // 4. Handle environmental interactions
+            _interactionController.HandleRespawnInput(this, _map);
+            _interactionController.HandleInteractionInput(_map, Position);
 
-            // Get movement input and apply movement (but not during attack)
-            Vector2 input = _inputHandler.GetMovementInput();
-
-            if (input.LengthSquared() > 0 && !_isAttacking)
-            {
-                if (Mathf.Abs(input.x) > 0.01f)
-                {
-                    _lastFacingX = input.x;
-                }
-
-                Vector2 velocity = input.Normalized() * MoveSpeed;
-                _movementController.TryMove(this, _map, velocity * delta, GetCollisionBodySizePixels());
-            }
-
-            // Update animation based on movement and attack state
-            if (_isAttacking)
-            {
-                // Attack animation already updated above
-            }
-            else
-            {
-                bool isMoving = input.LengthSquared() > 0;
-                _animationSystem.UpdateAnimation(isMoving, delta, _animationConfig.WalkAnimationFps, _lastFacingX);
-            }
-
-            // Handle portal and room transitions
-            TryHandlePortalTeleport();
-            UpdateRoomStateAndHandleExit();
-
-            // Update skill cooldowns
-            _combatSystem.UpdateSkillCooldowns(delta);
-        }
-
-        /// <summary>
-        /// Handle skill activation input (Left mouse button)
-        /// </summary>
-        private void HandleSkillInput()
-        {
-            var skills = _combatSystem?.CurrentSkills;
-            if (skills == null || skills.Count == 0)
-                return;
-
-            // Use left mouse button for basic attack (first skill)
-            if (_inputHandler.IsSkillActivationPressed() && !_isAttacking)
-            {
-                // Find nearest enemy within skill range to attack
-                Character nearestTarget = _combatSystem.FindNearestEnemyInRange(Position, skills[0], _map);
-
-                // Start attack animation (can perform even without target)
-                _isAttacking = true;
-                _animationSystem.PlayAttackAnimation();
-
-                // Execute the skill if target found
-                if (nearestTarget != null)
-                {
-                    _combatSystem.UseSkill(0, this, nearestTarget);
-                    GD.Print($"[Player] Attacking target: {nearestTarget.EntityName}");
-                }
-                else
-                {
-                    GD.Print("[Player] Empty swing - no enemies nearby");
-                }
-            }
+            // 5. Update drawing
+            Update();
         }
 
         public override void _Draw()
         {
             _animationSystem.DrawFallback(this, GetBodySizePixels());
-        }
-
-        private void LockCameraToRoom(Vector2 roomIndex)
-        {
-            if (_map == null)
-                return;
-
-            _cameraManager.LockToRoom(_map, roomIndex);
-        }
-
-        private void TryHandlePortalTeleport()
-        {
-            if (_map == null || !_roomTracker.IsPortalReady)
-                return;
-
-            if (_roomTracker.TryHandlePortal(_map, Position, out Vector2 destinationPosition))
-            {
-                TransitionToNewLocation(destinationPosition);
-            }
         }
 
         private Vector2 GetBodySizePixels()
@@ -351,6 +274,20 @@ namespace QuestFantasy.Characters
         private Vector2 GetCollisionBodySizePixels()
         {
             return GetBodySizePixels() * CollisionBodyScale;
+        }
+
+        // ==================== Helper Properties ====================
+        /// <summary>
+        /// Check if player is currently attacking
+        /// </summary>
+        public bool IsAttacking => _animationController?.IsAttacking ?? false;
+
+        /// <summary>
+        /// Update skill cooldowns (called by PhysicsController)
+        /// </summary>
+        public void UpdateSkillCooldowns(float delta)
+        {
+            _combatSystem?.UpdateSkillCooldowns(delta);
         }
 
         // ==================== Skill System ====================
@@ -428,41 +365,6 @@ namespace QuestFantasy.Characters
         {
             _equipmentSystem?.UnequipWeapon();
             UpdateAttributes();
-        }
-
-        // ==================== Room & Navigation ====================
-        private void UpdateRoomStateAndHandleExit()
-        {
-            if (_map == null)
-                return;
-
-            // Prioritize handling room exit (completion)
-            if (_roomTracker.TryHandleExit(_map, Position, out Vector2 exitNextPosition))
-            {
-                TransitionToNewLocation(exitNextPosition);
-                return;  // Prevent simultaneous room transitions within the same frame
-            }
-
-            // Then handle intra-room transitions
-            if (_roomTracker.TryUpdateRoomByPosition(_map, Position))
-            {
-                LockCameraToRoom(_roomTracker.CurrentRoomIndex);
-            }
-        }
-
-        private void TransitionToNewLocation(Vector2 newWorldPosition)
-        {
-            Position = newWorldPosition;
-            _roomTracker.InitializeFromPosition(_map, Position);
-            LockCameraToRoom(_roomTracker.CurrentRoomIndex);
-        }
-
-        private void RespawnAtCurrentRoomStart()
-        {
-            if (!_roomTracker.TryRespawnAtCurrentRoomStart(_map, out Vector2 nextPosition))
-                return;
-
-            Position = nextPosition;
         }
     }
 }
