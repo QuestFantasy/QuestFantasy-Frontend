@@ -58,6 +58,17 @@ public class AuthApiResult
             return nonFieldErrors[0].ToString();
         }
 
+        foreach (object keyObj in Data.Keys)
+        {
+            string key = keyObj?.ToString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(key) || !(Data[key] is Godot.Collections.Array errors) || errors.Count <= 0)
+            {
+                continue;
+            }
+
+            return errors[0]?.ToString() ?? fallback;
+        }
+
         return fallback;
     }
 }
@@ -69,7 +80,8 @@ public class AuthApiClient : Node
         None,
         ValidateToken,
         Login,
-        Register
+        Register,
+        Logout
     }
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
@@ -121,13 +133,14 @@ public class AuthApiClient : Node
             callback);
     }
 
-    public bool Register(string username, string email, string password, Action<AuthApiResult> callback)
+    public bool Register(string username, string email, string password, string confirmPassword, Action<AuthApiResult> callback)
     {
         var payload = new Godot.Collections.Dictionary
         {
             ["username"] = username,
             ["email"] = email,
-            ["password"] = password
+            ["password"] = password,
+            ["confirm_password"] = confirmPassword
         };
 
         return SendRequest(
@@ -136,6 +149,17 @@ public class AuthApiClient : Node
             HTTPClient.Method.Post,
             payload,
             null,
+            callback);
+    }
+
+    public bool Logout(string token, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.Logout,
+            "/api/auth/logout/",
+            HTTPClient.Method.Post,
+            null,
+            token,
             callback);
     }
 

@@ -4,7 +4,7 @@ using System;
 public class AuthView : CanvasLayer
 {
     public event Action<string, string> LoginSubmitted;
-    public event Action<string, string, string> RegisterSubmitted;
+    public event Action<string, string, string, string> RegisterSubmitted;
 
     private Label _statusLabel;
 
@@ -15,6 +15,7 @@ public class AuthView : CanvasLayer
     private LineEdit _registerUsernameInput;
     private LineEdit _registerEmailInput;
     private LineEdit _registerPasswordInput;
+    private LineEdit _registerConfirmPasswordInput;
     private Button _registerSubmitButton;
 
     public override void _Ready()
@@ -52,6 +53,39 @@ public class AuthView : CanvasLayer
     {
         Visible = false;
         SetStatus(string.Empty);
+    }
+
+    public void ClearInputs()
+    {
+        if (_loginCredentialInput != null)
+        {
+            _loginCredentialInput.Text = string.Empty;
+        }
+
+        if (_loginPasswordInput != null)
+        {
+            _loginPasswordInput.Text = string.Empty;
+        }
+
+        if (_registerUsernameInput != null)
+        {
+            _registerUsernameInput.Text = string.Empty;
+        }
+
+        if (_registerEmailInput != null)
+        {
+            _registerEmailInput.Text = string.Empty;
+        }
+
+        if (_registerPasswordInput != null)
+        {
+            _registerPasswordInput.Text = string.Empty;
+        }
+
+        if (_registerConfirmPasswordInput != null)
+        {
+            _registerConfirmPasswordInput.Text = string.Empty;
+        }
     }
 
     private void BuildUi()
@@ -148,6 +182,11 @@ public class AuthView : CanvasLayer
         _registerPasswordInput.Secret = true;
         registerTab.AddChild(_registerPasswordInput);
 
+        _registerConfirmPasswordInput = new LineEdit();
+        _registerConfirmPasswordInput.PlaceholderText = "Confirm password";
+        _registerConfirmPasswordInput.Secret = true;
+        registerTab.AddChild(_registerConfirmPasswordInput);
+
         _registerSubmitButton = new Button();
         _registerSubmitButton.Text = "Register and Log In";
         _registerSubmitButton.Connect("pressed", this, nameof(OnRegisterPressed));
@@ -173,13 +212,23 @@ public class AuthView : CanvasLayer
         string username = _registerUsernameInput?.Text?.Trim() ?? string.Empty;
         string email = _registerEmailInput?.Text?.Trim() ?? string.Empty;
         string password = _registerPasswordInput?.Text ?? string.Empty;
+        string confirmPassword = _registerConfirmPasswordInput?.Text ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        if (string.IsNullOrWhiteSpace(username)
+            || string.IsNullOrWhiteSpace(email)
+            || string.IsNullOrWhiteSpace(password)
+            || string.IsNullOrWhiteSpace(confirmPassword))
         {
-            SetStatus("Please fill in username, email, and password.");
+            SetStatus("Please fill in username, email, password, and password confirmation.");
             return;
         }
 
-        RegisterSubmitted?.Invoke(username, email, password);
+        if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
+        {
+            SetStatus("Password and confirmation must match.");
+            return;
+        }
+
+        RegisterSubmitted?.Invoke(username, email, password, confirmPassword);
     }
 }
