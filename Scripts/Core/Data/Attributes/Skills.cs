@@ -1,3 +1,4 @@
+using Godot;
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 
@@ -24,14 +25,73 @@ namespace QuestFantasy.Core.Data.Attributes
         }
     }
 
+    /// <summary>
+    /// Interface for skill effects that can be rendered with images/animations.
+    /// Allows async asset loading and visual effect handling for skill execution.
+    /// </summary>
+    public interface ISkillEffectRenderer
+    {
+        /// <summary>
+        /// Called when the skill is executed. Can load and display visual effects.
+        /// </summary>
+        void RenderEffect(Vector2 originPosition, Vector2 targetPosition);
+    }
+
     public class Skills : NameAndDescription
     {
         public Cooldown CoolDown;
+        
+        /// <summary>
+        /// Optional effect renderer for visual assets. Can be set by designers/artists.
+        /// </summary>
+        public ISkillEffectRenderer EffectRenderer { get; set; }
 
-        public virtual void Effect(Player player, Monster target)
+        /// <summary>
+        /// Maximum range in pixels at which the skill can be used.
+        /// </summary>
+        public virtual float MaxRange => 100f;
+
+        /// <summary>
+        /// Checks if a target is within skill range.
+        /// </summary>
+        public bool IsTargetInRange(Vector2 casterPosition, Vector2 targetPosition)
+        {
+            float distance = casterPosition.DistanceTo(targetPosition);
+            return distance <= MaxRange;
+        }
+
+        /// <summary>
+        /// Main skill execution method. Call this to use the skill.
+        /// </summary>
+        public virtual bool TryExecute(Player player, Character target)
+        {
+            if (!CoolDown.IsReady)
+                return false;
+
+            if (!IsTargetInRange(player.Position, target.Position))
+                return false;
+
+            Effect(player, target);
+            CoolDown.Start(GetCooldownDuration());
+
+            // Render visual effect if renderer is available
+            EffectRenderer?.RenderEffect(player.Position, target.Position);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Override this to implement skill-specific damage/effects.
+        /// </summary>
+        public virtual void Effect(Player player, Character target)
         {
             // TODO skill effect include damage rate, special effects, etc. to be implemented in subclasses
             // also will call Damage function in HP.cs to calculate damage dealt to target?
         }
+
+        /// <summary>
+        /// Override this to customize cooldown duration per skill.
+        /// </summary>
+        public virtual float GetCooldownDuration() => 1f;
     }
 }
