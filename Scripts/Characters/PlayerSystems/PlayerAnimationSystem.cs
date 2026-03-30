@@ -84,7 +84,13 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return;
             }
 
-            _sprite.Scale = new Vector2(bodySize.x / textureSize.x, bodySize.y / textureSize.y);
+            // Use a uniform scale to preserve texture aspect ratio so the sprite
+            // doesn't appear stretched while the collision/hitbox (separate)
+            // continues to use bodySize for physics calculations.
+            float scaleX = bodySize.x / textureSize.x;
+            float scaleY = bodySize.y / textureSize.y;
+            float uniformScale = Mathf.Min(scaleX, scaleY) * 2f; // scale textures 2x
+            _sprite.Scale = new Vector2(uniformScale, uniformScale);
         }
 
         /// <summary>
