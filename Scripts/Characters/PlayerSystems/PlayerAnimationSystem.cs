@@ -16,6 +16,9 @@ namespace QuestFantasy.Characters.PlayerSystems
     {
         private Sprite _sprite;
 
+        // Reference max texture size across all frames (used for consistent alignment)
+        private Vector2 _referenceTextureSize = Vector2.Zero;
+
         // Stand animations
         private Texture[] _standFrames;
 
@@ -78,18 +81,59 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return;
             }
 
-            Vector2 textureSize = _standFrames[0].GetSize();
+            // Compute maximum texture size across all frames so we use a
+            // consistent reference size. This prevents a single wider or
+            // taller attack frame from changing the visual width/height
+            // between frames.
+            Vector2 textureSize = Vector2.Zero;
+
+            if (_standFrames != null)
+            {
+                foreach (var t in _standFrames)
+                {
+                    if (t == null) continue;
+                    var s = t.GetSize();
+                    textureSize.x = Mathf.Max(textureSize.x, s.x);
+                    textureSize.y = Mathf.Max(textureSize.y, s.y);
+                }
+            }
+
+            if (_walkFrames != null)
+            {
+                foreach (var t in _walkFrames)
+                {
+                    if (t == null) continue;
+                    var s = t.GetSize();
+                    textureSize.x = Mathf.Max(textureSize.x, s.x);
+                    textureSize.y = Mathf.Max(textureSize.y, s.y);
+                }
+            }
+
+            if (_attackFrames != null)
+            {
+                foreach (var t in _attackFrames)
+                {
+                    if (t == null) continue;
+                    var s = t.GetSize();
+                    textureSize.x = Mathf.Max(textureSize.x, s.x);
+                    textureSize.y = Mathf.Max(textureSize.y, s.y);
+                }
+            }
+
             if (textureSize.x <= 0f || textureSize.y <= 0f)
             {
                 return;
             }
 
-            // Use a uniform scale to preserve texture aspect ratio so the sprite
-            // doesn't appear stretched while the collision/hitbox (separate)
-            // continues to use bodySize for physics calculations.
+            // Store reference size for alignment in ApplyCurrentFrame
+            _referenceTextureSize = textureSize;
+
+            // Use a uniform scale based on the max texture size so all frames
+            // render with consistent visual width/height. Keep the existing
+            // 2x multiplier for larger visuals.
             float scaleX = bodySize.x / textureSize.x;
             float scaleY = bodySize.y / textureSize.y;
-            float uniformScale = Mathf.Min(scaleX, scaleY) * 2f; // scale textures 2x
+            float uniformScale = Mathf.Min(scaleX, scaleY) * 3f;
             _sprite.Scale = new Vector2(uniformScale, uniformScale);
         }
 
@@ -247,6 +291,19 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (frameToUse != null)
             {
                 _sprite.Texture = frameToUse;
+
+                // Align frame vertically so bottoms match the reference size.
+                // When the current frame is shorter than the reference height,
+                // offset it downward by half the difference (because the sprite
+                // is centered). Multiply by scale to convert texture pixels to
+                // node space.
+                var frameSize = frameToUse.GetSize();
+                if (_referenceTextureSize.y > 0f)
+                {
+                    float dy = (_referenceTextureSize.y - frameSize.y) * 0.5f * _sprite.Scale.y;
+                    _sprite.Offset = new Vector2(0f, dy);
+                }
+
                 _sprite.FlipH = facingX < 0f;
             }
         }
