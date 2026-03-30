@@ -37,47 +37,92 @@ namespace QuestFantasy.Core.Data.Attributes
 
     public class HP
     {
+        private const int VIT_TO_HP_RATE = 10;
+
         public int MaxHP { get; private set; }
         public int CurrentHP { get; private set; }
-        public void UpdateMax(int Vit)
+
+        /// <summary>
+        /// Initialize HP with default value
+        /// </summary>
+        public HP()
         {
-            const int VIT_TO_HP_RATE = 10;
-            bool CurrentHPExceedsMax = CurrentHP >= MaxHP;
-            MaxHP = Vit * VIT_TO_HP_RATE;
-            if (CurrentHP > MaxHP || CurrentHPExceedsMax)
+            MaxHP = 10 * VIT_TO_HP_RATE; // 100 HP by default
+            CurrentHP = MaxHP;
+        }
+
+        /// <summary>
+        /// Update max HP based on Vitality stat
+        /// </summary>
+        public void UpdateMax(int vit)
+        {
+            int newMaxHP = vit * VIT_TO_HP_RATE;
+            MaxHP = newMaxHP;
+
+            // Adjust current HP if it exceeds new max
+            if (CurrentHP > MaxHP)
             {
-                CurrentHP = MaxHP; // Adjust current HP if it exceeds new max
+                CurrentHP = MaxHP;
             }
         }
-        public void TakeDamage(float rate, int attackerAtk, int Def, Status attackerStatus, Status defenderStatus)
+
+        /// <summary>
+        /// Apply damage to the character
+        /// </summary>
+        public void TakeDamage(int damage)
         {
-            if (attackerStatus == null || defenderStatus == null)
-            {
-                return; // Cannot calculate damage without status information
-            }
-            const float DAMAGE_RATE = 1f;
-            CurrentHP -= (int)((attackerAtk * attackerStatus.AtkRate() - defenderStatus.DefRate() * Def) * DAMAGE_RATE * rate);
+            if (damage < 0)
+                damage = 0;
+
+            CurrentHP -= damage;
             if (CurrentHP < 0)
             {
                 CurrentHP = 0;
             }
         }
+
+        /// <summary>
+        /// Restore HP
+        /// </summary>
+        public void Heal(int amount)
+        {
+            if (amount < 0)
+                amount = 0;
+
+            CurrentHP += amount;
+            if (CurrentHP > MaxHP)
+            {
+                CurrentHP = MaxHP;
+            }
+        }
+
+        /// <summary>
+        /// Check if character is alive
+        /// </summary>
+        public bool IsAlive => CurrentHP > 0;
     }
 
     public class Attributes
     {
-        public int TotalAtk { get; internal set; } // Attack: determines damage dealt to monsters and other players
-        public int TotalDef { get; internal set; } // Defense: reduces incoming damage
-        public int TotalSpd { get; internal set; } // Speed: determines walk speed and Skills cooldown
-        public int TotalVit { get; internal set; } // Vitality: determines max HP 
+        public int TotalAtk { get; set; } // Attack: determines damage dealt to monsters and other players
+        public int TotalDef { get; set; } // Defense: reduces incoming damage
+        public int TotalSpd { get; set; } // Speed: determines walk speed and Skills cooldown
+        public int TotalVit { get; set; } // Vitality: determines max HP 
         public Element Element { get; set; } = new Element { ElementType = ElementsTypes.Normal };
         public HP HP { get; private set; } = new HP();
+
+        /// <summary>
+        /// Update total attributes based on job, equipment, and buffs
+        /// </summary>
         public void Update(int newAtk, int newDef, int newSpd, int newVit)
         {
             TotalAtk = newAtk;
             TotalDef = newDef;
             TotalSpd = newSpd;
             TotalVit = newVit;
+
+            // Update HP max when vitality changes
+            HP.UpdateMax(newVit);
         }
     }
 }
