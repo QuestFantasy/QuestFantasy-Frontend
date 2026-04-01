@@ -179,7 +179,7 @@ public class AuthView : CanvasLayer
         registerTab.AddChild(_registerEmailInput);
 
         _registerPasswordInput = new LineEdit();
-        _registerPasswordInput.PlaceholderText = "Password (at least 8 characters)";
+        _registerPasswordInput.PlaceholderText = "Password (at least 8 characters and includes 1 uppercase letter, 1 lowercase letter, and 1 number)";
         _registerPasswordInput.Secret = true;
         registerTab.AddChild(_registerPasswordInput);
 
