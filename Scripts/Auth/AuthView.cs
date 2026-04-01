@@ -206,6 +206,10 @@ public class AuthView : CanvasLayer
         }
 
         LoginSubmitted?.Invoke(credential, password);
+
+        // Clear sensitive data immediately after use
+        _loginPasswordInput.Text = string.Empty;
+        GD.Print("[AuthView] Password cleared from memory");
     }
 
     private void OnRegisterPressed()
@@ -231,5 +235,10 @@ public class AuthView : CanvasLayer
         }
 
         RegisterSubmitted?.Invoke(username, email, password, confirmPassword);
+
+        // Clear sensitive data immediately after use
+        _registerPasswordInput.Text = string.Empty;
+        _registerConfirmPasswordInput.Text = string.Empty;
+        GD.Print("[AuthView] Passwords cleared from memory");
     }
 }
