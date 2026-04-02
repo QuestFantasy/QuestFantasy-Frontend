@@ -1,5 +1,7 @@
 using Godot;
 
+using QuestFantasy.Characters;
+
 /// <summary>
 /// Manages the playable prototype session lifecycle (map + player).
 /// Keeps session concerns out of Main for better modularity.
@@ -12,7 +14,7 @@ public class PrototypeGameplaySession : Node2D
     [Export] public int RoomsY = 2;
 
     private Map _map;
-    private MapPlayer _player;
+    private Player _player;
 
     public bool IsActive => _map != null && _player != null;
 
@@ -35,7 +37,7 @@ public class PrototypeGameplaySession : Node2D
         AddChild(_map);
         _map.RegenerateWithRandomSeed();
 
-        _player = new MapPlayer();
+        _player = new Player();
         AddChild(_player);
         _player.Position = _map.GetSpawnWorldPosition();
         _player.SetMap(_map);
