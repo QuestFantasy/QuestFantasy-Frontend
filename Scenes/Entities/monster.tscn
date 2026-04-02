@@ -7,7 +7,7 @@
 extents = Vector2( 32, 32 )
 
 [node name="Monster" type="Sprite"]
-scale = Vector2( 0.375, 0.375 )
+scale = Vector2( 0.25, 0.25 )
 texture = ExtResource( 2 )
 script = ExtResource( 1 )
 

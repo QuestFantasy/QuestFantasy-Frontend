@@ -2,3 +2,4 @@
 !.gitignore
 !.editorconfig
 !.githubmono_crash*.json
+mono_crash*.json
