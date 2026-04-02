@@ -179,9 +179,14 @@ public class AuthView : CanvasLayer
         registerTab.AddChild(_registerEmailInput);
 
         _registerPasswordInput = new LineEdit();
-        _registerPasswordInput.PlaceholderText = "Password (at least 8 characters and includes 1 uppercase letter, 1 lowercase letter, and 1 number)";
+        _registerPasswordInput.PlaceholderText = "Password";
         _registerPasswordInput.Secret = true;
         registerTab.AddChild(_registerPasswordInput);
+
+        var registerPasswordHint = new Label();
+        registerPasswordHint.Autowrap = true;
+        registerPasswordHint.Text = "Password rules: at least 8 characters, including 1 uppercase letter, 1 lowercase letter, and 1 number.";
+        registerTab.AddChild(registerPasswordHint);
 
         _registerConfirmPasswordInput = new LineEdit();
         _registerConfirmPasswordInput.PlaceholderText = "Confirm password";
