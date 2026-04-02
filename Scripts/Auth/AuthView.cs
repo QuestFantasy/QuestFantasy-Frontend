@@ -184,8 +184,10 @@ public class AuthView : CanvasLayer
         registerTab.AddChild(_registerPasswordInput);
 
         var registerPasswordHint = new Label();
-        registerPasswordHint.Autowrap = true;
-        registerPasswordHint.Text = "Password rules: at least 8 characters, including 1 uppercase letter, 1 lowercase letter, and 1 number.";
+        registerPasswordHint.Autowrap = false;
+        registerPasswordHint.Text = "Min 8 chars, 1 upper, 1 lower, 1 number.";
+        registerPasswordHint.RectScale = new Vector2(0.9f, 0.9f);
+        registerPasswordHint.Modulate = new Color(1f, 1f, 1f, 0.55f);
         registerTab.AddChild(registerPasswordHint);
 
         _registerConfirmPasswordInput = new LineEdit();
