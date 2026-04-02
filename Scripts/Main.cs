@@ -5,7 +5,7 @@ using QuestFantasy.Characters;
 public class Main : Node2D
 {
     private Map _map;
-    private MapPlayer _player;
+    private Player _player;
 
     public override void _Ready()
     {
@@ -22,7 +22,7 @@ public class Main : Node2D
         AddChild(_map);
         _map.RegenerateWithRandomSeed();
 
-        _player = new MapPlayer();
+        _player = new Player();
         AddChild(_player);
         _player.Position = _map.GetSpawnWorldPosition();
         _player.SetMap(_map);
