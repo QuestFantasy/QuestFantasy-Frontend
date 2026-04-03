@@ -70,7 +70,7 @@ namespace QuestFantasy.Core.Data.Skills
             // Apply damage to target
             if (target.Attributes?.HP != null)
             {
-                target.Attributes.HP.TakeDamage(finalDamage);
+                target.TakeDamage(finalDamage);
                 GD.Print($"[COMBAT] {player.EntityName} attacks {target.EntityName} for {finalDamage} damage! Target HP: {target.Attributes.HP.CurrentHP}/{target.Attributes.HP.MaxHP}");
 
                 // Check if target died

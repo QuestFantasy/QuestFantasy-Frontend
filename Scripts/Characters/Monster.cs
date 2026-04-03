@@ -56,6 +56,16 @@ namespace QuestFantasy.Characters
         private const float AttackCooldown = 1.5f;
         private const float AttackRange = 40.0f;
 
+        // Death state
+        private Texture _deadTexture;
+        private bool _isDead = false;
+        private float _deathTimer = 2.0f;
+
+        // Hit state
+        private Texture _hitTexture;
+        private bool _isHit = false;
+        private float _hitTimer = 0f;
+
         public Vector2 BodySizeInTiles = new Vector2(0.1f, 0.1f);
 
         public void SetEnvironment(Map map, Player player)
@@ -81,7 +91,7 @@ namespace QuestFantasy.Characters
         private bool IsPlayerSpawnPosition(Vector2 position)
         {
             if (_player == null) return false;
-            return position.DistanceTo(_player.GlobalPosition) <= _map.TileSize * 0.75f;
+            return position.DistanceTo(_player.GlobalPosition) <= _map.TileSize * 3.5f;  // Keep 3+ tiles away
         }
 
         private bool IsTileOccupiedByOtherMonster(int x, int y)
@@ -104,7 +114,7 @@ namespace QuestFantasy.Characters
             Vector2 spawnCenter = _map.GetSpawnWorldPosition();
             Vector2 fallbackPosition = spawnCenter;
 
-            for (int radius = 0; radius <= 5; radius++)
+            for (int radius = 0; radius <= 10; radius++)
             {
                 for (int x = -radius; x <= radius; x++)
                 {
@@ -155,7 +165,15 @@ namespace QuestFantasy.Characters
             _walkTexture = GD.Load<Texture>("res://Assets/Monster/slime_walk.png");
             _attackTexture1 = GD.Load<Texture>("res://Assets/Monster/slime_attack.png");
             _attackTexture2 = GD.Load<Texture>("res://Assets/Monster/slime_attack1.png");
+            _deadTexture = GD.Load<Texture>("res://Assets/Monster/slime_knockdown.png");
+            _hitTexture = GD.Load<Texture>("res://Assets/Monster/slime_hit.png");
             Texture = _standTexture;
+
+            if (Attributes != null)
+            {
+                Attributes.TotalAtk = 1;
+                Attributes.HP.SetMaxHPAndCurrentHP(5);
+            }
 
             GD.Print($"Monster ready at {GlobalPosition}");
         }
@@ -168,26 +186,60 @@ namespace QuestFantasy.Characters
 
         public override void UpdateAttributes()
         {
-            // Uses logic from main branch
             if (Attributes == null || Abilities == null)
             {
                 GD.PrintErr($"[Monster] {EntityName}: Attributes or Abilities not initialized");
                 return;
             }
 
-            int levelBonus = (int)(Level - 1);
+            // Fixed for current assignment spec
+            Attributes.TotalAtk = 1;
+            Attributes.TotalDef = 0;
+        }
 
-            Attributes.TotalAtk = Abilities.Atk + levelBonus;
-            Attributes.TotalDef = Abilities.Def + levelBonus;
-            Attributes.TotalSpd = Abilities.Spd + levelBonus;
-            Attributes.TotalVit = Abilities.Vit + levelBonus;
-
-            if (Attributes.HP != null)
-                Attributes.HP.UpdateMax(Attributes.TotalVit);
+        public override void TakeDamage(int damage)
+        {
+            base.TakeDamage(damage);
+            if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
+            {
+                _isHit = true;
+                _hitTimer = 0.2f;
+                Texture = _hitTexture;
+            }
         }
 
         public override void _PhysicsProcess(float delta)
         {
+            if (_isDead)
+            {
+                _deathTimer -= delta;
+                if (_deathTimer <= 0)
+                {
+                    QueueFree();
+                }
+                return;
+            }
+
+            if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)
+            {
+                Die();
+                return;
+            }
+
+            if (_isHit)
+            {
+                _hitTimer -= delta;
+                if (_hitTimer <= 0)
+                {
+                    _isHit = false;
+                }
+                else
+                {
+                    Texture = _hitTexture;
+                    return;
+                }
+            }
+
             if (_map == null || _player == null) return;
 
             if (_attackCooldownTimer > 0f)
@@ -358,7 +410,46 @@ namespace QuestFantasy.Characters
         private void MoveAndSlide()
         {
             Vector2 deltaMove = Velocity * GetPhysicsProcessDeltaTime();
-            GlobalPosition += deltaMove;
+            Vector2 newPos = GlobalPosition + deltaMove;
+            float minDistance = 24.0f; // Approx 1 tile minimal distance
+
+            // Anti-overlap with player
+            if (_player != null && _player.Attributes?.HP?.IsAlive == true)
+            {
+                if (newPos.DistanceTo(_player.GlobalPosition) < minDistance)
+                {
+                    Vector2 pushDir = (newPos - _player.GlobalPosition).Normalized();
+                    newPos = _player.GlobalPosition + pushDir * minDistance;
+                }
+            }
+
+            // Anti-overlap with other monsters
+            foreach (var monster in _activeMonsters)
+            {
+                if (monster == null || monster == this || monster.Attributes?.HP?.IsAlive != true) continue;
+                if (newPos.DistanceTo(monster.GlobalPosition) < minDistance)
+                {
+                    Vector2 pushDir = (newPos - monster.GlobalPosition).Normalized();
+                    if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0); // fallback
+                    newPos = monster.GlobalPosition + pushDir * minDistance;
+                }
+            }
+
+            // Check wall collision if we pushed
+            if (_map != null && !_map.CanMoveTo(GetBodyRect(newPos)))
+            {
+                // If push implies wall breach, ignore push if natural movement is fine
+                if (_map.CanMoveTo(GetBodyRect(GlobalPosition + deltaMove)))
+                {
+                    newPos = GlobalPosition + deltaMove;
+                }
+                else
+                {
+                    newPos = GlobalPosition; // Completely stuck
+                }
+            }
+
+            GlobalPosition = newPos;
         }
 
         private Rect2 GetBodyRect(Vector2 centerPosition)
@@ -479,9 +570,22 @@ namespace QuestFantasy.Characters
             return new Vector2(gX, gY);
         }
 
+        private void Die()
+        {
+            _isDead = true;
+            Texture = _deadTexture;
+            Velocity = Vector2.Zero;
+            GD.Print($"[Monster] {EntityName} Died");
+        }
+
         public override void Attack()
         {
             GD.Print($"Monster {EntityName} attacks with {Attributes?.TotalAtk} ATK!");
+            if (_player != null && _player.Attributes?.HP != null)
+            {
+                _player.TakeDamage(Attributes?.TotalAtk ?? 1);
+                GD.Print($"[COMBAT] {EntityName} attacks Player for {Attributes?.TotalAtk ?? 1} damage! Player HP: {_player.Attributes.HP.CurrentHP}/{_player.Attributes.HP.MaxHP}");
+            }
         }
     }
 }
