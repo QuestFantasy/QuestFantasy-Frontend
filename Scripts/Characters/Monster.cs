@@ -42,9 +42,19 @@ namespace QuestFantasy.Characters
         // Animation logic
         private Texture _standTexture;
         private Texture _walkTexture;
+        private Texture _attackTexture1;
+        private Texture _attackTexture2;
         private float _animationTimer = 0f;
         private const float AnimationInterval = 0.2f;
         private bool _isWalkFrame = false;
+
+        // Attack logic
+        private bool _isAttacking = false;
+        private float _attackTimer = 0f;
+        private float _attackCooldownTimer = 0f;
+        private const float AttackDuration = 0.5f;
+        private const float AttackCooldown = 1.5f;
+        private const float AttackRange = 40.0f;
 
         public Vector2 BodySizeInTiles = new Vector2(0.1f, 0.1f);
 
@@ -143,6 +153,8 @@ namespace QuestFantasy.Characters
 
             _standTexture = GD.Load<Texture>("res://Assets/Monster/slime_stand.png");
             _walkTexture = GD.Load<Texture>("res://Assets/Monster/slime_walk.png");
+            _attackTexture1 = GD.Load<Texture>("res://Assets/Monster/slime_attack.png");
+            _attackTexture2 = GD.Load<Texture>("res://Assets/Monster/slime_attack1.png");
             Texture = _standTexture;
 
             GD.Print($"Monster ready at {GlobalPosition}");
@@ -178,6 +190,30 @@ namespace QuestFantasy.Characters
         {
             if (_map == null || _player == null) return;
 
+            if (_attackCooldownTimer > 0f)
+            {
+                _attackCooldownTimer -= delta;
+            }
+
+            if (_isAttacking)
+            {
+                _attackTimer -= delta;
+                UpdateAttackAnimation(delta);
+
+                if (_attackTimer <= 0f)
+                {
+                    _isAttacking = false;
+                }
+                return; // Skip moving while attacking
+            }
+
+            float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
+            if (distanceToPlayer <= AttackRange && _attackCooldownTimer <= 0f)
+            {
+                PerformAttack();
+                return;
+            }
+
             if (_repathCooldown > 0f)
             {
                 _repathCooldown -= delta;
@@ -186,6 +222,31 @@ namespace QuestFantasy.Characters
             CheckPathflowAndStuck(delta);
             MoveProcess(delta);
             UpdateAnimation(delta);
+        }
+
+        private void PerformAttack()
+        {
+            _isAttacking = true;
+            _attackTimer = AttackDuration;
+            _attackCooldownTimer = AttackCooldown;
+            Velocity = Vector2.Zero; // Stop moving to attack
+            Attack();
+        }
+
+        private void UpdateAttackAnimation(float delta)
+        {
+            if (_attackTimer > AttackDuration / 2f)
+            {
+                Texture = _attackTexture1;
+            }
+            else
+            {
+                Texture = _attackTexture2;
+            }
+
+            // Face the player
+            if (_player.GlobalPosition.x < GlobalPosition.x) FlipH = true;
+            else if (_player.GlobalPosition.x > GlobalPosition.x) FlipH = false;
         }
 
         private void UpdateAnimation(float delta)
