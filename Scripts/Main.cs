@@ -22,8 +22,30 @@ public class Main : Node2D
 
     private void BuildPlayablePrototype()
     {
+        GetTree().Paused = false;
         _gameplaySession?.StartSession();
         _sidebarMenu?.SetMenuVisible(true);
+
+        if (_map != null)
+        {
+            _map.QueueFree();
+            _map = null;
+        }
+        if (_player != null)
+        {
+            _player.QueueFree();
+            _player = null;
+        }
+
+        // Clean up existing monsters
+        foreach (Node child in GetChildren())
+        {
+            if (child is Monster monster)
+            {
+                monster.QueueFree();
+            }
+        }
+
         _map = new Map();
         _map.TileSize = 24;
         _map.RoomTileSize = 100;
@@ -58,7 +80,8 @@ public class Main : Node2D
     {
         _authFlowController = new AuthFlowController
         {
-            BackendBaseUrl = BackendBaseUrl
+            BackendBaseUrl = BackendBaseUrl,
+            PauseMode = PauseModeEnum.Process
         };
         AddChild(_authFlowController);
         _authFlowController.Authenticated += BuildPlayablePrototype;
@@ -82,5 +105,6 @@ public class Main : Node2D
     {
         _gameplaySession?.StopSession();
         _sidebarMenu?.SetMenuVisible(false);
+        GetTree().Paused = true;
     }
 }
