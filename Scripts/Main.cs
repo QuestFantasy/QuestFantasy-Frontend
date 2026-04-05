@@ -6,24 +6,25 @@ public class Main : Node2D
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
 
-    private PrototypeGameplaySession _gameplaySession;
     private AuthFlowController _authFlowController;
     private SidebarMenu _sidebarMenu;
     private Map _map;
     private Player _player;
+    private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
 
 
     public override void _Ready()
     {
-        SetupGameplaySession();
         SetupSidebarMenu();
         SetupAuthFlowController();
     }
 
     private void BuildPlayablePrototype()
     {
-        _gameplaySession?.StartSession();
+        GetTree().Paused = false;
+        DestroyPlayableWorld();
         _sidebarMenu?.SetMenuVisible(true);
+
         _map = new Map();
         _map.TileSize = 24;
         _map.RoomTileSize = 100;
@@ -45,20 +46,16 @@ public class Main : Node2D
             var monster = (Monster)monsterScene.Instance();
             monster.SetEnvironment(_map, _player);
             AddChild(monster);
+            _spawnedMonsters.Add(monster);
         }
-    }
-
-    private void SetupGameplaySession()
-    {
-        _gameplaySession = new PrototypeGameplaySession();
-        AddChild(_gameplaySession);
     }
 
     private void SetupAuthFlowController()
     {
         _authFlowController = new AuthFlowController
         {
-            BackendBaseUrl = BackendBaseUrl
+            BackendBaseUrl = BackendBaseUrl,
+            PauseMode = PauseModeEnum.Process
         };
         AddChild(_authFlowController);
         _authFlowController.Authenticated += BuildPlayablePrototype;
@@ -80,7 +77,32 @@ public class Main : Node2D
 
     private void HandleLoggedOut()
     {
-        _gameplaySession?.StopSession();
+        DestroyPlayableWorld();
         _sidebarMenu?.SetMenuVisible(false);
+        GetTree().Paused = true;
+    }
+
+    private void DestroyPlayableWorld()
+    {
+        for (int i = 0; i < _spawnedMonsters.Count; i++)
+        {
+            if (Godot.Object.IsInstanceValid(_spawnedMonsters[i]))
+            {
+                _spawnedMonsters[i].QueueFree();
+            }
+        }
+        _spawnedMonsters.Clear();
+
+        if (Godot.Object.IsInstanceValid(_player))
+        {
+            _player.QueueFree();
+        }
+        _player = null;
+
+        if (Godot.Object.IsInstanceValid(_map))
+        {
+            _map.QueueFree();
+        }
+        _map = null;
     }
 }
