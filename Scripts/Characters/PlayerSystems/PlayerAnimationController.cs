@@ -31,8 +31,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void Update(Vector2 input, float delta)
         {
-            // Update player facing direction based on input
-            if (Mathf.Abs(input.x) > 0.01f)
+            // Update player facing direction based on input only if not attacking
+            if (!_isAttacking && Mathf.Abs(input.x) > 0.01f)
             {
                 _lastFacingX = input.x;
             }
