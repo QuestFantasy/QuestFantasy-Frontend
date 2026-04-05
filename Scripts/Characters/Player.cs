@@ -31,9 +31,9 @@ namespace QuestFantasy.Characters
         [Export] public string WalkFrame1Path = "res://Assets/Characters/walk.png";
         [Export] public string WalkFrame2Path = "res://Assets/Characters/walk1.png";
         [Export] public float AttackAnimationFps = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
-        [Export] public string AttackFrame1Path = "res://Assets/Characters/attack.png";
-        [Export] public string AttackFrame2Path = "res://Assets/Characters/attack1.png";
-        [Export] public string AttackFrame3Path = "res://Assets/Characters/attack2.png";
+        [Export] public string AttackFrame1Path = "res://Assets/Characters/slash.png";
+        [Export] public string AttackFrame2Path = "res://Assets/Characters/slash1.png";
+        [Export] public string AttackFrame3Path = "res://Assets/Characters/slash2.png";
 
         // ==================== Character Systems ====================
         public Jobs CurrentJob { get; private set; }
