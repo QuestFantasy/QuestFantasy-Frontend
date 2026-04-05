@@ -45,6 +45,14 @@ namespace QuestFantasy.Characters
         private PlayerAnimationConfig _animationConfig;
         private PlayerConfigValidator.PlayerConfig _playerConfig;
 
+        // Death state
+        private Texture _deadTexture;
+        private bool _isDead = false;
+        private float _respawnTimer = 0f;
+
+        // Hit state
+        private Texture _hitTexture;
+
         // Previously exposed properties now delegated to subsystems
         public int Experience => _inventorySystem?.Experience ?? 0;
         public int Gold => _inventorySystem?.Gold ?? 0;
@@ -174,6 +182,17 @@ namespace QuestFantasy.Characters
                 _animationConfig.WalkFrame1Path, _animationConfig.WalkFrame2Path,
                 _animationConfig.AttackFrame1Path, _animationConfig.AttackFrame2Path, _animationConfig.AttackFrame3Path,
                 GetBodySizePixels());
+
+            _deadTexture = GD.Load<Texture>("res://Assets/Characters/down.png");
+            _hitTexture = GD.Load<Texture>("res://Assets/Characters/hit.png");
+
+            // Set stats according to requirements
+            if (Attributes != null)
+            {
+                Attributes.TotalAtk = 1;
+                Attributes.HP.SetMaxHPAndCurrentHP(20);
+            }
+
             Update();
         }
 
@@ -229,8 +248,33 @@ namespace QuestFantasy.Characters
             Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit;
         }
 
+        public override void TakeDamage(int damage)
+        {
+            base.TakeDamage(damage);
+            if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
+            {
+                _animationController?.PlayHitAnimation(_hitTexture, 0.2f);
+            }
+        }
+
         public override void _PhysicsProcess(float delta)
         {
+            if (_isDead)
+            {
+                _respawnTimer -= delta;
+                if (_respawnTimer <= 0)
+                {
+                    Respawn();
+                }
+                return;
+            }
+
+            if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)
+            {
+                Die();
+                return;
+            }
+
             if (_map == null)
                 return;
 
@@ -274,6 +318,24 @@ namespace QuestFantasy.Characters
         private Vector2 GetCollisionBodySizePixels()
         {
             return GetBodySizePixels() * CollisionBodyScale;
+        }
+
+        private void Die()
+        {
+            _isDead = true;
+            _respawnTimer = 5.0f;
+            GD.Print("[Player] Died");
+            _animationController?.PlayDeadAnimation(_deadTexture);
+        }
+
+        private void Respawn()
+        {
+            _isDead = false;
+            Attributes.HP.SetMaxHPAndCurrentHP(20);
+            Position = _map?.GetSpawnWorldPosition() ?? Position;
+            _animationController?.Revive();
+            GD.Print("[Player] Respawned");
+            Update();
         }
 
         // ==================== Helper Properties ====================

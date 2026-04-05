@@ -38,6 +38,10 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (!_inputHandler.IsSkillActivationPressed())
                 return;
 
+            Vector2 mousePos = player.GetGlobalMousePosition();
+            float diffX = mousePos.x - player.GlobalPosition.x;
+            _animationController.SetFacingDirection(diffX);
+
             ExecuteSkill(player, map);
         }
 
@@ -64,7 +68,7 @@ namespace QuestFantasy.Characters.PlayerSystems
 
             // Find target (optional - can attack with no target)
             Character targetCharacter = _combatSystem.FindNearestEnemyInRange(
-                player.Position,
+                player.GlobalPosition,
                 basicSkill,
                 map);
 

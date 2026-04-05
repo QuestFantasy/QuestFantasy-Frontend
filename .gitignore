@@ -1,4 +1,5 @@
 .*
 !.gitignore
 !.editorconfig
-!.github
+!.githubmono_crash*.json
+mono_crash*.json

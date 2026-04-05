@@ -31,8 +31,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void Update(Vector2 input, float delta)
         {
-            // Update player facing direction based on input
-            if (Mathf.Abs(input.x) > 0.01f)
+            // Update player facing direction based on input only if not attacking
+            if (!_isAttacking && Mathf.Abs(input.x) > 0.01f)
             {
                 _lastFacingX = input.x;
             }
@@ -88,6 +88,28 @@ namespace QuestFantasy.Characters.PlayerSystems
         }
 
         /// <summary>
+        /// Trigger dead animation playback
+        /// </summary>
+        public void PlayDeadAnimation(Texture deadTexture)
+        {
+            _animationSystem.PlayDeadAnimation(deadTexture);
+        }
+
+        /// <summary>
+        /// Trigger hit animation playback
+        /// </summary>
+        public void PlayHitAnimation(Texture hitTexture, float duration = 0.2f)
+        {
+            _animationSystem.PlayHitAnimation(hitTexture, duration);
+        }
+
+        public void Revive()
+        {
+            _animationSystem.Revive();
+            _isAttacking = false;
+        }
+
+        /// <summary>
         /// Reset attack state without playing animation
         /// </summary>
         public void ResetAttackState()
@@ -101,6 +123,17 @@ namespace QuestFantasy.Characters.PlayerSystems
         public float GetFacingDirection()
         {
             return _lastFacingX;
+        }
+
+        /// <summary>
+        /// Explicitly set the facing direction
+        /// </summary>
+        public void SetFacingDirection(float facingX)
+        {
+            if (Mathf.Abs(facingX) > 0.01f)
+            {
+                _lastFacingX = Mathf.Sign(facingX);
+            }
         }
 
         /// <summary>

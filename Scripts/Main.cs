@@ -36,6 +36,16 @@ public class Main : Node2D
         AddChild(_player);
         _player.Position = _map.GetSpawnWorldPosition();
         _player.SetMap(_map);
+
+        // Spawn multiple Monsters (產生多隻怪物)
+        var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
+        int numMonstersToSpawn = 3; // 可以修改這個數字來控制怪物數量
+        for (int i = 0; i < numMonstersToSpawn; i++)
+        {
+            var monster = (Monster)monsterScene.Instance();
+            monster.SetEnvironment(_map, _player);
+            AddChild(monster);
+        }
     }
 
     private void SetupGameplaySession()

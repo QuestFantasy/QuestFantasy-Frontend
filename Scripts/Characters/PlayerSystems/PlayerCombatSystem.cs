@@ -89,7 +89,7 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// <summary>
         /// Find the nearest enemy within skill range
         /// </summary>
-        public Character FindNearestEnemyInRange(Vector2 playerPosition, Skills skill, Node mapRoot)
+        public Character FindNearestEnemyInRange(Vector2 playerGlobalPosition, Skills skill, Node mapRoot)
         {
             if (skill == null || mapRoot == null)
                 return null;
@@ -98,13 +98,13 @@ namespace QuestFantasy.Characters.PlayerSystems
             Character nearestEnemy = null;
             float nearestDistance = float.MaxValue;
 
-            var characters = GetAllNodesOfType<Character>(mapRoot);
+            var characters = GetAllNodesOfType<Character>(mapRoot.GetTree().Root);
             foreach (var character in characters)
             {
-                if (character == null)
+                if (character == null || character is Player || character.Attributes?.HP?.IsAlive != true)
                     continue;
 
-                float distance = playerPosition.DistanceTo(character.Position);
+                float distance = playerGlobalPosition.DistanceTo(character.GlobalPosition);
                 if (distance <= skillRange && distance < nearestDistance)
                 {
                     nearestEnemy = character;

@@ -9,7 +9,9 @@ namespace QuestFantasy.Characters.PlayerSystems
     {
         Idle,    // Standing still
         Walking, // Moving around
-        Attacking // Performing basic attack
+        Attacking, // Performing basic attack
+        Dead,     // Character is dead
+        Hit       // Character took damage
     }
 
     public class PlayerAnimationSystem
@@ -27,6 +29,13 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         // Attack animations
         private Texture[] _attackFrames;
+
+        // Dead animation
+        private Texture _deadTexture;
+
+        // Hit animation
+        private Texture _hitTexture;
+        private float _hitTimer = 0f;
 
         private AnimationState _currentState = AnimationState.Idle;
         private int _frameIndex = 0;
@@ -142,9 +151,22 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void UpdateAnimation(bool isMoving, float delta, float walkAnimationFps, float facingX)
         {
-            if (!_hasAllFrames)
+            if (!_hasAllFrames) return;
+
+            if (_currentState == AnimationState.Dead) return;
+
+            if (_currentState == AnimationState.Hit)
             {
-                return;
+                _hitTimer -= delta;
+                if (_hitTimer <= 0)
+                {
+                    _currentState = AnimationState.Idle;
+                }
+                else
+                {
+                    ApplyCurrentFrame(facingX);
+                    return;
+                }
             }
 
             // Determine target state
@@ -220,12 +242,42 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (!_hasAllFrames || _attackFrames == null || _attackFrames.Length == 0)
                 return;
 
+            if (_currentState == AnimationState.Dead) return;
+
             _currentState = AnimationState.Attacking;
             _frameIndex = 0;
             _animationTimer = 0f;
             _attackHoldTimer = 0f;
 
             GD.Print($"[PlayerAnimationSystem] Playing attack animation with {_attackFrames.Length} frames");
+        }
+
+        public void PlayDeadAnimation(Texture deadTexture)
+        {
+            if (_currentState == AnimationState.Dead) return;
+
+            _deadTexture = deadTexture;
+            _currentState = AnimationState.Dead;
+            ApplyCurrentFrame(1f); // Just apply the texture
+        }
+
+        public void PlayHitAnimation(Texture hitTexture, float duration)
+        {
+            if (_currentState == AnimationState.Dead) return;
+
+            _currentState = AnimationState.Hit;
+            _hitTexture = hitTexture;
+            _hitTimer = duration;
+            ApplyCurrentFrame(1f); // Keep facing (it will be updated next frame anyway, use 1f or last direction but 1f is just for parameter, FlipH will be recalculated in ApplyCurrentFrame if needed, but wait it flips based on passing facingX. It's fine)
+        }
+
+        public void Revive()
+        {
+            if (_currentState == AnimationState.Dead)
+            {
+                _currentState = AnimationState.Idle;
+                ApplyCurrentFrame(1f);
+            }
         }
 
         /// <summary>
@@ -284,6 +336,18 @@ namespace QuestFantasy.Characters.PlayerSystems
                     {
                         int safeIndex = Mathf.Clamp(_frameIndex, 0, _attackFrames.Length - 1);
                         frameToUse = _attackFrames[safeIndex];
+                    }
+                    break;
+                case AnimationState.Dead:
+                    if (_deadTexture != null)
+                    {
+                        frameToUse = _deadTexture;
+                    }
+                    break;
+                case AnimationState.Hit:
+                    if (_hitTexture != null)
+                    {
+                        frameToUse = _hitTexture;
                     }
                     break;
             }

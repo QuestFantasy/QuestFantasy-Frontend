@@ -52,6 +52,15 @@ namespace QuestFantasy.Core.Data.Attributes
         }
 
         /// <summary>
+        /// Explicitly set max and current HP directly
+        /// </summary>
+        public void SetMaxHPAndCurrentHP(int value)
+        {
+            MaxHP = value;
+            CurrentHP = value;
+        }
+
+        /// <summary>
         /// Update max HP based on Vitality stat
         /// </summary>
         public void UpdateMax(int vit)
