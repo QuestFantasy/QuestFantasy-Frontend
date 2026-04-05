@@ -1,108 +1,181 @@
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Prototype;
+
 public class Main : Node2D
 {
 
-    [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+	[Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
 
-    private AuthFlowController _authFlowController;
-    private SidebarMenu _sidebarMenu;
-    private Map _map;
-    private Player _player;
-    private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
+	private AuthFlowController _authFlowController;
+	private SidebarMenu _sidebarMenu;
+	private Map _map;
+	private Player _player;
+	private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
+	private LobbyManager _lobbyManager;
+	private bool _gameLoadedAlready = false;  // Guard against loading twice
 
 
-    public override void _Ready()
-    {
-        SetupSidebarMenu();
-        SetupAuthFlowController();
-    }
+	public override void _Ready()
+	{
+		SetupSidebarMenu();
+		SetupAuthFlowController();
+	}
 
-    private void BuildPlayablePrototype()
-    {
-        GetTree().Paused = false;
-        DestroyPlayableWorld();
-        _sidebarMenu?.SetMenuVisible(true);
+	private void BuildPlayablePrototype()
+	{
 
-        _map = new Map();
-        _map.TileSize = 24;
-        _map.RoomTileSize = 100;
-        _map.RoomsX = 2;
-        _map.RoomsY = 2;
-        AddChild(_map);
-        _map.RegenerateWithRandomSeed();
+		GetTree().Paused = false;
+		DestroyPlayableWorld();
+		_sidebarMenu?.SetMenuVisible(true);
 
-        _player = new Player();
-        AddChild(_player);
-        _player.Position = _map.GetSpawnWorldPosition();
-        _player.SetMap(_map);
+		_map = new Map();
+		_map.TileSize = 24;
+		_map.RoomTileSize = 100;
+		_map.RoomsX = 2;
+		_map.RoomsY = 2;
+		AddChild(_map);
+		_map.RegenerateWithRandomSeed();
 
-        // Spawn multiple Monsters (產生多隻怪物)
-        var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
-        int numMonstersToSpawn = 3; // 可以修改這個數字來控制怪物數量
-        for (int i = 0; i < numMonstersToSpawn; i++)
-        {
-            var monster = (Monster)monsterScene.Instance();
-            monster.SetEnvironment(_map, _player);
-            AddChild(monster);
-            _spawnedMonsters.Add(monster);
-        }
-    }
+		_player = new Player();
+		AddChild(_player);
+		_player.Position = _map.GetSpawnWorldPosition();
+		_player.SetMap(_map);
 
-    private void SetupAuthFlowController()
-    {
-        _authFlowController = new AuthFlowController
-        {
-            BackendBaseUrl = BackendBaseUrl,
-            PauseMode = PauseModeEnum.Process
-        };
-        AddChild(_authFlowController);
-        _authFlowController.Authenticated += BuildPlayablePrototype;
-        _authFlowController.LoggedOut += HandleLoggedOut;
-    }
+		// Spawn multiple Monsters (產生多隻怪物)
+		var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
+		int numMonstersToSpawn = 3; // 可以修改這個數字來控制怪物數量
+		for (int i = 0; i < numMonstersToSpawn; i++)
+		{
+			var monster = (Monster)monsterScene.Instance();
+			monster.SetEnvironment(_map, _player);
+			AddChild(monster);
+			_spawnedMonsters.Add(monster);
+		}
 
-    private void SetupSidebarMenu()
-    {
-        _sidebarMenu = new SidebarMenu();
-        AddChild(_sidebarMenu);
-        _sidebarMenu.SetMenuVisible(false);
-        _sidebarMenu.AddMenuItem("logout", "Logout", OnLogoutPressed);
-    }
+		// Don't use PrototypeGameplaySession anymore - using LobbyManager instead
+		// _gameplaySession?.StartSession();
 
-    private void OnLogoutPressed()
-    {
-        _authFlowController?.RequestLogout();
-    }
+		_sidebarMenu?.SetMenuVisible(true);
 
-    private void HandleLoggedOut()
-    {
-        DestroyPlayableWorld();
-        _sidebarMenu?.SetMenuVisible(false);
-        GetTree().Paused = true;
-    }
+		// Build lobby instead of directly loading a game map
+		BuildLobby();
+	}
 
-    private void DestroyPlayableWorld()
-    {
-        for (int i = 0; i < _spawnedMonsters.Count; i++)
-        {
-            if (Godot.Object.IsInstanceValid(_spawnedMonsters[i]))
-            {
-                _spawnedMonsters[i].QueueFree();
-            }
-        }
-        _spawnedMonsters.Clear();
 
-        if (Godot.Object.IsInstanceValid(_player))
-        {
-            _player.QueueFree();
-        }
-        _player = null;
+	private void SetupAuthFlowController()
+	{
+		_authFlowController = new AuthFlowController
+		{
+			BackendBaseUrl = BackendBaseUrl,
+			PauseMode = PauseModeEnum.Process
+		};
+		AddChild(_authFlowController);
+		_authFlowController.Authenticated += BuildPlayablePrototype;
+		_authFlowController.LoggedOut += HandleLoggedOut;
+	}
 
-        if (Godot.Object.IsInstanceValid(_map))
-        {
-            _map.QueueFree();
-        }
-        _map = null;
-    }
+	private void SetupSidebarMenu()
+	{
+		_sidebarMenu = new SidebarMenu();
+		AddChild(_sidebarMenu);
+		_sidebarMenu.SetMenuVisible(false);
+		_sidebarMenu.AddMenuItem("logout", "Logout", OnLogoutPressed);
+	}
+
+	private void OnLogoutPressed()
+	{
+		_authFlowController?.RequestLogout();
+	}
+
+	private void HandleLoggedOut()
+	{
+		DestroyPlayableWorld();
+		_sidebarMenu?.SetMenuVisible(false);
+		GetTree().Paused = true;
+		_sidebarMenu?.SetMenuVisible(false);
+
+		// Clean up any active gameplay/lobby scenes
+		_lobbyManager?.QueueFree();
+		_lobbyManager = null;
+		_map?.QueueFree();
+		_map = null;
+		_player = null;
+
+		GD.Print("[Main] Logged out - all game states cleaned");
+	}
+
+	private void DestroyPlayableWorld()
+	{
+		for (int i = 0; i < _spawnedMonsters.Count; i++)
+		{
+			if (Godot.Object.IsInstanceValid(_spawnedMonsters[i]))
+			{
+				_spawnedMonsters[i].QueueFree();
+			}
+		}
+		_spawnedMonsters.Clear();
+
+		if (Godot.Object.IsInstanceValid(_player))
+		{
+			_player.QueueFree();
+		}
+		_player = null;
+
+		if (Godot.Object.IsInstanceValid(_map))
+		{
+			_map.QueueFree();
+		}
+		_map = null;
+		
+	}
+	private void BuildLobby()
+	{
+		_lobbyManager = new LobbyManager();
+		AddChild(_lobbyManager);
+		_lobbyManager.DifficultySelected += OnDifficultySelected;
+	}
+
+	private void OnDifficultySelected(DifficultyLevel difficulty)
+	{
+		if (_gameLoadedAlready)
+			return;
+
+		_gameLoadedAlready = true;
+		_lobbyManager?.QueueFree();
+		_lobbyManager = null;
+		LoadGameLevel(difficulty);
+	}
+
+	private void LoadGameLevel(DifficultyLevel difficulty)
+	{
+		_map = new Map();
+		_map.TileSize = 24;
+		_map.RoomTileSize = 100;
+		_map.RoomsX = 2;
+		_map.RoomsY = 2;
+		AddChild(_map);
+		_map.RegenerateWithRandomSeed();
+
+		_player = new Player();
+		AddChild(_player);
+		_player.Position = _map.GetSpawnWorldPosition();
+		_player.SetMap(_map);
+
+		// Listen for when player reaches the exit to return to lobby
+		_player.GetCharacterController().ExitReached += ReturnToLobby;
+	}
+
+	private void ReturnToLobby()
+	{
+		GD.Print("[Main] Player reached exit - returning to lobby");
+		_gameLoadedAlready = false;
+		_map?.QueueFree();
+		_map = null;
+		_player = null;
+
+		// Rebuild the lobby for another session
+		BuildLobby();
+	}
 }

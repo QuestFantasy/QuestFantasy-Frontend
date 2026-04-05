@@ -1,3 +1,5 @@
+using System;
+
 using Godot;
 
 namespace QuestFantasy.Characters.PlayerSystems
@@ -11,6 +13,8 @@ namespace QuestFantasy.Characters.PlayerSystems
     /// </summary>
     public class PlayerPhysicsController
     {
+        public event Action ExitReached;  // Event fired when player reaches a level exit
+
         private readonly PlayerMovementController _movementController;
         private readonly PlayerRoomTracker _roomTracker;
         private readonly PlayerCameraManager _cameraManager;
@@ -76,9 +80,15 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         private void HandleRoomTransitions(Player player, Map map)
         {
+            // Skip all room exit handling if exits are disabled (e.g., in lobby)
+            if (map.DisableRoomExits)
+                return;
+
             // Prioritize room exit (level completion)
             if (_roomTracker.TryHandleExit(map, player.Position, out Vector2 exitPosition))
             {
+                // Fire event that player reached an exit
+                ExitReached?.Invoke();
                 TransitionToLocation(player, map, exitPosition);
                 return;  // Prevent multiple transitions in same frame
             }

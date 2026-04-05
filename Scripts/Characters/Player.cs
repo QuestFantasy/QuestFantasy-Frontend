@@ -176,6 +176,10 @@ namespace QuestFantasy.Characters
         private void InitializeEntity()
         {
             _inputHandler.EnsureInteractInputAction();
+
+            // Center the sprite on the player position
+            Offset = -GetBodySizePixels() / 2f;
+
             _cameraManager.Initialize(this, CameraZoom);
             _animationSystem.Initialize(this,
                 _animationConfig.StandFrame1Path, _animationConfig.StandFrame2Path,
@@ -229,6 +233,11 @@ namespace QuestFantasy.Characters
         public void ConfigureCameraBounds(Rect2 worldBounds)
         {
             _cameraManager.ConfigureBounds(worldBounds);
+        }
+
+        public PlayerPhysicsController GetCharacterController()
+        {
+            return _physicsController;
         }
 
         public override void UpdateAttributes()
