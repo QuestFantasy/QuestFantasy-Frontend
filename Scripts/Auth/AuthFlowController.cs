@@ -195,6 +195,7 @@ public class AuthFlowController : Node
             _authView.ClearInputs();
             _authView.SetStatus("Your session has expired. Please log in again.");
             _authView.ShowView();
+            LoggedOut?.Invoke();
             return;
         }
 

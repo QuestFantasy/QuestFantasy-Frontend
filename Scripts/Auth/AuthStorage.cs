@@ -52,7 +52,7 @@ public static class AuthStorage
 
         // Restore session data
         session.Token = token;
-        session.UserId = (long)(config.GetValue(AuthSessionSection, UserIdKey, 0L) ?? 0L);
+        session.UserId = System.Convert.ToInt64(config.GetValue(AuthSessionSection, UserIdKey, 0L));
         session.Username = config.GetValue(AuthSessionSection, UsernameKey, string.Empty) as string ?? string.Empty;
 
         // Restore issued and expiration times
