@@ -33,9 +33,9 @@ public class MapGenerationConfig : Resource
     // Maximum number of boxes to place per room.
     [Export] public int BoxCountMax = 20;
     // Texture used for unopened boxes.
-    [Export] public string BoxClosedTexturePath = "res://Assets/Box/Box_Closed.png";
+    [Export] public string BoxClosedTexturePath = "res://Assets/Box/treasure1_close.png";
     // Texture used for opened boxes.
-    [Export] public string BoxOpenTexturePath = "res://Assets/Box/Box_Open.png";
+    [Export] public string BoxOpenTexturePath = "res://Assets/Box/treasure1_open.png";
 
     public bool Validate(out string error)
     {

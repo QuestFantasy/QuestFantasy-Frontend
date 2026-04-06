@@ -19,9 +19,9 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         // Attack animation
         public float AttackAnimationFps { get; set; } = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
-        public string AttackFrame1Path { get; set; } = "res://Assets/Characters/attack.png";
-        public string AttackFrame2Path { get; set; } = "res://Assets/Characters/attack1.png";
-        public string AttackFrame3Path { get; set; } = "res://Assets/Characters/attack2.png";
+        public string AttackFrame1Path { get; set; } = "res://Assets/Characters/slash.png";
+        public string AttackFrame2Path { get; set; } = "res://Assets/Characters/slash1.png";
+        public string AttackFrame3Path { get; set; } = "res://Assets/Characters/slash2.png";
 
         /// <summary>
         /// Validate all animation settings and reset to defaults if invalid
@@ -83,9 +83,9 @@ namespace QuestFantasy.Characters.PlayerSystems
             WalkFrame1Path = "res://Assets/Characters/walk.png";
             WalkFrame2Path = "res://Assets/Characters/walk1.png";
             AttackAnimationFps = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
-            AttackFrame1Path = "res://Assets/Characters/attack.png";
-            AttackFrame2Path = "res://Assets/Characters/attack1.png";
-            AttackFrame3Path = "res://Assets/Characters/attack2.png";
+            AttackFrame1Path = "res://Assets/Characters/slash.png";
+            AttackFrame2Path = "res://Assets/Characters/slash1.png";
+            AttackFrame3Path = "res://Assets/Characters/slash2.png";
         }
     }
 }
