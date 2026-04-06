@@ -9,6 +9,10 @@ public class MapRenderSystem
     private Texture _exitOutTexture;
     private Texture _teleportInTexture;
     private Texture _teleportOutTexture;
+    private readonly System.Collections.Generic.Dictionary<MapScenarioType, Texture> _floorTextures = new System.Collections.Generic.Dictionary<MapScenarioType, Texture>();
+    private readonly System.Collections.Generic.Dictionary<MapScenarioType, Texture> _wallTextures = new System.Collections.Generic.Dictionary<MapScenarioType, Texture>();
+    private Texture _waterTexture;
+    private Texture _lavaTexture;
     private MapTileData _cachedData; // Cache to prevent unnecessary rebuilds
     private string _cachedClosedPath;
     private string _cachedOpenPath;
@@ -31,6 +35,7 @@ public class MapRenderSystem
         BuildMapTexture(data);
         LoadBoxTextures(boxClosedTexturePath, boxOpenTexturePath);
         LoadExitAndTeleportTextures();
+        LoadFloorTextures();
         RebuildBoxTileList(data);
     }
 
@@ -42,6 +47,8 @@ public class MapRenderSystem
         }
 
         node.DrawTextureRect(_mapTexture, new Rect2(Vector2.Zero, new Vector2(data.WorldPixelWidth, data.WorldPixelHeight)), false);
+        DrawFloorTiles(node, data);
+        DrawWallTiles(node, data);
         DrawPortals(node, data);
         DrawBoxes(node, data);
         DrawStartAndExitTiles(node, data);
@@ -173,6 +180,107 @@ public class MapRenderSystem
                 Rect2 dstRect = new Rect2(new Vector2(dx * data.TileSize, dy * data.TileSize), new Vector2(data.TileSize, data.TileSize));
                 node.DrawTextureRect(_teleportInTexture, dstRect, false);
                 drawn.Add(dKey);
+            }
+        }
+    }
+
+    private void LoadFloorTextures()
+    {
+        _floorTextures.Clear();
+        // Map scenarios to assets in Assets/Floor
+        _floorTextures[MapScenarioType.Grassland] = GD.Load<Texture>("res://Assets/Floor/grass.png");
+        _floorTextures[MapScenarioType.Mountain] = GD.Load<Texture>("res://Assets/Floor/ground.png");
+        _floorTextures[MapScenarioType.Lava] = GD.Load<Texture>("res://Assets/Floor/brick.png");
+        _floorTextures[MapScenarioType.Sea] = GD.Load<Texture>("res://Assets/Floor/sand.png");
+
+        // Water tiles (MapTileType.Water) use Assets/Floor/water.png
+        _waterTexture = GD.Load<Texture>("res://Assets/Floor/water.png");
+        // Lava tiles (MapTileType.Lava) use Assets/Floor/lava.png
+        _lavaTexture = GD.Load<Texture>("res://Assets/Floor/lava.png");
+
+        // Wall overlays per scenario
+        _wallTextures.Clear();
+        _wallTextures[MapScenarioType.Grassland] = GD.Load<Texture>("res://Assets/Floor/tree.png");
+        _wallTextures[MapScenarioType.Mountain] = GD.Load<Texture>("res://Assets/Floor/mountain.png");
+        _wallTextures[MapScenarioType.Lava] = GD.Load<Texture>("res://Assets/Floor/wall.png");
+        _wallTextures[MapScenarioType.Sea] = GD.Load<Texture>("res://Assets/Floor/sea.png");
+
+        // Log missing textures but continue (colors will be fallback)
+        foreach (var kv in _floorTextures)
+        {
+            if (kv.Value == null)
+            {
+                GD.Print($"MapRenderSystem: floor texture for {kv.Key} not found");
+            }
+        }
+        foreach (var kv in _wallTextures)
+        {
+            if (kv.Value == null)
+            {
+                GD.Print($"MapRenderSystem: wall texture for {kv.Key} not found");
+            }
+        }
+    }
+
+    private void DrawWallTiles(Node2D node, MapTileData data)
+    {
+        for (int x = 0; x < data.WorldTileWidth; x++)
+        {
+            for (int y = 0; y < data.WorldTileHeight; y++)
+            {
+                if (data.Tiles[x, y] != MapTileType.Wall)
+                    continue;
+
+                MapScenarioType scenario = GetScenarioByTile(data, x, y);
+                if (_wallTextures.TryGetValue(scenario, out Texture tex) && tex != null)
+                {
+                    Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                    Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                    node.DrawTextureRect(tex, destRect, false);
+                }
+            }
+        }
+    }
+
+    private void DrawFloorTiles(Node2D node, MapTileData data)
+    {
+        for (int x = 0; x < data.WorldTileWidth; x++)
+        {
+            for (int y = 0; y < data.WorldTileHeight; y++)
+            {
+                var tileType = data.Tiles[x, y];
+                if (tileType == MapTileType.Water)
+                {
+                    if (_waterTexture != null)
+                    {
+                        Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                        Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                        node.DrawTextureRect(_waterTexture, destRect, false);
+                    }
+                    continue;
+                }
+
+                if (tileType == MapTileType.Lava)
+                {
+                    if (_lavaTexture != null)
+                    {
+                        Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                        Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                        node.DrawTextureRect(_lavaTexture, destRect, false);
+                    }
+                    continue;
+                }
+
+                if (tileType != MapTileType.Floor)
+                    continue;
+
+                MapScenarioType scenario = GetScenarioByTile(data, x, y);
+                if (_floorTextures.TryGetValue(scenario, out Texture tex) && tex != null)
+                {
+                    Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                    Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                    node.DrawTextureRect(tex, destRect, false);
+                }
             }
         }
     }
