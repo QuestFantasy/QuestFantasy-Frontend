@@ -30,35 +30,6 @@ public class Main : Node2D
 		DestroyPlayableWorld();
 		_sidebarMenu?.SetMenuVisible(true);
 
-		_map = new Map();
-		_map.TileSize = 24;
-		_map.RoomTileSize = 100;
-		_map.RoomsX = 2;
-		_map.RoomsY = 2;
-		AddChild(_map);
-		_map.RegenerateWithRandomSeed();
-
-		_player = new Player();
-		AddChild(_player);
-		_player.Position = _map.GetSpawnWorldPosition();
-		_player.SetMap(_map);
-
-		// Spawn multiple Monsters (產生多隻怪物)
-		var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
-		int numMonstersToSpawn = 3; // 可以修改這個數字來控制怪物數量
-		for (int i = 0; i < numMonstersToSpawn; i++)
-		{
-			var monster = (Monster)monsterScene.Instance();
-			monster.SetEnvironment(_map, _player);
-			AddChild(monster);
-			_spawnedMonsters.Add(monster);
-		}
-
-		// Don't use PrototypeGameplaySession anymore - using LobbyManager instead
-		// _gameplaySession?.StartSession();
-
-		_sidebarMenu?.SetMenuVisible(true);
-
 		// Build lobby instead of directly loading a game map
 		BuildLobby();
 	}
@@ -163,6 +134,17 @@ public class Main : Node2D
 		_player.Position = _map.GetSpawnWorldPosition();
 		_player.SetMap(_map);
 
+		// Spawn monsters based on difficulty
+		int numMonstersToSpawn = ((int)difficulty + 1)*10;
+		var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
+		for (int i = 0; i < numMonstersToSpawn; i++)
+		{
+			var monster = (Monster)monsterScene.Instance();
+			monster.SetEnvironment(_map, _player);
+			AddChild(monster);
+			_spawnedMonsters.Add(monster);
+		}
+
 		// Listen for when player reaches the exit to return to lobby
 		_player.GetCharacterController().ExitReached += ReturnToLobby;
 	}
@@ -171,9 +153,19 @@ public class Main : Node2D
 	{
 		GD.Print("[Main] Player reached exit - returning to lobby");
 		_gameLoadedAlready = false;
-		_map?.QueueFree();
-		_map = null;
+		
+		// Clean up in correct order: Player first (to stop _PhysicsProcess from accessing Map), then Map
+		if (Godot.Object.IsInstanceValid(_player))
+		{
+			_player.QueueFree();
+		}
 		_player = null;
+		
+		if (Godot.Object.IsInstanceValid(_map))
+		{
+			_map.QueueFree();
+		}
+		_map = null;
 
 		// Rebuild the lobby for another session
 		BuildLobby();

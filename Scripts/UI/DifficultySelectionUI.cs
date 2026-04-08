@@ -28,7 +28,7 @@ public class DifficultySelectionUI : CanvasLayer
 		// Main container
 		var panelContainer = new PanelContainer();
 		panelContainer.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Center);
-		panelContainer.RectMinSize = new Vector2(300, 250);
+		panelContainer.RectMinSize = new Vector2(300, 350);
 		AddChild(panelContainer);
 
 		// Create a VBox for the entire panel content
@@ -53,6 +53,15 @@ public class DifficultySelectionUI : CanvasLayer
 
 		// Easy button
 		AddDifficultyButton("Easy", DifficultyLevel.Easy);
+
+		// Normal button
+		AddDifficultyButton("Normal", DifficultyLevel.Normal);
+
+		// Hard button
+		AddDifficultyButton("Hard", DifficultyLevel.Hard);
+
+		// Nightmare button
+		AddDifficultyButton("Nightmare", DifficultyLevel.Nightmare);
 
 		// Spacer
 		var spacer2 = new Control();
