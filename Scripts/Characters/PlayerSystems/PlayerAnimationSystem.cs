@@ -142,7 +142,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             // 2x multiplier for larger visuals.
             float scaleX = bodySize.x / textureSize.x;
             float scaleY = bodySize.y / textureSize.y;
-            float uniformScale = Mathf.Min(scaleX, scaleY) * 3f;
+            float uniformScale = Mathf.Min(scaleX, scaleY) *2.5f;
             _sprite.Scale = new Vector2(uniformScale, uniformScale);
         }
 
