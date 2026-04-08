@@ -22,171 +22,171 @@ using Godot;
 /// </summary>
 public static class AuthStorage
 {
-	private const string AuthConfigPath = "user://auth.cfg";
-	private const string AuthSessionSection = "auth_session";
-	private const string TokenKey = "token";
-	private const string UserIdKey = "user_id";
-	private const string UsernameKey = "username";
-	private const string IssuedAtKey = "issued_at";
-	private const string ExpiresAtKey = "expires_at";
+    private const string AuthConfigPath = "user://auth.cfg";
+    private const string AuthSessionSection = "auth_session";
+    private const string TokenKey = "token";
+    private const string UserIdKey = "user_id";
+    private const string UsernameKey = "username";
+    private const string IssuedAtKey = "issued_at";
+    private const string ExpiresAtKey = "expires_at";
 
-	/// <summary>
-	/// Loads the stored authentication session.
-	/// </summary>
-	public static bool TryLoadSession(out AuthSession session)
-	{
-		session = new AuthSession();
-		var config = new ConfigFile();
-		Error loadError = config.Load(AuthConfigPath);
+    /// <summary>
+    /// Loads the stored authentication session.
+    /// </summary>
+    public static bool TryLoadSession(out AuthSession session)
+    {
+        session = new AuthSession();
+        var config = new ConfigFile();
+        Error loadError = config.Load(AuthConfigPath);
 
-		if (loadError != Error.Ok)
-		{
-			return false;
-		}
+        if (loadError != Error.Ok)
+        {
+            return false;
+        }
 
-		string token = config.GetValue(AuthSessionSection, TokenKey, string.Empty) as string ?? string.Empty;
-		if (string.IsNullOrWhiteSpace(token))
-		{
-			return false;
-		}
+        string token = config.GetValue(AuthSessionSection, TokenKey, string.Empty) as string ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
 
-		// Restore session data
-		session.Token = token;
+        // Restore session data
+        session.Token = token;
 
-		// Safely parse UserId - handle both int and long types
-		var userIdValue = config.GetValue(AuthSessionSection, UserIdKey, 0L);
-		if (userIdValue is long longUserId)
-		{
-			session.UserId = longUserId;
-		}
-		else if (userIdValue is int intUserId)
-		{
-			session.UserId = intUserId;
-		}
-		else if (long.TryParse(userIdValue?.ToString() ?? "0", out long parsedUserId))
-		{
-			session.UserId = parsedUserId;
-		}
-		else
-		{
-			session.UserId = 0L;
-		}
+        // Safely parse UserId - handle both int and long types
+        var userIdValue = config.GetValue(AuthSessionSection, UserIdKey, 0L);
+        if (userIdValue is long longUserId)
+        {
+            session.UserId = longUserId;
+        }
+        else if (userIdValue is int intUserId)
+        {
+            session.UserId = intUserId;
+        }
+        else if (long.TryParse(userIdValue?.ToString() ?? "0", out long parsedUserId))
+        {
+            session.UserId = parsedUserId;
+        }
+        else
+        {
+            session.UserId = 0L;
+        }
 
-		session.Username = config.GetValue(AuthSessionSection, UsernameKey, string.Empty) as string ?? string.Empty;
+        session.Username = config.GetValue(AuthSessionSection, UsernameKey, string.Empty) as string ?? string.Empty;
 
-		// Restore issued and expiration times
-		if (long.TryParse(config.GetValue(AuthSessionSection, IssuedAtKey, string.Empty) as string ?? string.Empty, out long issuedTicks))
-		{
-			session.IssuedAt = new System.DateTime(issuedTicks);
-		}
+        // Restore issued and expiration times
+        if (long.TryParse(config.GetValue(AuthSessionSection, IssuedAtKey, string.Empty) as string ?? string.Empty, out long issuedTicks))
+        {
+            session.IssuedAt = new System.DateTime(issuedTicks);
+        }
 
-		if (long.TryParse(config.GetValue(AuthSessionSection, ExpiresAtKey, string.Empty) as string ?? string.Empty, out long expiresTicks))
-		{
-			session.ExpiresAt = new System.DateTime(expiresTicks);
-		}
+        if (long.TryParse(config.GetValue(AuthSessionSection, ExpiresAtKey, string.Empty) as string ?? string.Empty, out long expiresTicks))
+        {
+            session.ExpiresAt = new System.DateTime(expiresTicks);
+        }
 
-		GD.Print($"[AuthStorage] Session loaded: {session}");
-		return true;
-	}
+        GD.Print($"[AuthStorage] Session loaded: {session}");
+        return true;
+    }
 
-	/// <summary>
-	/// Legacy method for backward compatibility.
-	/// Prefer TryLoadSession() instead.
-	/// </summary>
-	public static bool TryLoadToken(out string token)
-	{
-		token = string.Empty;
-		if (TryLoadSession(out var session))
-		{
-			token = session.Token;
-			return true;
-		}
-		return false;
-	}
+    /// <summary>
+    /// Legacy method for backward compatibility.
+    /// Prefer TryLoadSession() instead.
+    /// </summary>
+    public static bool TryLoadToken(out string token)
+    {
+        token = string.Empty;
+        if (TryLoadSession(out var session))
+        {
+            token = session.Token;
+            return true;
+        }
+        return false;
+    }
 
-	/// <summary>
-	/// Saves the authentication session persistently.
-	/// </summary>
-	public static void SaveSession(AuthSession session)
-	{
-		if (session == null)
-		{
-			ClearSession();
-			return;
-		}
+    /// <summary>
+    /// Saves the authentication session persistently.
+    /// </summary>
+    public static void SaveSession(AuthSession session)
+    {
+        if (session == null)
+        {
+            ClearSession();
+            return;
+        }
 
-		var config = new ConfigFile();
+        var config = new ConfigFile();
 
-		// Load existing config to preserve other data
-		config.Load(AuthConfigPath);
+        // Load existing config to preserve other data
+        config.Load(AuthConfigPath);
 
-		config.SetValue(AuthSessionSection, TokenKey, session.Token ?? string.Empty);
-		config.SetValue(AuthSessionSection, UserIdKey, session.UserId);
-		config.SetValue(AuthSessionSection, UsernameKey, session.Username ?? string.Empty);
-		config.SetValue(AuthSessionSection, IssuedAtKey, session.IssuedAt.Ticks.ToString());
+        config.SetValue(AuthSessionSection, TokenKey, session.Token ?? string.Empty);
+        config.SetValue(AuthSessionSection, UserIdKey, session.UserId);
+        config.SetValue(AuthSessionSection, UsernameKey, session.Username ?? string.Empty);
+        config.SetValue(AuthSessionSection, IssuedAtKey, session.IssuedAt.Ticks.ToString());
 
-		if (session.ExpiresAt.HasValue)
-		{
-			config.SetValue(AuthSessionSection, ExpiresAtKey, session.ExpiresAt.Value.Ticks.ToString());
-		}
+        if (session.ExpiresAt.HasValue)
+        {
+            config.SetValue(AuthSessionSection, ExpiresAtKey, session.ExpiresAt.Value.Ticks.ToString());
+        }
 
-		Error saveError = config.Save(AuthConfigPath);
-		if (saveError != Error.Ok)
-		{
-			GD.PrintErr($"[AuthStorage] Failed to save session: {saveError}");
-		}
-		else
-		{
-			GD.Print($"[AuthStorage] Session saved: {session}");
-		}
-	}
+        Error saveError = config.Save(AuthConfigPath);
+        if (saveError != Error.Ok)
+        {
+            GD.PrintErr($"[AuthStorage] Failed to save session: {saveError}");
+        }
+        else
+        {
+            GD.Print($"[AuthStorage] Session saved: {session}");
+        }
+    }
 
-	/// <summary>
-	/// Legacy method for backward compatibility.
-	/// Prefer SaveSession() instead.
-	/// </summary>
-	public static void SaveToken(string token)
-	{
-		var session = new AuthSession { Token = token, IssuedAt = System.DateTime.UtcNow };
-		SaveSession(session);
-	}
+    /// <summary>
+    /// Legacy method for backward compatibility.
+    /// Prefer SaveSession() instead.
+    /// </summary>
+    public static void SaveToken(string token)
+    {
+        var session = new AuthSession { Token = token, IssuedAt = System.DateTime.UtcNow };
+        SaveSession(session);
+    }
 
-	/// <summary>
-	/// Clears the stored authentication session.
-	/// </summary>
-	public static void ClearSession()
-	{
-		var config = new ConfigFile();
-		if (config.Load(AuthConfigPath) == Error.Ok)
-		{
-			// Remove all auth-related keys
-			foreach (var key in new[] { TokenKey, UserIdKey, UsernameKey, IssuedAtKey, ExpiresAtKey })
-			{
-				if (config.HasSectionKey(AuthSessionSection, key))
-				{
-					// Godot doesn't have a direct delete method, so we load and re-save without the keys
-				}
-			}
+    /// <summary>
+    /// Clears the stored authentication session.
+    /// </summary>
+    public static void ClearSession()
+    {
+        var config = new ConfigFile();
+        if (config.Load(AuthConfigPath) == Error.Ok)
+        {
+            // Remove all auth-related keys
+            foreach (var key in new[] { TokenKey, UserIdKey, UsernameKey, IssuedAtKey, ExpiresAtKey })
+            {
+                if (config.HasSectionKey(AuthSessionSection, key))
+                {
+                    // Godot doesn't have a direct delete method, so we load and re-save without the keys
+                }
+            }
 
-			// Create new config without auth data
-			var newConfig = new ConfigFile();
-			Error saveError = newConfig.Save(AuthConfigPath);
-			if (saveError != Error.Ok)
-			{
-				GD.PrintErr($"[AuthStorage] Failed to clear session: {saveError}");
-			}
-			else
-			{
-				GD.Print("[AuthStorage] Session cleared");
-			}
-		}
-	}
+            // Create new config without auth data
+            var newConfig = new ConfigFile();
+            Error saveError = newConfig.Save(AuthConfigPath);
+            if (saveError != Error.Ok)
+            {
+                GD.PrintErr($"[AuthStorage] Failed to clear session: {saveError}");
+            }
+            else
+            {
+                GD.Print("[AuthStorage] Session cleared");
+            }
+        }
+    }
 
-	/// <summary>
-	/// Legacy method for backward compatibility.
-	/// </summary>
-	public static void ClearToken()
-	{
-		ClearSession();
-	}
+    /// <summary>
+    /// Legacy method for backward compatibility.
+    /// </summary>
+    public static void ClearToken()
+    {
+        ClearSession();
+    }
 }
