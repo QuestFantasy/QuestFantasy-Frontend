@@ -37,6 +37,10 @@ namespace QuestFantasy.Characters.PlayerSystems
             var basicAttack = new BasicAttackSkill();
             basicAttack.EffectRenderer = new Core.Data.Assets.BasicAttackEffectRenderer();
             _currentSkills.Add(basicAttack);
+
+            // Adventurer starter ranged skills.
+            _currentSkills.Add(new BowAttackSkill());
+            _currentSkills.Add(new FireballSkill());
         }
 
         /// <summary>

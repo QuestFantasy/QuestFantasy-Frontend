@@ -186,6 +186,7 @@ namespace QuestFantasy.Characters
         private void InitializeEntity()
         {
             _inputHandler.EnsureInteractInputAction();
+            _inputHandler.EnsureSkillInputActions();
             _cameraManager.Initialize(this, CameraZoom);
             _animationSystem.Initialize(this,
                 _animationConfig.StandFrame1Path, _animationConfig.StandFrame2Path,
@@ -431,7 +432,7 @@ namespace QuestFantasy.Characters
             var skills = new List<Skills>();
             if (snapshots == null)
             {
-                return skills;
+                snapshots = new List<PlayerSkillSnapshot>();
             }
 
             for (int i = 0; i < snapshots.Count; i++)
@@ -452,12 +453,26 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
+                if (string.Equals(snapshot.SkillId, "bow_attack", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new BowAttackSkill());
+                    continue;
+                }
+
+                if (string.Equals(snapshot.SkillId, "fireball", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new FireballSkill());
+                    continue;
+                }
+
                 var remoteSkill = new RemoteSkill(
                     snapshot.SkillId,
                     snapshot.Name,
                     snapshot.CooldownSeconds);
                 skills.Add(remoteSkill);
             }
+
+            EnsureAdventurerCoreSkills(skills);
 
             return skills;
         }
@@ -485,6 +500,16 @@ namespace QuestFantasy.Characters
                 return "basic_attack";
             }
 
+            if (skill is BowAttackSkill)
+            {
+                return "bow_attack";
+            }
+
+            if (skill is FireballSkill)
+            {
+                return "fireball";
+            }
+
             if (skill is RemoteSkill remoteSkill)
             {
                 return remoteSkill.SkillId;
@@ -494,6 +519,48 @@ namespace QuestFantasy.Characters
                 .Trim()
                 .ToLowerInvariant()
                 .Replace(" ", "_");
+        }
+
+        private static void EnsureAdventurerCoreSkills(List<Skills> skills)
+        {
+            bool hasSword = false;
+            bool hasBow = false;
+            bool hasFireball = false;
+
+            for (int i = 0; i < skills.Count; i++)
+            {
+                if (skills[i] is BasicAttackSkill)
+                {
+                    hasSword = true;
+                }
+                else if (skills[i] is BowAttackSkill)
+                {
+                    hasBow = true;
+                }
+                else if (skills[i] is FireballSkill)
+                {
+                    hasFireball = true;
+                }
+            }
+
+            if (!hasSword)
+            {
+                var basicAttack = new BasicAttackSkill
+                {
+                    EffectRenderer = new BasicAttackEffectRenderer(),
+                };
+                skills.Insert(0, basicAttack);
+            }
+
+            if (!hasBow)
+            {
+                skills.Add(new BowAttackSkill());
+            }
+
+            if (!hasFireball)
+            {
+                skills.Add(new FireballSkill());
+            }
         }
 
         private void HandleRoomChangedFromPhysics(Vector2 roomIndex, string reason)

@@ -10,6 +10,7 @@ public class PlayerHud : CanvasLayer
     private readonly Dictionary<string, string> _skillIconPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["basic_attack"] = "res://Assets/SkillAnimation/arrow.png",
+        ["bow_attack"] = "res://Assets/SkillAnimation/arrow.png",
         ["fireball"] = "res://Assets/SkillAnimation/fireball.png",
     };
 

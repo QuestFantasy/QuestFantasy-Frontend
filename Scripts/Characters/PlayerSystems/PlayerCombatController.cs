@@ -1,6 +1,7 @@
 using Godot;
 
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Data.Skills;
 
 namespace QuestFantasy.Characters.PlayerSystems
 {
@@ -16,6 +17,7 @@ namespace QuestFantasy.Characters.PlayerSystems
         private readonly PlayerCombatSystem _combatSystem;
         private readonly PlayerInputHandler _inputHandler;
         private readonly PlayerAnimationController _animationController;
+        private int _selectedSkillIndex;
 
         public PlayerCombatController(
             PlayerCombatSystem combatSystem,
@@ -32,6 +34,13 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void HandleSkillInput(Player player, Map map)
         {
+            int requestedSkillIndex = _inputHandler.ConsumeSelectedSkillIndex();
+            if (requestedSkillIndex >= 0)
+            {
+                _selectedSkillIndex = requestedSkillIndex;
+                GD.Print($"[PlayerCombatController] Selected skill slot {_selectedSkillIndex + 1}");
+            }
+
             if (_animationController.IsAttacking)
                 return;  // Cannot start new skill while attacking
 
@@ -57,10 +66,11 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return;
             }
 
-            var basicSkill = skills[0];
+            int skillIndex = Mathf.Clamp(_selectedSkillIndex, 0, skills.Count - 1);
+            var selectedSkill = skills[skillIndex];
 
             // Check if skill is on cooldown
-            if (!basicSkill.CoolDown.IsReady)
+            if (!selectedSkill.CoolDown.IsReady)
             {
                 GD.Print("[PlayerCombatController] Skill on cooldown");
                 return;
@@ -69,13 +79,13 @@ namespace QuestFantasy.Characters.PlayerSystems
             // Find target (optional - can attack with no target)
             Character targetCharacter = _combatSystem.FindNearestEnemyInRange(
                 player.GlobalPosition,
-                basicSkill,
+                selectedSkill,
                 map);
 
             // Execute the attack with or without a target
-            _animationController.PlayAttackAnimation();
+            _animationController.PlayAttackAnimation(GetAttackAnimationStyle(selectedSkill));
 
-            bool success = _combatSystem.UseSkill(0, player, targetCharacter);
+            bool success = _combatSystem.UseSkill(skillIndex, player, targetCharacter);
             if (!success)
             {
                 GD.PrintErr("[PlayerCombatController] Skill execution failed despite validation");
@@ -91,6 +101,21 @@ namespace QuestFantasy.Characters.PlayerSystems
             {
                 GD.Print("[PlayerCombatController] Performed attack - no targets in range (empty swing)");
             }
+        }
+
+        private static AttackAnimationStyle GetAttackAnimationStyle(Skills skill)
+        {
+            if (skill is BowAttackSkill)
+            {
+                return AttackAnimationStyle.Bow;
+            }
+
+            if (skill is FireballSkill)
+            {
+                return AttackAnimationStyle.Fireball;
+            }
+
+            return AttackAnimationStyle.Sword;
         }
 
         /// <summary>
