@@ -6,8 +6,8 @@ using Godot;
 
 using QuestFantasy.Characters.PlayerSystems;
 using QuestFantasy.Core.Data;
-using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Assets;
+using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Core.Data.Skills;
 
