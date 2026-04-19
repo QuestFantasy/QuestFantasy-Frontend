@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Godot;
 
@@ -36,6 +37,26 @@ namespace QuestFantasy.Characters.PlayerSystems
             var basicAttack = new BasicAttackSkill();
             basicAttack.EffectRenderer = new Core.Data.Assets.BasicAttackEffectRenderer();
             _currentSkills.Add(basicAttack);
+        }
+
+        /// <summary>
+        /// Replace all currently equipped/learned skills.
+        /// </summary>
+        public void SetSkills(IEnumerable<Skills> skills)
+        {
+            _currentSkills.Clear();
+
+            if (skills != null)
+            {
+                _currentSkills.AddRange(skills.Where(skill => skill != null));
+            }
+
+            if (_currentSkills.Count == 0)
+            {
+                var basicAttack = new BasicAttackSkill();
+                basicAttack.EffectRenderer = new Core.Data.Assets.BasicAttackEffectRenderer();
+                _currentSkills.Add(basicAttack);
+            }
         }
 
         /// <summary>

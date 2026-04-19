@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Godot;
 
 using QuestFantasy.Characters.PlayerSystems;
 using QuestFantasy.Core.Data;
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Data.Assets;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.Core.Data.Skills;
 
 namespace QuestFantasy.Characters
 {
@@ -63,6 +66,10 @@ namespace QuestFantasy.Characters
         public event Action<int> OnExperienceChanged;
         public event Action<int> OnGoldChanged;
         public event Action<Item> OnInventoryChanged;
+        public event Action<int> OnLevelChanged;
+        public event Action<int, int> OnHpChanged;
+        public event Action OnDied;
+        public event Action<Vector2, string> OnRoomEntered;
 
         // ==================== Core Controllers ====================
         // Each controller handles a specific aspect of player behavior
@@ -77,6 +84,7 @@ namespace QuestFantasy.Characters
         private readonly PlayerAnimationSystem _animationSystem = new PlayerAnimationSystem();
         private readonly PlayerCameraManager _cameraManager = new PlayerCameraManager();
         private readonly PlayerRoomTracker _roomTracker = new PlayerRoomTracker();
+        private Vector2 _lastKnownRoomIndex = new Vector2(float.MinValue, float.MinValue);
 
         private Map _map;
 
@@ -144,6 +152,7 @@ namespace QuestFantasy.Characters
         {
             // Initialize character base
             InitializeCharacter();
+            BindHpEvent();
 
             // Initialize combat system
             _combatSystem = new PlayerCombatSystem();
@@ -166,6 +175,7 @@ namespace QuestFantasy.Characters
             // Initialize controllers
             _animationController = new PlayerAnimationController(_animationSystem, _animationConfig);
             _physicsController = new PlayerPhysicsController(_movementController, _roomTracker, _cameraManager);
+            _physicsController.OnRoomChanged += HandleRoomChangedFromPhysics;
             _combatController = new PlayerCombatController(_combatSystem, _inputHandler, _animationController);
             _interactionController = new PlayerInteractionController(_inputHandler, _physicsController);
         }
@@ -190,7 +200,6 @@ namespace QuestFantasy.Characters
             if (Attributes != null)
             {
                 Attributes.TotalAtk = 1;
-                Attributes.HP.SetMaxHPAndCurrentHP(20);
             }
 
             Update();
@@ -223,6 +232,7 @@ namespace QuestFantasy.Characters
             {
                 _roomTracker.InitializeFromPosition(_map, Position);
                 _cameraManager.LockToRoom(_map, _roomTracker.CurrentRoomIndex);
+                _lastKnownRoomIndex = _roomTracker.CurrentRoomIndex;
             }
         }
 
@@ -326,16 +336,171 @@ namespace QuestFantasy.Characters
             _respawnTimer = 5.0f;
             GD.Print("[Player] Died");
             _animationController?.PlayDeadAnimation(_deadTexture);
+            OnDied?.Invoke();
         }
 
         private void Respawn()
         {
             _isDead = false;
-            Attributes.HP.SetMaxHPAndCurrentHP(20);
+            int maxHp = Attributes?.HP?.MaxHP ?? 100;
+            Attributes.HP.SetMaxHPAndCurrentHP(maxHp, maxHp);
             Position = _map?.GetSpawnWorldPosition() ?? Position;
             _animationController?.Revive();
             GD.Print("[Player] Respawned");
             Update();
+        }
+
+        public void SetLevel(int level)
+        {
+            int normalized = Mathf.Max(1, level);
+            if (Level == normalized)
+            {
+                return;
+            }
+
+            Level = normalized;
+            OnLevelChanged?.Invoke(normalized);
+        }
+
+        public void ApplyProfile(PlayerProfileSnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            SetLevel(snapshot.Level);
+            Attributes?.HP?.SetMaxHPAndCurrentHP(snapshot.HpMax, snapshot.HpCurrent);
+            _inventorySystem?.SetSnapshot(snapshot.Experience, snapshot.Gold);
+            _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills));
+
+            // Re-broadcast HP to refresh HUD after profile application.
+            if (Attributes?.HP != null)
+            {
+                OnHpChanged?.Invoke(Attributes.HP.CurrentHP, Attributes.HP.MaxHP);
+            }
+        }
+
+        public PlayerProfileSnapshot BuildProfileSnapshot()
+        {
+            var snapshot = new PlayerProfileSnapshot
+            {
+                Level = (int)Math.Max(1, Level),
+                Experience = Experience,
+                Gold = Gold,
+                HpMax = Attributes?.HP?.MaxHP ?? 100,
+                HpCurrent = Attributes?.HP?.CurrentHP ?? 100,
+                Skills = GetSkillSnapshots().ToList(),
+            };
+
+            return snapshot;
+        }
+
+        public IReadOnlyList<PlayerSkillSnapshot> GetSkillSnapshots()
+        {
+            var result = new List<PlayerSkillSnapshot>();
+            var currentSkills = _combatSystem?.CurrentSkills;
+            if (currentSkills == null)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < currentSkills.Count; i++)
+            {
+                var skill = currentSkills[i];
+                if (skill == null)
+                {
+                    continue;
+                }
+
+                result.Add(new PlayerSkillSnapshot
+                {
+                    SkillId = ResolveSkillId(skill),
+                    Name = skill.Name,
+                    CooldownSeconds = skill.GetCooldownDuration(),
+                    RemainingCooldownSeconds = skill.CoolDown.RemainingTime,
+                    DisplayOrder = i,
+                });
+            }
+
+            return result;
+        }
+
+        private List<Skills> BuildSkillsFromSnapshot(IReadOnlyList<PlayerSkillSnapshot> snapshots)
+        {
+            var skills = new List<Skills>();
+            if (snapshots == null)
+            {
+                return skills;
+            }
+
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                var snapshot = snapshots[i];
+                if (snapshot == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(snapshot.SkillId, "basic_attack", StringComparison.OrdinalIgnoreCase))
+                {
+                    var basicAttack = new BasicAttackSkill
+                    {
+                        EffectRenderer = new BasicAttackEffectRenderer(),
+                    };
+                    skills.Add(basicAttack);
+                    continue;
+                }
+
+                var remoteSkill = new RemoteSkill(
+                    snapshot.SkillId,
+                    snapshot.Name,
+                    snapshot.CooldownSeconds);
+                skills.Add(remoteSkill);
+            }
+
+            return skills;
+        }
+
+        private void BindHpEvent()
+        {
+            if (Attributes?.HP == null)
+            {
+                return;
+            }
+
+            Attributes.HP.OnChanged -= HandleHpChanged;
+            Attributes.HP.OnChanged += HandleHpChanged;
+        }
+
+        private void HandleHpChanged(int current, int max)
+        {
+            OnHpChanged?.Invoke(current, max);
+        }
+
+        private static string ResolveSkillId(Skills skill)
+        {
+            if (skill is BasicAttackSkill)
+            {
+                return "basic_attack";
+            }
+
+            if (skill is RemoteSkill remoteSkill)
+            {
+                return remoteSkill.SkillId;
+            }
+
+            return (skill.Name ?? "skill")
+                .Trim()
+                .ToLowerInvariant()
+                .Replace(" ", "_");
+        }
+
+        private void HandleRoomChangedFromPhysics(Vector2 roomIndex, string reason)
+        {
+            _lastKnownRoomIndex = roomIndex;
+            OnRoomEntered?.Invoke(roomIndex, reason ?? "room_enter");
+            GD.Print($"[ProgressSync] Entered room ({roomIndex.x}, {roomIndex.y}), reason={reason}.");
         }
 
         // ==================== Helper Properties ====================
