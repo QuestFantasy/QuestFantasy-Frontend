@@ -1,4 +1,5 @@
 using System;
+
 using Godot;
 
 public class DeathScreenUI : CanvasLayer
@@ -100,7 +101,7 @@ public class DeathScreenUI : CanvasLayer
             RectMinSize = new Vector2(200, 40),
             FocusMode = Control.FocusModeEnum.None
         };
-        
+
         var normalStyle = new StyleBoxFlat
         {
             BgColor = new Color(0.2f, 0.24f, 0.35f, 1f),
@@ -109,10 +110,10 @@ public class DeathScreenUI : CanvasLayer
             CornerRadiusBottomLeft = 5,
             CornerRadiusBottomRight = 5
         };
-        
+
         var hoverStyle = normalStyle.Duplicate() as StyleBoxFlat;
         if (hoverStyle != null) hoverStyle.BgColor = new Color(0.3f, 0.35f, 0.5f, 1f);
-        
+
         var pressedStyle = normalStyle.Duplicate() as StyleBoxFlat;
         if (pressedStyle != null) pressedStyle.BgColor = new Color(0.15f, 0.18f, 0.26f, 1f);
 

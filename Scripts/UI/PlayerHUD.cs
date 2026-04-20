@@ -44,10 +44,10 @@ public class PlayerHUD : CanvasLayer
             RectMinSize = new Vector2(400, 20),
             PercentVisible = false // hide default percentage
         };
-        
+
         var bgStyle = new StyleBoxFlat { BgColor = new Color(0.2f, 0.2f, 0.2f, 0.8f), CornerRadiusTopLeft = 10, CornerRadiusTopRight = 10, CornerRadiusBottomLeft = 10, CornerRadiusBottomRight = 10 };
         var fgStyle = new StyleBoxFlat { BgColor = new Color(0.2f, 0.8f, 0.2f, 1f), CornerRadiusTopLeft = 10, CornerRadiusTopRight = 10, CornerRadiusBottomLeft = 10, CornerRadiusBottomRight = 10 };
-        
+
         _hpBar.AddStyleboxOverride("bg", bgStyle);
         _hpBar.AddStyleboxOverride("fg", fgStyle);
 
