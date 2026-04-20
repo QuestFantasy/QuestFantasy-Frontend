@@ -10,6 +10,7 @@ public class Main : Node2D
 	private SidebarMenu _sidebarMenu;
 	private Map _map;
 	private Player _player;
+	private PlayerHUD _playerHUD;
 	private DeathScreenUI _deathScreen;
 	private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
 
@@ -40,6 +41,10 @@ public class Main : Node2D
 		_player.Position = _map.GetSpawnWorldPosition();
 		_player.SetMap(_map);
 		_player.OnPlayerDied += () => _deathScreen?.SetVisible(true);
+
+		_playerHUD = new PlayerHUD();
+		AddChild(_playerHUD);
+		_playerHUD.Initialize(_player);
 
 		// Spawn multiple Monsters (產生多隻怪物)
 		var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
@@ -111,6 +116,12 @@ public class Main : Node2D
 			}
 		}
 		_spawnedMonsters.Clear();
+
+		if (Godot.Object.IsInstanceValid(_playerHUD))
+		{
+			_playerHUD.QueueFree();
+		}
+		_playerHUD = null;
 
 		if (Godot.Object.IsInstanceValid(_player))
 		{

@@ -66,6 +66,9 @@ namespace QuestFantasy.Characters
 		private bool _isHit = false;
 		private float _hitTimer = 0f;
 
+		// Health Bar
+		private ProgressBar _healthBar;
+
 		public Vector2 BodySizeInTiles = new Vector2(0.1f, 0.1f);
 
 		public void SetEnvironment(Map map, Player player)
@@ -175,6 +178,19 @@ namespace QuestFantasy.Characters
 				Attributes.HP.SetMaxHPAndCurrentHP(5);
 			}
 
+			// Add HP bar
+			_healthBar = new ProgressBar
+			{
+				RectSize = new Vector2(96, 4),
+				RectPosition = new Vector2(-40, -70),
+				PercentVisible = false
+			};
+			var bgStyle = new StyleBoxFlat { BgColor = new Color(0.5f, 0.5f, 0.5f, 1f) };
+			var fgStyle = new StyleBoxFlat { BgColor = new Color(0.9f, 0.1f, 0.1f, 1f) };
+			_healthBar.AddStyleboxOverride("bg", bgStyle);
+			_healthBar.AddStyleboxOverride("fg", fgStyle);
+			AddChild(_healthBar);
+
 			GD.Print($"Monster ready at {GlobalPosition}");
 		}
 
@@ -218,6 +234,12 @@ namespace QuestFantasy.Characters
 					QueueFree();
 				}
 				return;
+			}
+
+			if (Attributes != null && Attributes.HP != null && _healthBar != null)
+			{
+				_healthBar.MaxValue = Attributes.HP.MaxHP;
+				_healthBar.Value = Attributes.HP.CurrentHP;
 			}
 
 			if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)
@@ -575,6 +597,7 @@ namespace QuestFantasy.Characters
 			_isDead = true;
 			Texture = _deadTexture;
 			Velocity = Vector2.Zero;
+			if (_healthBar != null) _healthBar.Visible = false;
 			GD.Print($"[Monster] {EntityName} Died");
 		}
 
