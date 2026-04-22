@@ -19,6 +19,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         private readonly PlayerAnimationController _animationController;
         private int _selectedSkillIndex;
 
+        public int SelectedSkillIndex => _selectedSkillIndex;
+
         public PlayerCombatController(
             PlayerCombatSystem combatSystem,
             PlayerInputHandler inputHandler,

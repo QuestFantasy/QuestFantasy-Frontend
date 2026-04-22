@@ -214,6 +214,11 @@ namespace QuestFantasy.Characters
             return _combatSystem?.CurrentSkills ?? new List<Skills>();
         }
 
+        public int GetSelectedSkillIndex()
+        {
+            return _combatController?.SelectedSkillIndex ?? 0;
+        }
+
         /// <summary>
         /// Get a read-only list of inventory items
         /// </summary>

@@ -24,7 +24,7 @@ namespace QuestFantasy.Core.Data.Skills
 
         private static Vector2 ResolveDirection(Player player, Character target)
         {
-            if (target != null)
+            if (target != null && Godot.Object.IsInstanceValid(target))
             {
                 Vector2 towardTarget = target.GlobalPosition - player.GlobalPosition;
                 if (towardTarget.LengthSquared() > 0.0001f)
@@ -44,6 +44,11 @@ namespace QuestFantasy.Core.Data.Skills
 
         private static void AttachToScene(Player player, SkillProjectileNode node)
         {
+            if (player == null || !Godot.Object.IsInstanceValid(player))
+            {
+                return;
+            }
+
             Node parent = player.GetTree()?.Root;
             if (parent == null || node == null)
             {
@@ -63,6 +68,7 @@ namespace QuestFantasy.Core.Data.Skills
         private const float ArrowImpactScale = 0.3f;
         private const float FireballProjectileScale = 0.5f;
         private const float FireballImpactScale = 0.6f;
+        private const float FireballFlightFrameDuration = 0.07f;
 
         private readonly List<Character> _damagedTargets = new List<Character>();
 
@@ -78,6 +84,7 @@ namespace QuestFantasy.Core.Data.Skills
         private bool _isAoe;
         private float _aoeRadius;
         private Texture _projectileTexture;
+        private Texture[] _flightFrames;
         private Texture[] _impactFrames;
         private float _projectileScale = FireballProjectileScale;
         private float _impactScale = FireballImpactScale;
@@ -86,6 +93,9 @@ namespace QuestFantasy.Core.Data.Skills
         private bool _impacting;
         private float _impactTimer;
         private int _impactFrameIndex;
+        private float _flightFrameTimer;
+        private int _flightFrameIndex = -1;
+        private float _flightFrameDuration = 0f;
 
         public static SkillProjectileNode CreateArrow(Player owner, Vector2 direction, float maxRange)
         {
@@ -104,6 +114,10 @@ namespace QuestFantasy.Core.Data.Skills
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
                 _projectileScale = ArrowProjectileScale,
                 _impactScale = ArrowImpactScale,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
+                },
                 _impactFrames = new[]
                 {
                     GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
@@ -128,6 +142,13 @@ namespace QuestFantasy.Core.Data.Skills
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/fireball.png"),
                 _projectileScale = FireballProjectileScale,
                 _impactScale = FireballImpactScale,
+                _flightFrameDuration = FireballFlightFrameDuration,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball1.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball2.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball3.png"),
+                },
                 _impactFrames = new[]
                 {
                     GD.Load<Texture>("res://Assets/SkillAnimation/fireball_hit.png"),
@@ -140,13 +161,18 @@ namespace QuestFantasy.Core.Data.Skills
 
         public override void _Ready()
         {
+            Texture firstFlightTexture = _projectileTexture;
+
             _sprite = new Sprite
             {
-                Texture = _projectileTexture,
+                Texture = firstFlightTexture,
                 Centered = true,
                 Scale = new Vector2(_projectileScale, _projectileScale),
             };
             AddChild(_sprite);
+
+            _flightFrameIndex = -1;
+            _flightFrameTimer = 0f;
 
             if (_direction.LengthSquared() < 0.0001f)
             {
@@ -160,11 +186,19 @@ namespace QuestFantasy.Core.Data.Skills
 
         public override void _Process(float delta)
         {
+            if (!IsOwnerAlive())
+            {
+                QueueFree();
+                return;
+            }
+
             if (_impacting)
             {
                 UpdateImpact(delta);
                 return;
             }
+
+            UpdateFlightAnimation(delta);
 
             Vector2 step = _direction * _speed * delta;
             Vector2 nextPosition = GlobalPosition + step;
@@ -192,7 +226,7 @@ namespace QuestFantasy.Core.Data.Skills
 
         private bool IsBlockedByWall(Vector2 position)
         {
-            if (_map == null)
+            if (_map == null || !Godot.Object.IsInstanceValid(_map))
             {
                 return false;
             }
@@ -203,7 +237,7 @@ namespace QuestFantasy.Core.Data.Skills
 
         private Character FindHitTarget(Vector2 position)
         {
-            if (_owner == null)
+            if (!IsOwnerAlive())
             {
                 return null;
             }
@@ -246,6 +280,25 @@ namespace QuestFantasy.Core.Data.Skills
                 _sprite.Scale = new Vector2(_impactScale, _impactScale);
                 _sprite.Rotation = 0f;
             }
+        }
+
+        private void UpdateFlightAnimation(float delta)
+        {
+            if (_sprite == null || _flightFrames == null || _flightFrames.Length <= 1)
+            {
+                return;
+            }
+
+            float duration = _flightFrameDuration > 0f ? _flightFrameDuration : FireballFlightFrameDuration;
+            _flightFrameTimer += delta;
+            if (_flightFrameTimer < duration)
+            {
+                return;
+            }
+
+            _flightFrameTimer = 0f;
+            _flightFrameIndex = (_flightFrameIndex + 1) % _flightFrames.Length;
+            _sprite.Texture = _flightFrames[_flightFrameIndex] ?? _sprite.Texture;
         }
 
         private void UpdateImpact(float delta)
@@ -294,7 +347,7 @@ namespace QuestFantasy.Core.Data.Skills
 
         private void ApplyDamage(Character target)
         {
-            if (target == null || _owner == null)
+            if (target == null || !Godot.Object.IsInstanceValid(target) || !IsOwnerAlive())
             {
                 return;
             }
@@ -317,6 +370,11 @@ namespace QuestFantasy.Core.Data.Skills
 
         private IEnumerable<Character> EnumerateEnemyCharacters()
         {
+            if (!IsOwnerAlive())
+            {
+                yield break;
+            }
+
             Node root = _owner?.GetTree()?.Root;
             if (root == null)
             {
@@ -343,7 +401,7 @@ namespace QuestFantasy.Core.Data.Skills
 
         private static Map FindMap(Player owner)
         {
-            if (owner == null)
+            if (owner == null || !Godot.Object.IsInstanceValid(owner))
             {
                 return null;
             }
@@ -372,6 +430,11 @@ namespace QuestFantasy.Core.Data.Skills
             }
 
             return null;
+        }
+
+        private bool IsOwnerAlive()
+        {
+            return _owner != null && Godot.Object.IsInstanceValid(_owner);
         }
     }
 }
