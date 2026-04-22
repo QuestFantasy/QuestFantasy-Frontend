@@ -89,7 +89,6 @@ namespace QuestFantasy.Characters.PlayerSystems
             {
                 // Fire event that player reached an exit
                 ExitReached?.Invoke();
-                TransitionToLocation(player, map, exitPosition);
                 return;  // Prevent multiple transitions in same frame
             }
 

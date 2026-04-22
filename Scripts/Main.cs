@@ -63,6 +63,7 @@ public class Main : Node2D
     private void HandleLoggedOut()
     {
         DestroyPlayableWorld();
+        _gameLoadedAlready = false;
         _sidebarMenu?.SetMenuVisible(false);
         GetTree().Paused = true;
         _sidebarMenu?.SetMenuVisible(false);
@@ -99,6 +100,7 @@ public class Main : Node2D
             _map.QueueFree();
         }
         _map = null;
+        _gameLoadedAlready = false;
 
     }
     private void BuildLobby()
@@ -152,20 +154,7 @@ public class Main : Node2D
     private void ReturnToLobby()
     {
         GD.Print("[Main] Player reached exit - returning to lobby");
-        _gameLoadedAlready = false;
-
-        // Clean up in correct order: Player first (to stop _PhysicsProcess from accessing Map), then Map
-        if (Godot.Object.IsInstanceValid(_player))
-        {
-            _player.QueueFree();
-        }
-        _player = null;
-
-        if (Godot.Object.IsInstanceValid(_map))
-        {
-            _map.QueueFree();
-        }
-        _map = null;
+        DestroyPlayableWorld();
 
         // Rebuild the lobby for another session
         BuildLobby();
