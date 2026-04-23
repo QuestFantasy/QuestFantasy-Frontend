@@ -14,6 +14,9 @@ public class EquipmentManager : Node
     [Export]
     public float PickupSpriteScale = 0.1f;
 
+    [Export]
+    public float LevelScalingMultiplier = 1.0f; // scaling factor per equipment level (factor = 1 + level * multiplier)
+
     // Provide explicit asset lists per equipment category (no automatic discovery).
     [Export]
     public string[] BowAssetPaths = new string[] { "Assets/Equipments/bow/basic-bow.png" };
@@ -155,7 +158,25 @@ public class EquipmentManager : Node
             else w.WeaponType = WeaponType.Sword;
             w.Rarity = rarity;
             w.WeaponAbilities = new Abilities();
-            w.WeaponAbilities.Set(w.Rarity * 2, w.Rarity, w.Rarity >= 3 ? 1 : 0, 0);
+            // Assign weapon-focused stats per type
+            switch (w.WeaponType)
+            {
+                case WeaponType.Sword:
+                    // Sword: Attack & Defense
+                    w.WeaponAbilities.Set(w.Rarity * 3, w.Rarity * 2, w.Rarity >= 3 ? 1 : 0, 0);
+                    break;
+                case WeaponType.Bow:
+                    // Bow: Attack & Speed
+                    w.WeaponAbilities.Set(w.Rarity * 2, w.Rarity, w.Rarity * 3, 0);
+                    break;
+                case WeaponType.Staff:
+                    // Staff: Higher Attack
+                    w.WeaponAbilities.Set(w.Rarity * 5, w.Rarity, w.Rarity >= 3 ? 1 : 0, 0);
+                    break;
+                default:
+                    w.WeaponAbilities.Set(w.Rarity * 2, w.Rarity, w.Rarity >= 3 ? 1 : 0, 0);
+                    break;
+            }
             w.LevelRequirement = Math.Max(1, w.Rarity * 2 - 1);
             w.Sprite = tex;
             w.SpritePath = assetPath;
@@ -174,10 +195,30 @@ public class EquipmentManager : Node
 
         eq.Rarity = rarity;
         eq.EquipmentAbilities = new Abilities();
-        if (eq.EquipmentType == EquipmentType.Head || eq.EquipmentType == EquipmentType.Body || eq.EquipmentType == EquipmentType.Arms || eq.EquipmentType == EquipmentType.Shoes)
-            eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity * 2, eq.Rarity >= 3 ? 1 : 0, eq.Rarity >= 3 ? 1 : 0);
-        else
-            eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity, 0, 0);
+        // Assign focused stat bonuses based on equipment slot/type
+        switch (eq.EquipmentType)
+        {
+            case EquipmentType.Head:
+                // Head: Vitality focused (more HP)
+                eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity, 0, eq.Rarity * 3);
+                break;
+            case EquipmentType.Body:
+                // Body: Defense focused
+                eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity * 3, 0, eq.Rarity * 2);
+                break;
+            case EquipmentType.Arms:
+                // Arms/Gloves: Attack & Speed focused
+                eq.EquipmentAbilities.Set(eq.Rarity * 2, eq.Rarity, eq.Rarity, 0);
+                break;
+            case EquipmentType.Shoes:
+                // Shoes: Speed focused
+                eq.EquipmentAbilities.Set(0, eq.Rarity, eq.Rarity * 3, eq.Rarity);
+                break;
+            default:
+                // Fallback: balanced small bonuses
+                eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity, 0, 0);
+                break;
+        }
 
         eq.LevelRequirement = Math.Max(1, eq.Rarity * 2 - 1);
         eq.Sprite = tex;
@@ -242,7 +283,26 @@ public class EquipmentManager : Node
             }
 
             w.WeaponAbilities = new Abilities();
-            w.WeaponAbilities.Set(w.Rarity * 2, w.Rarity, w.Rarity >= 3 ? 1 : 0, 0);
+            // Assign weapon-focused stats per detected type
+            if (isSword)
+            {
+                // Sword: Attack & Defense
+                w.WeaponAbilities.Set(w.Rarity * 3, w.Rarity * 2, w.Rarity >= 3 ? 1 : 0, 0);
+            }
+            else if (isBow)
+            {
+                // Bow: Attack & Speed
+                w.WeaponAbilities.Set(w.Rarity * 2, w.Rarity, w.Rarity * 3, 0);
+            }
+            else if (isStaff)
+            {
+                // Staff: Higher Attack
+                w.WeaponAbilities.Set(w.Rarity * 4, w.Rarity, w.Rarity >= 3 ? 1 : 0, 0);
+            }
+            else
+            {
+                w.WeaponAbilities.Set(w.Rarity * 2, w.Rarity, w.Rarity >= 3 ? 1 : 0, 0);
+            }
             w.LevelRequirement = Math.Max(1, w.Rarity * 2 - 1);
             w.Sprite = tex;
             w.SpritePath = filePath;
@@ -279,15 +339,27 @@ public class EquipmentManager : Node
         }
 
         eq.EquipmentAbilities = new Abilities();
+        // Assign focused stat bonuses based on detected equipment type from filename/folder
         switch (eq.EquipmentType)
         {
             case EquipmentType.Head:
+                // Head: Vitality focused
+                eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity, 0, eq.Rarity * 3);
+                break;
             case EquipmentType.Body:
+                // Body: Defense focused
+                eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity * 3, 0, eq.Rarity * 2);
+                break;
             case EquipmentType.Arms:
+                // Arms/Gloves: Attack & Speed focused
+                eq.EquipmentAbilities.Set(eq.Rarity * 2, eq.Rarity, eq.Rarity, 0);
+                break;
             case EquipmentType.Shoes:
-                eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity * 2, eq.Rarity >= 3 ? 1 : 0, eq.Rarity >= 3 ? 1 : 0);
+                // Shoes: Speed focused
+                eq.EquipmentAbilities.Set(0, eq.Rarity, eq.Rarity * 3, eq.Rarity);
                 break;
             default:
+                // Fallback: balanced small bonuses
                 eq.EquipmentAbilities.Set(eq.Rarity, eq.Rarity, 0, 0);
                 break;
         }
@@ -551,6 +623,12 @@ public class EquipmentManager : Node
                 if (maxLevel > minLevel)
                     chosen = (int)Math.Floor(GD.Randf() * (maxLevel - minLevel + 1)) + minLevel;
                 eq.LevelRequirement = chosen;
+                // Scale abilities by factor = 1 + LevelRequirement * LevelScalingMultiplier
+                float factor = 1f + eq.LevelRequirement * LevelScalingMultiplier;
+                eq.EquipmentAbilities.Atk = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Atk * factor));
+                eq.EquipmentAbilities.Def = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Def * factor));
+                eq.EquipmentAbilities.Spd = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Spd * factor));
+                eq.EquipmentAbilities.Vit = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Vit * factor));
                 result.Add(eq);
             }
             else if (src is Weapon sw)
@@ -572,6 +650,12 @@ public class EquipmentManager : Node
                 if (maxLevel > minLevel)
                     chosen = (int)Math.Floor(GD.Randf() * (maxLevel - minLevel + 1)) + minLevel;
                 w.LevelRequirement = chosen;
+                // Scale abilities by factor = 1 + LevelRequirement * LevelScalingMultiplier
+                float wfactor = 1f + w.LevelRequirement * LevelScalingMultiplier;
+                w.WeaponAbilities.Atk = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Atk * wfactor));
+                w.WeaponAbilities.Def = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Def * wfactor));
+                w.WeaponAbilities.Spd = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Spd * wfactor));
+                w.WeaponAbilities.Vit = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Vit * wfactor));
                 result.Add(w);
             }
         }
