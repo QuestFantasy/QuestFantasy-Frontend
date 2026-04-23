@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 
 using Godot;
-using QuestFantasy.Core.Data.Items;
+
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Data.Items;
 
 public class EquipmentManager : Node
 {
@@ -264,7 +265,7 @@ public class EquipmentManager : Node
         bool isBow = baseName.Contains("bow") || lname.Contains("/bow/");
         bool isStaff = baseName.Contains("staff") || lname.Contains("/staff/");
 
-            if (isSword || isBow || isStaff)
+        if (isSword || isBow || isStaff)
         {
             var w = new Weapon();
             if (isSword) w.WeaponType = WeaponType.Sword;
@@ -517,9 +518,9 @@ public class EquipmentManager : Node
         foreach (var f in files)
         {
             var full = "Assets/Equipments/" + f.Replace('\\', '/');
-                var it = CreateFromSpriteFile(full);
-                if (it != null)
-                    list.Add(it);
+            var it = CreateFromSpriteFile(full);
+            if (it != null)
+                list.Add(it);
         }
 
         return list;
@@ -612,8 +613,8 @@ public class EquipmentManager : Node
                 eq.EquipmentAbilities.Set(se.EquipmentAbilities?.Atk ?? 0, se.EquipmentAbilities?.Def ?? 0, se.EquipmentAbilities?.Spd ?? 0, se.EquipmentAbilities?.Vit ?? 0);
                 eq.Rarity = se.Rarity;
                 eq.Sprite = se.Sprite;
-                    eq.Name = se.Name;
-                    eq.SpritePath = se.SpritePath;
+                eq.Name = se.Name;
+                eq.SpritePath = se.SpritePath;
                 eq.Source = se.Source;
                 eq.Price = se.Price;
 
