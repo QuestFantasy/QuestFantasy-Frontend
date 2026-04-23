@@ -45,8 +45,9 @@ public class MapInteractionSystem
         return false;
     }
 
-    public bool TryOpenNearbyBox(MapTileData data, Vector2 worldPosition, float maxDistanceTiles = -1f)
+    public bool TryOpenNearbyBox(MapTileData data, Vector2 worldPosition, out Vector2 openedWorld, float maxDistanceTiles = -1f)
     {
+        openedWorld = Vector2.Zero;
         if (maxDistanceTiles < 0)
         {
             maxDistanceTiles = GameConstants.BOX_INTERACTION_MAX_DISTANCE_TILES;
@@ -96,6 +97,8 @@ public class MapInteractionSystem
         }
 
         data.OpenedBoxes[(int)bestTile.x, (int)bestTile.y] = true;
+        // compute world center for the opened tile
+        openedWorld = data.TileToWorldCenter((int)bestTile.x, (int)bestTile.y);
         return true;
     }
 

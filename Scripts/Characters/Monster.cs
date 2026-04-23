@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Godot;
 
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Data.Items;
 
 namespace QuestFantasy.Characters
 {
@@ -13,6 +14,17 @@ namespace QuestFantasy.Characters
     /// </summary>
     public class Monster : Character
     {
+        [Export]
+        public int MinDrops = 0;
+
+        [Export]
+        public int MaxDrops = 2;
+
+        [Export]
+        public int DropOptionCount = 3; // how many options to consider when generating drops
+
+        [Export]
+        public int DropLevelOffset = 1;
         public int ExperienceReward { get; set; }
         public int LootGoldReward { get; set; }
 
@@ -576,6 +588,98 @@ namespace QuestFantasy.Characters
             Texture = _deadTexture;
             Velocity = Vector2.Zero;
             GD.Print($"[Monster] {EntityName} Died");
+            TrySpawnDrops();
+        }
+
+        private void TrySpawnDrops()
+        {
+            // Find EquipmentManager in the scene
+            var manager = FindEquipmentManager();
+            if (manager == null)
+            {
+                GD.PrintS("[Monster] No EquipmentManager found; skipping drops.");
+                return;
+            }
+
+            var rng = new RandomNumberGenerator();
+            rng.Randomize();
+            int minD = Math.Max(0, MinDrops);
+            int maxD = Math.Max(minD, MaxDrops);
+            int drops = rng.RandiRange(minD, maxD);
+            if (drops <= 0)
+            {
+                return;
+            }
+
+            int playerLevel = _player != null ? (int)_player.Level : (int)Level;
+            var options = manager.GetEquipmentSet(DropOptionCount, playerLevel, DropLevelOffset);
+            var optList = new System.Collections.Generic.List<Item>();
+            foreach (var o in options)
+            {
+                if (o is Item it) optList.Add(it);
+            }
+
+            if (optList.Count == 0)
+            {
+                GD.PrintS("[Monster] No equipment options available for drops.");
+                return;
+            }
+
+            // Shuffle
+            var shuffled = new System.Collections.Generic.List<Item>(optList);
+            for (int s = shuffled.Count - 1; s > 0; s--)
+            {
+                int j = (int)rng.RandiRange(0, s);
+                var tmp = shuffled[s];
+                shuffled[s] = shuffled[j];
+                shuffled[j] = tmp;
+            }
+
+            int take = Math.Min(drops, shuffled.Count);
+            Node parent = GetParent() ?? GetTree().Root;
+            for (int i = 0; i < take; i++)
+            {
+                var it = shuffled[i];
+                if (it == null) continue;
+
+                var pickup = new EquipmentPickup();
+                pickup.ItemData = it;
+                // Try to use manager configured pickup scale
+                pickup.SpriteScale = manager.PickupSpriteScale;
+                var offset = new Vector2(rng.Randf() * 120f - 60f, rng.Randf() * 120f - 60f);
+                pickup.Position = GlobalPosition + offset;
+
+                string baseName = "equipment";
+                var spriteTex = (it is Equipment pe) ? pe.Sprite : (it is Weapon pw ? pw.Sprite : null);
+                if (spriteTex != null)
+                {
+                    var rp = spriteTex.ResourcePath;
+                    if (!string.IsNullOrEmpty(rp))
+                    {
+                        baseName = System.IO.Path.GetFileNameWithoutExtension(rp).Replace(' ', '_');
+                    }
+                }
+                pickup.Name = $"Pickup_{baseName}_monster_{i}";
+                parent.AddChild(pickup);
+                GD.PrintS($"[Monster] Spawned drop: {pickup.Name} at {pickup.Position}");
+            }
+        }
+
+        private EquipmentManager FindEquipmentManager()
+        {
+            var root = GetTree().Root;
+            return FindEquipmentManagerRecursive(root);
+        }
+
+        private EquipmentManager FindEquipmentManagerRecursive(Node node)
+        {
+            if (node is EquipmentManager em) return em;
+            foreach (Node child in node.GetChildren())
+            {
+                var found = FindEquipmentManagerRecursive(child);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         public override void Attack()
