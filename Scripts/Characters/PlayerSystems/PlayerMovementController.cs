@@ -15,26 +15,37 @@ namespace QuestFantasy.Characters.PlayerSystems
     {
         public void TryMove(Node2D actor, Map map, Vector2 deltaMove, Vector2 bodySize)
         {
+            if (map == null)
+            {
+                GD.PrintErr("[Movement] Map is null!");
+                return;
+            }
+
             // Save original position to allow independent calculation for both axes
             Vector2 originalPos = actor.Position;
             Vector2 newPos = originalPos;
 
             // Attempt movement along X axis
             Vector2 nextX = new Vector2(originalPos.x + deltaMove.x, originalPos.y);
-            if (map.CanMoveTo(GetBodyRect(nextX, bodySize)))
+            Rect2 xRect = GetBodyRect(nextX, bodySize);
+            if (map.CanMoveTo(xRect))
             {
                 newPos.x = nextX.x;
             }
 
             // Attempt movement along Y axis (based on original Y, unaffected by X axis)
             Vector2 nextY = new Vector2(originalPos.x, originalPos.y + deltaMove.y);
-            if (map.CanMoveTo(GetBodyRect(nextY, bodySize)))
+            Rect2 yRect = GetBodyRect(nextY, bodySize);
+            if (map.CanMoveTo(yRect))
             {
                 newPos.y = nextY.y;
             }
 
             // Apply new position atomically
-            actor.Position = newPos;
+            if (newPos != originalPos)
+            {
+                actor.Position = newPos;
+            }
         }
 
         private Rect2 GetBodyRect(Vector2 centerPosition, Vector2 bodySize)
