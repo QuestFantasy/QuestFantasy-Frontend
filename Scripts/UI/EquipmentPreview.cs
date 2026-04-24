@@ -17,6 +17,8 @@ public class EquipmentPreview : CanvasLayer
     public int InnerTopPadding = 14;
     [Export]
     public int HeaderTopPadding = 8;
+    [Export]
+    public int InnerHorizontalPadding = 12;
 
     public override void _Ready()
     {
@@ -93,7 +95,16 @@ public class EquipmentPreview : CanvasLayer
         innerStyle.CornerRadiusBottomLeft = 8;
         innerStyle.CornerRadiusBottomRight = 8;
         innerPanel.AddStyleboxOverride("panel", innerStyle);
-        innerPanel.AddChild(_box);
+        // Wrap the VBox in a horizontal container with left/right spacers
+        var wrapper = new HBoxContainer();
+        var leftSpacer = new Control();
+        leftSpacer.RectMinSize = new Vector2(InnerHorizontalPadding, 0);
+        var rightSpacer = new Control();
+        rightSpacer.RectMinSize = new Vector2(InnerHorizontalPadding, 0);
+        wrapper.AddChild(leftSpacer);
+        wrapper.AddChild(_box);
+        wrapper.AddChild(rightSpacer);
+        innerPanel.AddChild(wrapper);
 
         _panel.AddChild(innerPanel);
 
@@ -201,11 +212,9 @@ public class EquipmentPreview : CanvasLayer
         // Resize background and panel to cover the content.
         // Compute combined minimum size of the VBox and add the inner panel margins.
         Vector2 contentSize = _box.GetCombinedMinimumSize();
-        float innerMarginH = 8 + 8;
-        float innerMarginV = 6 + 6;
+        float innerMarginH = InnerHorizontalPadding * 2;
         // extra padding for breathing room
         float extraH = 8;
-        float extraV = 8;
         float width = Math.Max(200f, contentSize.x + innerMarginH + extraH);
         float height = FixedPreviewHeight;
         _panel.RectSize = new Vector2(width, height);
