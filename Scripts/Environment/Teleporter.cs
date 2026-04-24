@@ -20,6 +20,11 @@ namespace QuestFantasy.Environment
         private bool _playerInRange = false;
         private bool _fKeyPressed = false;  // Debounce flag for F key
 
+        public override void _Ready()
+        {
+            SetProcess(true);
+        }
+
         public override void _Process(float delta)
         {
             try
@@ -62,7 +67,7 @@ namespace QuestFantasy.Environment
                     }
 
                     // Check if player pressed F key to interact
-                    bool fKeyPressed = Input.IsKeyPressed((int)KeyList.F);
+                    bool fKeyPressed = Input.IsActionPressed("interact");
                     if (fKeyPressed && !_fKeyPressed)  // Debounce: only trigger on key press, not hold
                     {
                         GD.Print("[Teleporter] F key pressed!");

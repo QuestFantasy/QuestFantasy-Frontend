@@ -1,72 +1,203 @@
 using System;
+using System.Collections.Generic;
 
 using Godot;
 
+using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
 
 namespace QuestFantasy.Characters
 {
+    public enum NpcRole
+    {
+        Guide,
+        Merchant,
+        Blacksmith
+    }
+
     /// <summary>
     /// Non-playable character class. Handles NPC interactions like trading, dialogue, and quests.
     /// </summary>
     public class NPC : Character
     {
-        public string Dialogue { get; set; } = "Hello, traveler!";
-        public Bag ShopInventory { get; private set; } = new Bag();
-        public bool IsShopkeeper { get; set; }
+        private const float DefaultInteractionRangePixels = 80f;
 
-        public event Action<NPC> OnInteractionTriggered;
+        private Player _nearbyPlayer;
+        private bool _playerInRange;
+        private Color _baseModulate = Colors.White;
+        private Label _namePlateLabel;
+        private Label _interactionPromptLabel;
+
+        public string Dialogue { get; private set; } = "Hello, traveler!";
+        public NpcRole Role { get; private set; } = NpcRole.Guide;
+        public bool IsShopkeeper { get; private set; }
+        public float InteractionRangePixels { get; set; } = DefaultInteractionRangePixels;
+        public Bag ShopInventory { get; private set; } = new Bag { MaxSlots = 0 };
+
+        public event Action<NPC, Player> InteractionStarted;
+        public event Action<NPC, Player> DialogueRequested;
+        public event Action<NPC, Player> ShopRequested;
 
         public override void _Ready()
         {
-            // Initialize base character attributes
             InitializeCharacter();
+            SetProcess(true);
+            BuildOverlayLabels();
+            Update();
         }
 
-        /// <summary>
-        /// Handle NPC interaction (dialogue, trading, etc.)
-        /// </summary>
-        public void Interact(Player player)
+        public void Initialize(string entityName, string dialogue, NpcRole role, bool isShopkeeper = false)
         {
-            if (player == null)
+            EntityName = string.IsNullOrWhiteSpace(entityName) ? "NPC" : entityName;
+            Name = EntityName;
+            Dialogue = string.IsNullOrWhiteSpace(dialogue) ? "Hello, traveler!" : dialogue;
+            Role = role;
+            IsShopkeeper = isShopkeeper;
+
+            if (ShopInventory == null)
             {
-                GD.PrintErr($"[NPC] {EntityName}: Cannot interact with null player");
+                ShopInventory = new Bag { MaxSlots = 0 };
+            }
+        }
+
+        public void SetBaseTint(Color tint)
+        {
+            _baseModulate = tint;
+            Modulate = tint;
+        }
+
+        private void BuildOverlayLabels()
+        {
+            _namePlateLabel = new Label
+            {
+                Text = EntityName,
+                Align = Label.AlignEnum.Center,
+                RectPosition = new Vector2(-64f, -52f),
+                RectMinSize = new Vector2(128f, 18f),
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+            AddChild(_namePlateLabel);
+
+            _interactionPromptLabel = new Label
+            {
+                Text = GetInteractionPromptText(),
+                Align = Label.AlignEnum.Center,
+                RectPosition = new Vector2(-80f, -36f),
+                RectMinSize = new Vector2(160f, 18f),
+                Visible = false,
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+            AddChild(_interactionPromptLabel);
+        }
+
+        private string GetInteractionPromptText()
+        {
+            return IsShopkeeper ? "Press F to talk / trade" : "Press F to talk";
+        }
+
+        public override void _Process(float delta)
+        {
+            try
+            {
+                _nearbyPlayer = ResolveNearbyPlayer();
+                if (_nearbyPlayer == null)
+                {
+                    SetInRangeState(false);
+                    return;
+                }
+
+                bool inRange = Position.DistanceTo(_nearbyPlayer.Position) <= InteractionRangePixels;
+                SetInRangeState(inRange);
+
+                if (inRange && Input.IsActionJustPressed("interact"))
+                {
+                    OnInteract(_nearbyPlayer);
+                }
+            }
+            catch (Exception ex)
+            {
+                GD.PrintErr("[NPC] Exception in _Process: " + ex.Message);
+                GD.PrintErr(ex.StackTrace);
+            }
+        }
+
+        public override void OnInteract(Creature interactor)
+        {
+            if (!(interactor is Player player))
+            {
                 return;
             }
 
             GD.Print($"[NPC] {EntityName} says: {Dialogue}");
-            OnInteractionTriggered?.Invoke(this);
+            InteractionStarted?.Invoke(this, player);
+            DialogueRequested?.Invoke(this, player);
+
+            if (IsShopkeeper)
+            {
+                ShopRequested?.Invoke(this, player);
+            }
         }
 
-        /// <summary>
-        /// Trade items with the player.
-        /// </summary>
-        public bool Trade(Player player, Item playerItem, Item shopItem, int tradePrice)
+        public IReadOnlyList<Item> GetShopItems()
         {
-            if (player == null)
+            return ShopInventory.Items.AsReadOnly();
+        }
+
+        public bool TrySellToPlayer(Player player, Item item, int price)
+        {
+            if (!ValidateTradeParticipant(player, item, price))
             {
-                GD.PrintErr($"[NPC] {EntityName}: Cannot trade with null player");
                 return false;
             }
 
-            if (!IsShopkeeper)
+            if (!player.SpendGold(price))
             {
-                GD.Print($"[NPC] {EntityName}: I'm not a shopkeeper");
+                GD.Print($"[NPC] {EntityName}: Player does not have enough gold to buy {item.Name}");
                 return false;
             }
 
-            if (player.Gold < tradePrice)
+            if (!ShopInventory.RemoveItem(item))
             {
-                GD.Print($"[NPC] {EntityName}: You don't have enough gold! Need {tradePrice}, have {player.Gold}");
+                player.AddGold(price);
+                GD.Print($"[NPC] {EntityName}: Could not remove {item.Name} from the shop inventory");
                 return false;
             }
 
-            // Process trade
-            player.AddGold(-tradePrice);
-            player.AddItem(shopItem);
-            GD.Print($"[NPC] {EntityName}: Thank you for your business!");
+            if (!player.AddItem(item))
+            {
+                ShopInventory.AddItem(item);
+                player.AddGold(price);
+                GD.Print($"[NPC] {EntityName}: Player inventory is full, trade cancelled");
+                return false;
+            }
 
+            GD.Print($"[NPC] {EntityName}: Sold {item.Name} for {price} gold");
+            return true;
+        }
+
+        public bool TryBuyFromPlayer(Player player, Item item, int price)
+        {
+            if (!ValidateTradeParticipant(player, item, price))
+            {
+                return false;
+            }
+
+            if (!player.RemoveItem(item))
+            {
+                GD.Print($"[NPC] {EntityName}: Player does not have {item.Name}");
+                return false;
+            }
+
+            if (!ShopInventory.AddItem(item))
+            {
+                player.AddItem(item);
+                GD.Print($"[NPC] {EntityName}: Shop inventory is full, trade cancelled");
+                return false;
+            }
+
+            player.AddGold(price);
+            GD.Print($"[NPC] {EntityName}: Bought {item.Name} for {price} gold");
             return true;
         }
 
@@ -75,7 +206,6 @@ namespace QuestFantasy.Characters
         /// </summary>
         public override void UpdateAttributes()
         {
-            // NPCs can have attributes for combat, but typically don't update them
             if (Attributes != null && Abilities != null)
             {
                 Attributes.TotalAtk = Abilities.Atk;
@@ -83,6 +213,87 @@ namespace QuestFantasy.Characters
                 Attributes.TotalSpd = Abilities.Spd;
                 Attributes.TotalVit = Abilities.Vit;
             }
+        }
+
+        public override void _Draw()
+        {
+            Vector2 bodyCenter = new Vector2(0f, -4f);
+            Vector2 bodySize = new Vector2(22f, 28f);
+
+            Color bodyColor = IsShopkeeper
+                ? new Color(0.55f, 0.72f, 1f)
+                : new Color(0.68f, 0.78f, 0.72f);
+
+            DrawRect(new Rect2(bodyCenter.x - bodySize.x / 2f, bodyCenter.y - bodySize.y / 2f, bodySize.x, bodySize.y), bodyColor);
+            DrawCircle(new Vector2(0f, -24f), 9f, new Color(0.93f, 0.82f, 0.72f));
+
+            if (IsShopkeeper)
+            {
+                DrawRect(new Rect2(-7f, -7f, 14f, 10f), new Color(0.18f, 0.2f, 0.24f));
+            }
+            else
+            {
+                DrawRect(new Rect2(-6f, -8f, 12f, 6f), new Color(0.18f, 0.2f, 0.24f));
+            }
+
+            DrawCircle(new Vector2(-4f, -26f), 1.2f, Colors.Black);
+            DrawCircle(new Vector2(4f, -26f), 1.2f, Colors.Black);
+            Update();
+        }
+
+        private Player ResolveNearbyPlayer()
+        {
+            Node parent = GetParent();
+            if (parent == null)
+            {
+                return null;
+            }
+
+            return parent.GetNodeOrNull<Player>("Player");
+        }
+
+        private void SetInRangeState(bool inRange)
+        {
+            if (inRange == _playerInRange)
+            {
+                return;
+            }
+
+            _playerInRange = inRange;
+            Modulate = inRange ? new Color(1f, 1f, 0.75f) : _baseModulate;
+            if (_interactionPromptLabel != null)
+            {
+                _interactionPromptLabel.Visible = inRange;
+            }
+        }
+
+        private bool ValidateTradeParticipant(Player player, Item item, int price)
+        {
+            if (player == null)
+            {
+                GD.PrintErr($"[NPC] {EntityName}: Cannot trade with null player");
+                return false;
+            }
+
+            if (item == null)
+            {
+                GD.PrintErr($"[NPC] {EntityName}: Cannot trade null item");
+                return false;
+            }
+
+            if (!IsShopkeeper)
+            {
+                GD.Print($"[NPC] {EntityName}: This NPC is not marked as a shopkeeper");
+                return false;
+            }
+
+            if (price < 0)
+            {
+                GD.PrintErr($"[NPC] {EntityName}: Trade price cannot be negative");
+                return false;
+            }
+
+            return true;
         }
     }
 }
