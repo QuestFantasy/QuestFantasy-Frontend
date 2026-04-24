@@ -1,6 +1,8 @@
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Prototype;
+
 public class Main : Node2D
 {
 
@@ -13,6 +15,8 @@ public class Main : Node2D
     private EquipmentManager _equipManagerRef;
     private TreasureChest _chestRef;
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
+    private LobbyManager _lobbyManager;
+    private bool _gameLoadedAlready = false;  // Guard against loading twice
 
 
     public override void _Ready()
@@ -23,54 +27,14 @@ public class Main : Node2D
 
     private void BuildPlayablePrototype()
     {
+
         GetTree().Paused = false;
         DestroyPlayableWorld();
         _sidebarMenu?.SetMenuVisible(true);
-
-        _map = new Map();
-        _map.TileSize = 24;
-        _map.RoomTileSize = 100;
-        _map.RoomsX = 2;
-        _map.RoomsY = 2;
-        AddChild(_map);
-        _map.RegenerateWithRandomSeed();
-
-        _player = new Player();
-        AddChild(_player);
-        _player.Position = _map.GetSpawnWorldPosition();
-        _player.SetMap(_map);
-
-        // Spawn multiple Monsters (產生多隻怪物)
-        var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
-        int numMonstersToSpawn = 3; // 可以修改這個數字來控制怪物數量
-        for (int i = 0; i < numMonstersToSpawn; i++)
-        {
-            var monster = (Monster)monsterScene.Instance();
-            monster.SetEnvironment(_map, _player);
-            AddChild(monster);
-            _spawnedMonsters.Add(monster);
-        }
-
-        // Add equipment manager and a treasure chest. Chest will spawn items when opened.
-        var equipManager = new EquipmentManager();
-        AddChild(equipManager);
-        _equipManagerRef = equipManager;
-
-        var chest = new TreasureChest();
-        chest.EquipmentManagerPath = equipManager.GetPath();
-        AddChild(chest);
-        _chestRef = chest;
-
-        // Add EquipmentPreview UI singleton
-        var preview = new EquipmentPreview();
-        AddChild(preview);
-
-        // Connect map BoxOpened signal to spawn drops
-        if (_map != null && _chestRef != null && _equipManagerRef != null)
-        {
-            _map.Connect("BoxOpened", this, nameof(OnBoxOpened));
-        }
+        // Build lobby instead of directly loading a game map
+        BuildLobby();
     }
+
 
     private void SetupAuthFlowController()
     {
@@ -100,8 +64,19 @@ public class Main : Node2D
     private void HandleLoggedOut()
     {
         DestroyPlayableWorld();
+        _gameLoadedAlready = false;
         _sidebarMenu?.SetMenuVisible(false);
         GetTree().Paused = true;
+        _sidebarMenu?.SetMenuVisible(false);
+
+        // Clean up any active gameplay/lobby scenes
+        _lobbyManager?.QueueFree();
+        _lobbyManager = null;
+        _map?.QueueFree();
+        _map = null;
+        _player = null;
+
+        GD.Print("[Main] Logged out - all game states cleaned");
     }
 
     private void DestroyPlayableWorld()
@@ -126,6 +101,64 @@ public class Main : Node2D
             _map.QueueFree();
         }
         _map = null;
+        _gameLoadedAlready = false;
+
+    }
+    private void BuildLobby()
+    {
+        _lobbyManager = new LobbyManager();
+        AddChild(_lobbyManager);
+        _lobbyManager.DifficultySelected += OnDifficultySelected;
+    }
+
+    private void OnDifficultySelected(DifficultyLevel difficulty)
+    {
+        if (_gameLoadedAlready)
+            return;
+
+        _gameLoadedAlready = true;
+        _lobbyManager?.QueueFree();
+        _lobbyManager = null;
+        LoadGameLevel(difficulty);
+    }
+
+    private void LoadGameLevel(DifficultyLevel difficulty)
+    {
+        _map = new Map();
+        _map.TileSize = 24;
+        _map.RoomTileSize = 100;
+        _map.RoomsX = 2;
+        _map.RoomsY = 2;
+        AddChild(_map);
+        _map.RegenerateWithRandomSeed();
+
+        _player = new Player();
+        AddChild(_player);
+        _player.Position = _map.GetSpawnWorldPosition();
+        _player.SetMap(_map);
+
+        // Spawn monsters based on difficulty
+        int numMonstersToSpawn = ((int)difficulty + 1) * 10;
+        var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
+        for (int i = 0; i < numMonstersToSpawn; i++)
+        {
+            var monster = (Monster)monsterScene.Instance();
+            monster.SetEnvironment(_map, _player);
+            AddChild(monster);
+            _spawnedMonsters.Add(monster);
+        }
+
+        // Listen for when player reaches the exit to return to lobby
+        _player.GetCharacterController().ExitReached += ReturnToLobby;
+    }
+
+    private void ReturnToLobby()
+    {
+        GD.Print("[Main] Player reached exit - returning to lobby");
+        DestroyPlayableWorld();
+
+        // Rebuild the lobby for another session
+        BuildLobby();
     }
 
     // Called when a box opens in the map; spawn equipment pickups at the position

@@ -52,7 +52,26 @@ public static class AuthStorage
 
         // Restore session data
         session.Token = token;
-        session.UserId = System.Convert.ToInt64(config.GetValue(AuthSessionSection, UserIdKey, 0L));
+
+        // Safely parse UserId - handle both int and long types
+        var userIdValue = config.GetValue(AuthSessionSection, UserIdKey, 0L);
+        if (userIdValue is long longUserId)
+        {
+            session.UserId = longUserId;
+        }
+        else if (userIdValue is int intUserId)
+        {
+            session.UserId = intUserId;
+        }
+        else if (long.TryParse(userIdValue?.ToString() ?? "0", out long parsedUserId))
+        {
+            session.UserId = parsedUserId;
+        }
+        else
+        {
+            session.UserId = 0L;
+        }
+
         session.Username = config.GetValue(AuthSessionSection, UsernameKey, string.Empty) as string ?? string.Empty;
 
         // Restore issued and expiration times

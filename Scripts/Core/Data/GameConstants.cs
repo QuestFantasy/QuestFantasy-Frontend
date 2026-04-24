@@ -75,6 +75,22 @@ public static class GameConstants
     /// <summary>Maximum detection distance (in tiles) for box interaction.</summary>
     public const float BOX_INTERACTION_MAX_DISTANCE_TILES = 1.15f;
 
+    // ==================== Lobby Configuration ====================
+    /// <summary>Tile size for lobby map.</summary>
+    public const int LOBBY_TILE_SIZE = 24;
+
+    /// <summary>Room tile size for lobby map.</summary>
+    public const int LOBBY_ROOM_TILE_SIZE = 100;
+
+    /// <summary>Number of rooms horizontally in lobby.</summary>
+    public const int LOBBY_ROOMS_X = 3;
+
+    /// <summary>Number of rooms vertically in lobby.</summary>
+    public const int LOBBY_ROOMS_Y = 3;
+
+    /// <summary>Obstacle fill rate for lobby (0.0-1.0, lower for less congestion).</summary>
+    public const float LOBBY_OBSTACLE_FILL_RATE = 0.2f;
+
     // ==================== Map Colors ====================
     /// <summary>Color configuration for map rendering.</summary>
     public static class MapColors
@@ -92,7 +108,7 @@ public static class GameConstants
         public static readonly Color Box = new Color(0.54f, 0.34f, 0.15f);
 
         /// <summary>Color for portal tiles.</summary>
-        public static readonly Color Portal = new Color(0.88f, 0.26f, 0.80f);
+        public static readonly Color Portal = new Color(0.55f, 0.55f, 0.58f);  // Muted gray instead of pink
 
         /// <summary>Color for lava tiles.</summary>
         public static readonly Color Lava = new Color(0.88f, 0.34f, 0.12f);
