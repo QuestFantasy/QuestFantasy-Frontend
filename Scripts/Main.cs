@@ -12,8 +12,8 @@ public class Main : Node2D
     private SidebarMenu _sidebarMenu;
     private Map _map;
     private Player _player;
-    private EquipmentManager _equipManagerRef;
-    private TreasureChest _chestRef;
+    private readonly EquipmentManager _equipManagerRef;
+    private readonly TreasureChest _chestRef;
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
     private LobbyManager _lobbyManager;
     private bool _gameLoadedAlready = false;  // Guard against loading twice
