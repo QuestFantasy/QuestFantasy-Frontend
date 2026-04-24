@@ -120,7 +120,10 @@ public class EquipmentPreview : CanvasLayer
             child.QueueFree();
         }
         if (item == null)
+        {
+            HidePreview();
             return;
+        }
         // Add explicit top spacer so there's visible space above the first line
         var topSpacer = new Control();
         topSpacer.RectMinSize = new Vector2(0, InnerTopPadding);
@@ -274,6 +277,16 @@ public class EquipmentPreview : CanvasLayer
     {
         if (_panel == null) return;
         _panel.Visible = false;
+        if (_shadowPanel != null) _shadowPanel.Visible = false;
+
+        // clear children so spacer or content doesn't persist
+        if (_box != null)
+        {
+            foreach (Node child in _box.GetChildren())
+            {
+                child.QueueFree();
+            }
+        }
     }
 
     public new void Hide()
