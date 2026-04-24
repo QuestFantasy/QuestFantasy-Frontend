@@ -2,6 +2,8 @@ using System;
 
 using Godot;
 
+using QuestFantasy.Characters;
+
 public class TreasureChest : Node
 {
     [Export]
@@ -27,6 +29,42 @@ public class TreasureChest : Node
         {
             _manager = GetNode<EquipmentManager>(EquipmentManagerPath);
         }
+    }
+
+    // Handle map's BoxOpened signal directly and spawn drops.
+    // This allows Map -> TreasureChest wiring without Main as intermediary.
+    public void HandleMapBoxOpened(Vector2 worldPosition)
+    {
+        var manager = _manager ?? FindEquipmentManagerRecursive(GetTree().Root);
+        var player = FindPlayerRecursive(GetTree().Root);
+        int playerLevel = 1;
+        if (player != null)
+            playerLevel = (int)player.Level;
+
+        Node parent = GetParent() ?? GetTree().Root;
+        OpenChest(parent, worldPosition, manager, playerLevel);
+    }
+
+    private EquipmentManager FindEquipmentManagerRecursive(Node node)
+    {
+        if (node is EquipmentManager em) return em;
+        foreach (Node child in node.GetChildren())
+        {
+            var found = FindEquipmentManagerRecursive(child);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private Player FindPlayerRecursive(Node node)
+    {
+        if (node is Player p) return p;
+        foreach (Node child in node.GetChildren())
+        {
+            var found = FindPlayerRecursive(child);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     // Return a set of equipment choices for the given player level.
