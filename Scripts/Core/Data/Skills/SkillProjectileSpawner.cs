@@ -68,7 +68,9 @@ namespace QuestFantasy.Core.Data.Skills
         private const float ArrowImpactScale = 0.3f;
         private const float FireballProjectileScale = 0.5f;
         private const float FireballImpactScale = 0.6f;
-        private const float FireballFlightFrameDuration = 0.07f;
+        private const float ArrowImpactFrameDuration = 0.05f;
+        private const float FireballFlightFrameDuration = 0.11f;
+        private const float FireballImpactFrameDuration = 0.09f;
 
         private readonly List<Character> _damagedTargets = new List<Character>();
 
@@ -96,6 +98,7 @@ namespace QuestFantasy.Core.Data.Skills
         private float _flightFrameTimer;
         private int _flightFrameIndex = -1;
         private float _flightFrameDuration = 0f;
+        private float _impactFrameDuration = ArrowImpactFrameDuration;
 
         public static SkillProjectileNode CreateArrow(Player owner, Vector2 direction, float maxRange)
         {
@@ -143,6 +146,7 @@ namespace QuestFantasy.Core.Data.Skills
                 _projectileScale = FireballProjectileScale,
                 _impactScale = FireballImpactScale,
                 _flightFrameDuration = FireballFlightFrameDuration,
+                _impactFrameDuration = FireballImpactFrameDuration,
                 _flightFrames = new[]
                 {
                     GD.Load<Texture>("res://Assets/SkillAnimation/fireball1.png"),
@@ -310,7 +314,7 @@ namespace QuestFantasy.Core.Data.Skills
             }
 
             _impactTimer += delta;
-            if (_impactTimer < 0.05f)
+            if (_impactTimer < _impactFrameDuration)
             {
                 return;
             }

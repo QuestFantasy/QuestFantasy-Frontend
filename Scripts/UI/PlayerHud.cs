@@ -10,7 +10,7 @@ public class PlayerHud : CanvasLayer
     private const float HudWidth = 460f;
     private const float HudHeight = 160f;
     private const float HudBottomOffset = 12f;
-    private const float HpBarHeight = 24f;
+    private const float HpBarHeight = 15f;
     private const float SkillSlotSize = 52f;
 
     private readonly Dictionary<string, string> _skillIconPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

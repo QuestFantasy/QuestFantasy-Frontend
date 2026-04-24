@@ -98,6 +98,7 @@ public class AuthApiClient : Node
     public override void _Ready()
     {
         _request = new HTTPRequest();
+        _request.PauseMode = PauseModeEnum.Process;
         AddChild(_request);
         _request.Connect("request_completed", this, nameof(OnRequestCompleted));
     }
