@@ -238,7 +238,11 @@ public class AuthApiClient : Node
         Register,
         Logout,
         FetchPlayerProfile,
-        UpdatePlayerProfile
+        UpdatePlayerProfile,
+        FetchPlayerInventory,
+        UpdatePlayerInventory,
+        FetchPlayerGold,
+        UpdatePlayerGold
     }
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
@@ -337,6 +341,50 @@ public class AuthApiClient : Node
         return SendRequest(
             AuthRequestKind.UpdatePlayerProfile,
             "/api/player/profile/",
+            HTTPClient.Method.Patch,
+            payload,
+            token,
+            callback);
+    }
+
+    public bool FetchPlayerInventory(string token, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.FetchPlayerInventory,
+            "/api/player/inventory/",
+            HTTPClient.Method.Get,
+            null,
+            token,
+            callback);
+    }
+
+    public bool UpdatePlayerInventory(string token, Godot.Collections.Dictionary payload, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.UpdatePlayerInventory,
+            "/api/player/inventory/",
+            HTTPClient.Method.Patch,
+            payload,
+            token,
+            callback);
+    }
+
+    public bool FetchPlayerGold(string token, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.FetchPlayerGold,
+            "/api/player/gold/",
+            HTTPClient.Method.Get,
+            null,
+            token,
+            callback);
+    }
+
+    public bool UpdatePlayerGold(string token, Godot.Collections.Dictionary payload, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.UpdatePlayerGold,
+            "/api/player/gold/",
             HTTPClient.Method.Patch,
             payload,
             token,

@@ -25,13 +25,17 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         private readonly Bag _inventory;
         public Bag Inventory => _inventory;
+        private readonly Bag _discarded;
+        public Bag Discarded => _discarded;
         public event Action<Item> OnInventoryChanged;
+        public event Action OnInventoryStateChanged;
 
         public PlayerInventorySystem(int initialGold = 0, int maxInventorySlots = 20)
         {
             _experience = 0;
             _gold = initialGold;
             _inventory = new Bag { MaxSlots = maxInventorySlots };
+            _discarded = new Bag { MaxSlots = 0 };
         }
 
         /// <summary>
@@ -107,6 +111,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (success)
             {
                 OnInventoryChanged?.Invoke(item);
+                OnInventoryStateChanged?.Invoke();
             }
             return success;
         }
@@ -119,7 +124,92 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (item == null)
                 return false;
 
-            return _inventory.RemoveItem(item);
+            bool removed = _inventory.RemoveItem(item);
+            if (removed)
+            {
+                OnInventoryStateChanged?.Invoke();
+            }
+
+            return removed;
+        }
+
+        /// <summary>
+        /// Move an inventory item into discarded records.
+        /// </summary>
+        public bool DiscardItem(Item item)
+        {
+            if (item == null)
+            {
+                return false;
+            }
+
+            if (!_inventory.RemoveItem(item))
+            {
+                return false;
+            }
+
+            _discarded.Items.Add(item);
+            OnInventoryStateChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// Replace inventory and discarded lists with backend snapshot values.
+        /// </summary>
+        public void ReplaceSnapshot(
+            System.Collections.Generic.IEnumerable<Item> inventoryItems,
+            System.Collections.Generic.IEnumerable<Item> discardedItems,
+            bool notify = true,
+            bool replaceInventory = true,
+            bool replaceDiscarded = true)
+        {
+            bool changed = false;
+
+            if (replaceInventory)
+            {
+                _inventory.Clear();
+                changed = true;
+
+                if (inventoryItems != null)
+                {
+                    foreach (Item item in inventoryItems)
+                    {
+                        if (item == null)
+                        {
+                            continue;
+                        }
+
+                        if (_inventory.HasSpace())
+                        {
+                            _inventory.Items.Add(item);
+                        }
+                    }
+                }
+            }
+
+            if (replaceDiscarded)
+            {
+                _discarded.Clear();
+                changed = true;
+
+                if (discardedItems != null)
+                {
+                    foreach (Item item in discardedItems)
+                    {
+                        if (item == null)
+                        {
+                            continue;
+                        }
+
+                        _discarded.Items.Add(item);
+                    }
+                }
+            }
+
+            if (notify && changed)
+            {
+                OnInventoryStateChanged?.Invoke();
+            }
         }
 
         /// <summary>

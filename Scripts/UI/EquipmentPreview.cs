@@ -23,6 +23,7 @@ public class EquipmentPreview : CanvasLayer
     public override void _Ready()
     {
         Instance = this;
+        Layer = 100;
         EnsureInit();
     }
 
@@ -50,6 +51,7 @@ public class EquipmentPreview : CanvasLayer
     public override void _EnterTree()
     {
         Instance = this;
+        Layer = 100;
     }
 
     private void EnsureInit()
