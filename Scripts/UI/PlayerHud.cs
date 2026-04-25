@@ -28,6 +28,7 @@ public class PlayerHud : CanvasLayer
     private ProgressBar _hpBar;
     private Label _hpValue;
     private GridContainer _skillsContainer;
+    private Control _rootControl;
 
     public override void _Ready()
     {
@@ -67,15 +68,24 @@ public class PlayerHud : CanvasLayer
         }
     }
 
+    public void SetVisible(bool visible)
+    {
+        if (_rootControl != null)
+        {
+            _rootControl.Visible = visible;
+        }
+    }
+
     private void BuildUi()
     {
-        var root = new Control
+        _rootControl = new Control
         {
             AnchorRight = 1f,
             AnchorBottom = 1f,
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
-        AddChild(root);
+        AddChild(_rootControl);
+        var root = _rootControl;
 
         var panel = new PanelContainer
         {
