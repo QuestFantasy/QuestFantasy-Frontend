@@ -44,7 +44,7 @@ namespace QuestFantasy.Characters
 		private float _stuckTime;
 		private Vector2 _lastTargetTile = new Vector2(-999, -999);
 		private float _repathCooldown = 0f;
-		private const float RepathInterval = 0.3f;
+		private const float RepathInterval = 1.2f;
 
 		// Optimization: Frame slicing for pathfinding
 		private static ulong _lastPathfindingFrame = 0;
@@ -269,7 +269,7 @@ namespace QuestFantasy.Characters
 			if (_map == null || _player == null) return;
 
 			float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
-			if (distanceToPlayer > 1000f)
+			if (distanceToPlayer > 450f)
 			{
 				Velocity = Vector2.Zero;
 				if (_isWalkFrame)
@@ -309,7 +309,7 @@ namespace QuestFantasy.Characters
 			}
 
 			CheckPathflowAndStuck(delta);
-			MoveProcess(delta);
+			MoveProcess(delta, distanceToPlayer);
 			UpdateAnimation(delta);
 		}
 
@@ -392,6 +392,10 @@ namespace QuestFantasy.Characters
 					RecomputePath();
 					_repathCooldown = RepathInterval + (float)_random.NextDouble() * 0.2f;
 				}
+				else
+				{
+					_repathCooldown = 0.2f + (float)_random.NextDouble() * 0.3f;
+				}
 			}
 		}
 
@@ -414,7 +418,7 @@ namespace QuestFantasy.Characters
 			}
 		}
 
-		private void MoveProcess(float delta)
+		private void MoveProcess(float delta, float distanceToPlayer)
 		{
 			if (_currentPath.Count == 0)
 			{
@@ -441,10 +445,10 @@ namespace QuestFantasy.Characters
 			Vector2 direction = (nextWaypoint - GlobalPosition).Normalized();
 			Velocity = direction * speed;
 
-			MoveAndSlide();
+			MoveAndSlide(distanceToPlayer);
 		}
 
-		private void MoveAndSlide()
+		private void MoveAndSlide(float distanceToPlayer)
 		{
 			Vector2 deltaMove = Velocity * GetPhysicsProcessDeltaTime();
 			Vector2 newPos = GlobalPosition + deltaMove;
@@ -453,22 +457,38 @@ namespace QuestFantasy.Characters
 			// Anti-overlap with player
 			if (_player != null && _player.Attributes?.HP?.IsAlive == true)
 			{
-				if (newPos.DistanceTo(_player.GlobalPosition) < minDistance)
+				if (Math.Abs(newPos.x - _player.GlobalPosition.x) < minDistance &&
+					Math.Abs(newPos.y - _player.GlobalPosition.y) < minDistance)
 				{
-					Vector2 pushDir = (newPos - _player.GlobalPosition).Normalized();
-					newPos = _player.GlobalPosition + pushDir * minDistance;
+					if (newPos.DistanceTo(_player.GlobalPosition) < minDistance)
+					{
+						Vector2 pushDir = (newPos - _player.GlobalPosition).Normalized();
+						newPos = _player.GlobalPosition + pushDir * minDistance;
+					}
 				}
 			}
 
 			// Anti-overlap with other monsters
-			foreach (var monster in _activeMonsters)
+			if (distanceToPlayer < 400f)
 			{
-				if (monster == null || monster == this || monster.Attributes?.HP?.IsAlive != true) continue;
-				if (newPos.DistanceTo(monster.GlobalPosition) < minDistance)
+				int checks = 0;
+				foreach (var monster in _activeMonsters)
 				{
-					Vector2 pushDir = (newPos - monster.GlobalPosition).Normalized();
-					if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0); // fallback
-					newPos = monster.GlobalPosition + pushDir * minDistance;
+					if (monster == null || monster == this || monster.Attributes?.HP?.IsAlive != true) continue;
+					
+					if (Math.Abs(newPos.x - monster.GlobalPosition.x) > minDistance || 
+						Math.Abs(newPos.y - monster.GlobalPosition.y) > minDistance) 
+						continue;
+
+					if (newPos.DistanceTo(monster.GlobalPosition) < minDistance)
+					{
+						Vector2 pushDir = (newPos - monster.GlobalPosition).Normalized();
+						if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0); // fallback
+						newPos = monster.GlobalPosition + pushDir * minDistance;
+						
+						checks++;
+						if (checks > 5) break; 
+					}
 				}
 			}
 
