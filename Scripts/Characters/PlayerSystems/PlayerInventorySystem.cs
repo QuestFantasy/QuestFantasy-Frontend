@@ -145,5 +145,22 @@ namespace QuestFantasy.Characters.PlayerSystems
         {
             return _inventory.HasSpace();
         }
+
+        /// <summary>
+        /// Replace local inventory currency/exp values with backend snapshot values.
+        /// </summary>
+        public void SetSnapshot(int experience, int gold, bool notify = true)
+        {
+            _experience = Math.Max(0, experience);
+            _gold = Math.Max(0, gold);
+
+            if (!notify)
+            {
+                return;
+            }
+
+            OnExperienceChanged?.Invoke(_experience);
+            OnGoldChanged?.Invoke(_gold);
+        }
     }
 }

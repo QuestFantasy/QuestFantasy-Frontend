@@ -88,7 +88,7 @@ public class DeathScreenUI : CanvasLayer
         respawnBtn.Connect("pressed", this, nameof(HandleRespawnPressed));
         buttonVbox.AddChild(respawnBtn);
 
-        var exitBtn = CreateButton("Exit to Login");
+        var exitBtn = CreateButton("Exit to Lobby");
         exitBtn.Connect("pressed", this, nameof(HandleExitPressed));
         buttonVbox.AddChild(exitBtn);
     }

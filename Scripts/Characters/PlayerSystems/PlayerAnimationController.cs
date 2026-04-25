@@ -2,6 +2,13 @@ using Godot;
 
 namespace QuestFantasy.Characters.PlayerSystems
 {
+    public enum AttackAnimationStyle
+    {
+        Sword,
+        Bow,
+        Fireball,
+    }
+
     /// <summary>
     /// Handles all animation-related logic for the player:
     /// - Attack animation state management
@@ -15,6 +22,9 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         private bool _isAttacking = false;
         private float _lastFacingX = 1f;
+        private readonly Texture[] _swordAttackFrames;
+        private readonly Texture[] _bowAttackFrames;
+        private readonly Texture[] _fireballAttackFrames;
 
         public bool IsAttacking => _isAttacking;
 
@@ -24,6 +34,21 @@ namespace QuestFantasy.Characters.PlayerSystems
         {
             _animationSystem = animationSystem;
             _animationConfig = animationConfig;
+
+            _swordAttackFrames = BuildFrames(
+                _animationConfig.AttackFrame1Path,
+                _animationConfig.AttackFrame2Path,
+                _animationConfig.AttackFrame3Path);
+
+            _bowAttackFrames = BuildFrames(
+                "res://Assets/Characters/shot_prepare.png",
+                "res://Assets/Characters/shot.png",
+                "res://Assets/Characters/shoted.png");
+
+            _fireballAttackFrames = BuildFrames(
+                "res://Assets/Characters/magic.png",
+                "res://Assets/Characters/magic1.png",
+                "res://Assets/Characters/magic1.png");
         }
 
         /// <summary>
@@ -81,9 +106,21 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// <summary>
         /// Trigger attack animation playback
         /// </summary>
-        public void PlayAttackAnimation()
+        public void PlayAttackAnimation(AttackAnimationStyle style = AttackAnimationStyle.Sword)
         {
             _isAttacking = true;
+
+            Texture[] selectedFrames = _swordAttackFrames;
+            if (style == AttackAnimationStyle.Bow)
+            {
+                selectedFrames = _bowAttackFrames;
+            }
+            else if (style == AttackAnimationStyle.Fireball)
+            {
+                selectedFrames = _fireballAttackFrames;
+            }
+
+            _animationSystem.SetAttackFrames(selectedFrames);
             _animationSystem.PlayAttackAnimation();
         }
 
@@ -142,6 +179,16 @@ namespace QuestFantasy.Characters.PlayerSystems
         public void RefreshAnimationScale(Vector2 bodySizeInPixels)
         {
             _animationSystem.RefreshScale(bodySizeInPixels);
+        }
+
+        private static Texture[] BuildFrames(string frame1, string frame2, string frame3)
+        {
+            return new[]
+            {
+                GD.Load<Texture>(frame1),
+                GD.Load<Texture>(frame2),
+                GD.Load<Texture>(frame3),
+            };
         }
     }
 }

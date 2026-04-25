@@ -2,6 +2,9 @@ using Godot;
 
 public class Map : Node2D
 {
+    [Signal]
+    public delegate void BoxOpened(Vector2 worldPosition);
+
     [Export] public MapGenerationConfig GenerationConfig = new MapGenerationConfig();
 
     // Compatibility accessors let existing callers use map.TileSize and similar properties.
@@ -31,6 +34,7 @@ public class Map : Node2D
     private RandomNumberGenerator _random;
     private static readonly RandomNumberGenerator _seedRandom = new RandomNumberGenerator();
     private static bool _seedRandomInitialized;
+    public bool DisableRoomExits { get; set; } = false;  // Flag for lobby: disables room exit transitions
 
     public int WorldTileWidth => _data != null ? _data.WorldTileWidth : RoomsX * RoomTileSize;
     public int WorldTileHeight => _data != null ? _data.WorldTileHeight : RoomsY * RoomTileSize;
@@ -200,12 +204,15 @@ public class Map : Node2D
             return false;
         }
 
-        bool opened = _interactionSystem.TryOpenNearbyBox(_data, worldPosition, maxDistanceTiles);
-        if (opened)
+        if (_interactionSystem.TryOpenNearbyBox(_data, worldPosition, out Vector2 openedWorld, maxDistanceTiles))
         {
+            // notify listeners that a box opened at this world position
+            EmitSignal("BoxOpened", openedWorld);
             Update();
+            return true;
         }
-        return opened;
+
+        return false;
     }
 
     public override void _Draw()

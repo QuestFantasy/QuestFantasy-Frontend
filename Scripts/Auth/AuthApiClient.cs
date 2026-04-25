@@ -82,7 +82,9 @@ public class AuthApiClient : Node
         ValidateToken,
         Login,
         Register,
-        Logout
+        Logout,
+        FetchPlayerProfile,
+        UpdatePlayerProfile
     }
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
@@ -96,6 +98,7 @@ public class AuthApiClient : Node
     public override void _Ready()
     {
         _request = new HTTPRequest();
+        _request.PauseMode = PauseModeEnum.Process;
         AddChild(_request);
         _request.Connect("request_completed", this, nameof(OnRequestCompleted));
     }
@@ -160,6 +163,28 @@ public class AuthApiClient : Node
             "/api/auth/logout/",
             HTTPClient.Method.Post,
             null,
+            token,
+            callback);
+    }
+
+    public bool FetchPlayerProfile(string token, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.FetchPlayerProfile,
+            "/api/player/profile/",
+            HTTPClient.Method.Get,
+            null,
+            token,
+            callback);
+    }
+
+    public bool UpdatePlayerProfile(string token, Godot.Collections.Dictionary payload, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.UpdatePlayerProfile,
+            "/api/player/profile/",
+            HTTPClient.Method.Patch,
+            payload,
             token,
             callback);
     }

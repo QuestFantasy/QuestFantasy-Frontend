@@ -14,6 +14,11 @@ namespace QuestFantasy.Core.Data.Items
     {
         public WeaponType WeaponType { get; set; }
         public Abilities WeaponAbilities { get; set; }
+        public int Rarity { get; set; } = 1;
+        public int LevelRequirement { get; set; } = 1;
+        public string SpritePath { get; set; }
+        public string Source { get; set; }
+        public Texture Sprite { get; set; }
 
         public Weapon()
         {

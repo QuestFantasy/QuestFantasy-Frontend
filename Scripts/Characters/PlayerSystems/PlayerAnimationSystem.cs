@@ -41,7 +41,7 @@ namespace QuestFantasy.Characters.PlayerSystems
         private int _frameIndex = 0;
         private float _animationTimer = 0f;
         private bool _hasAllFrames = false;
-        private float _attackHoldTimer = 0f; // Extra time to hold last attack frame
+        // (attack hold timer removed - not used)
 
         public void Initialize(Node2D owner, string standFrame1Path, string standFrame2Path,
                                string walkFrame1Path, string walkFrame2Path,
@@ -142,7 +142,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             // 2x multiplier for larger visuals.
             float scaleX = bodySize.x / textureSize.x;
             float scaleY = bodySize.y / textureSize.y;
-            float uniformScale = Mathf.Min(scaleX, scaleY) * 3f;
+            float uniformScale = Mathf.Min(scaleX, scaleY) * 2.5f;
             _sprite.Scale = new Vector2(uniformScale, uniformScale);
         }
 
@@ -247,9 +247,19 @@ namespace QuestFantasy.Characters.PlayerSystems
             _currentState = AnimationState.Attacking;
             _frameIndex = 0;
             _animationTimer = 0f;
-            _attackHoldTimer = 0f;
+            // attack hold timer removed
 
             GD.Print($"[PlayerAnimationSystem] Playing attack animation with {_attackFrames.Length} frames");
+        }
+
+        public void SetAttackFrames(Texture[] attackFrames)
+        {
+            if (attackFrames == null || attackFrames.Length == 0)
+            {
+                return;
+            }
+
+            _attackFrames = attackFrames;
         }
 
         public void PlayDeadAnimation(Texture deadTexture)
@@ -299,10 +309,9 @@ namespace QuestFantasy.Characters.PlayerSystems
                 // Check if animation finished
                 if (_frameIndex >= _attackFrames.Length)
                 {
-                    // Hold last frame for 0.1 extra seconds to show impact
-                    _attackHoldTimer = 0.1f;
+                    // Finish attack animation and return to idle
                     _frameIndex = _attackFrames.Length - 1;
-                    _currentState = AnimationState.Idle; // Return to idle at end
+                    _currentState = AnimationState.Idle;
                     ApplyCurrentFrame(facingX);
                     return true; // Animation complete
                 }
