@@ -268,6 +268,18 @@ namespace QuestFantasy.Characters
 
 			if (_map == null || _player == null) return;
 
+			float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
+			if (distanceToPlayer > 1000f)
+			{
+				Velocity = Vector2.Zero;
+				if (_isWalkFrame)
+				{
+					_isWalkFrame = false;
+					Texture = _standTexture;
+				}
+				return;
+			}
+
 			if (_attackCooldownTimer > 0f)
 			{
 				_attackCooldownTimer -= delta;
@@ -285,7 +297,6 @@ namespace QuestFantasy.Characters
 				return; // Skip moving while attacking
 			}
 
-			float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
 			if (distanceToPlayer <= AttackRange && _attackCooldownTimer <= 0f)
 			{
 				PerformAttack();

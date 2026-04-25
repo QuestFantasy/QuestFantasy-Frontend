@@ -207,22 +207,22 @@ public class Main : Node2D
 		_sidebarMenu.AddMenuItem("logout", "Logout", OnLogoutPressed);
 	}
 
-	    private void SetupDeathScreen()
-    {
-        _deathScreen = new DeathScreenUI();
-        AddChild(_deathScreen);
-        _deathScreen.OnRespawnClicked += () =>
-        {
-            _deathScreen.SetVisible(false);
-            if (_playerHud != null) _playerHud.SetVisible(true);
-            _player?.Respawn();
-        };
-        _deathScreen.OnExitClicked += () =>
-        {
-            _deathScreen.SetVisible(false);
-            ReturnToLobby();
-        };
-    }
+		private void SetupDeathScreen()
+	{
+		_deathScreen = new DeathScreenUI();
+		AddChild(_deathScreen);
+		_deathScreen.OnRespawnClicked += () =>
+		{
+			_deathScreen.SetVisible(false);
+			if (_playerHud != null) _playerHud.SetVisible(true);
+			_player?.Respawn();
+		};
+		_deathScreen.OnExitClicked += () =>
+		{
+			_deathScreen.SetVisible(false);
+			ReturnToLobby();
+		};
+	}
 
 	private void OnLogoutPressed()
 	{
@@ -230,12 +230,12 @@ public class Main : Node2D
 		_authFlowController?.RequestLogout();
 	}
 
-	    private void OnPlayerDied()
-    {
-        TransmitPlayerProfile("die");
-        if (_playerHud != null) _playerHud.SetVisible(false);
-        _deathScreen?.SetVisible(true);
-    }
+		private void OnPlayerDied()
+	{
+		TransmitPlayerProfile("die");
+		if (_playerHud != null) _playerHud.SetVisible(false);
+		_deathScreen?.SetVisible(true);
+	}
 
 	private void OnPlayerEnteredRoom(Vector2 roomIndex, string reason)
 	{
@@ -398,7 +398,7 @@ public class Main : Node2D
 		_playerHud.Initialize(_player);
 
 		// Spawn monsters based on difficulty
-		int numMonstersToSpawn = ((int)difficulty + 1) * 10;
+		int numMonstersToSpawn = ((int)difficulty + 1) * 100;
 		var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
 		for (int i = 0; i < numMonstersToSpawn; i++)
 		{
