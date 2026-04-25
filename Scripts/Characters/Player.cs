@@ -51,10 +51,13 @@ namespace QuestFantasy.Characters
         // Death state
         private Texture _deadTexture;
         private bool _isDead = false;
-        private float _respawnTimer = 0f;
 
         // Hit state
         private Texture _hitTexture;
+
+        // Invincibility state
+        private int _damageCooldownFrames = 0;
+        private float _respawnInvincibilityTimer = 0f;
 
         // Previously exposed properties now delegated to subsystems
         public int Experience => _inventorySystem?.Experience ?? 0;
@@ -275,6 +278,11 @@ namespace QuestFantasy.Characters
 
         public override void TakeDamage(int damage)
         {
+            if (_respawnInvincibilityTimer > 0f) return;
+            if (_damageCooldownFrames > 0) return;
+
+            _damageCooldownFrames = 6; // 0.1 seconds at 60 FPS processing
+
             base.TakeDamage(damage);
             if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
             {
@@ -286,12 +294,32 @@ namespace QuestFantasy.Characters
         {
             if (_isDead)
             {
-                _respawnTimer -= delta;
-                if (_respawnTimer <= 0)
-                {
-                    Respawn();
-                }
                 return;
+            }
+
+            if (_damageCooldownFrames > 0)
+            {
+                _damageCooldownFrames--;
+            }
+
+            if (_respawnInvincibilityTimer > 0f)
+            {
+                _respawnInvincibilityTimer -= delta;
+                if (_respawnInvincibilityTimer <= 0f)
+                {
+                    Modulate = new Color(1f, 1f, 1f, 1f);
+                }
+                else if (_respawnInvincibilityTimer <= 1.0f)
+                {
+                    // Flashing effect in the last second
+                    float flash = Mathf.Sin(_respawnInvincibilityTimer * 30f) * 0.5f + 0.5f;
+                    Modulate = new Color(1f, 1f, 0.5f, 0.5f + flash * 0.5f);
+                }
+                else
+                {
+                    // Solid golden glow
+                    Modulate = new Color(1f, 0.9f, 0.4f, 1f);
+                }
             }
 
             if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)
@@ -347,20 +375,23 @@ namespace QuestFantasy.Characters
 
         private void Die()
         {
+            if (_isDead) return;
             _isDead = true;
-            _respawnTimer = 5.0f;
+            Modulate = new Color(1f, 1f, 1f, 1f);
             GD.Print("[Player] Died");
             _animationController?.PlayDeadAnimation(_deadTexture);
             OnDied?.Invoke();
         }
 
-        private void Respawn()
+        public void Respawn()
         {
             _isDead = false;
             int maxHp = Attributes?.HP?.MaxHP ?? 100;
             Attributes.HP.SetMaxHPAndCurrentHP(maxHp, maxHp);
             Position = _map?.GetSpawnWorldPosition() ?? Position;
             _animationController?.Revive();
+            _respawnInvincibilityTimer = 3.0f;
+            Modulate = new Color(1f, 0.9f, 0.4f, 1f);
             GD.Print("[Player] Respawned");
             Update();
         }

@@ -28,6 +28,7 @@ public class PlayerHud : CanvasLayer
     private ProgressBar _hpBar;
     private Label _hpValue;
     private GridContainer _skillsContainer;
+    private Control _rootControl;
 
     public override void _Ready()
     {
@@ -67,15 +68,24 @@ public class PlayerHud : CanvasLayer
         }
     }
 
+    public void SetVisible(bool visible)
+    {
+        if (_rootControl != null)
+        {
+            _rootControl.Visible = visible;
+        }
+    }
+
     private void BuildUi()
     {
-        var root = new Control
+        _rootControl = new Control
         {
             AnchorRight = 1f,
             AnchorBottom = 1f,
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
-        AddChild(root);
+        AddChild(_rootControl);
+        var root = _rootControl;
 
         var panel = new PanelContainer
         {
@@ -385,6 +395,15 @@ public class PlayerHud : CanvasLayer
         _hpBar.MaxValue = safeMax;
         _hpBar.Value = clampedCurrent;
         _hpValue.Text = $"{clampedCurrent}/{safeMax}";
+
+        var fgStyle = _hpBar.GetStylebox("fg") as StyleBoxFlat;
+        if (fgStyle != null)
+        {
+            float ratio = (float)clampedCurrent / safeMax;
+            if (ratio > 0.5f) { fgStyle.BgColor = new Color(0.1f, 0.8f, 0.1f, 1f); } // Green
+            else if (ratio > 0.25f) { fgStyle.BgColor = new Color(0.9f, 0.7f, 0.1f, 1f); } // Orange/Yellow
+            else { fgStyle.BgColor = new Color(0.9f, 0.1f, 0.1f, 1f); } // Red
+        }
     }
 
     private void ClearSkillSlots()

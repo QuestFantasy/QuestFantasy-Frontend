@@ -44,7 +44,7 @@ namespace QuestFantasy.Characters
         private float _stuckTime;
         private Vector2 _lastTargetTile = new Vector2(-999, -999);
         private float _repathCooldown = 0f;
-        private const float RepathInterval = 0.3f;
+        private const float RepathInterval = 1.2f;
 
         // Optimization: Frame slicing for pathfinding
         private static ulong _lastPathfindingFrame = 0;
@@ -77,6 +77,9 @@ namespace QuestFantasy.Characters
         private Texture _hitTexture;
         private bool _isHit = false;
         private float _hitTimer = 0f;
+
+        // Health Bar
+        private ProgressBar _healthBar;
 
         public Vector2 BodySizeInTiles = new Vector2(0.1f, 0.1f);
 
@@ -123,37 +126,29 @@ namespace QuestFantasy.Characters
 
         private void FindSafeSpawnLocation()
         {
-            Vector2 spawnCenter = _map.GetSpawnWorldPosition();
-            Vector2 fallbackPosition = spawnCenter;
-
-            for (int radius = 0; radius <= 10; radius++)
+            int maxAttempts = 200;
+            for (int i = 0; i < maxAttempts; i++)
             {
-                for (int x = -radius; x <= radius; x++)
-                {
-                    for (int y = -radius; y <= radius; y++)
-                    {
-                        if (Mathf.Max(Mathf.Abs(x), Mathf.Abs(y)) != radius) continue;
+                int tx = _random.Next(0, _map.WorldTileWidth);
+                int ty = _random.Next(0, _map.WorldTileHeight);
 
-                        Vector2 checkPos = spawnCenter + new Vector2(x * _map.TileSize, y * _map.TileSize);
+                Vector2 checkPos = TileToWorldCenter(new Vector2(tx, ty));
 
-                        if (!_map.CanMoveTo(GetBodyRect(checkPos))) continue;
-                        if (IsSpawnPositionOccupied(checkPos)) continue;
-                        if (IsPlayerSpawnPosition(checkPos)) continue;
+                if (!_map.CanMoveTo(GetBodyRect(checkPos))) continue;
+                if (IsPlayerSpawnPosition(checkPos)) continue;
+                if (IsSpawnPositionOccupied(checkPos)) continue;
+                if (IsTileOccupiedByOtherMonster(tx, ty)) continue;
 
-                        Vector2 candidateTile = WorldToTile(checkPos);
-                        if (IsTileOccupiedByOtherMonster((int)candidateTile.x, (int)candidateTile.y)) continue;
-
-                        Position = checkPos;
-                        _occupiedSpawnPositions.Add(checkPos);
-                        return;
-                    }
-                }
+                Position = checkPos;
+                _occupiedSpawnPositions.Add(checkPos);
+                return;
             }
 
-            if (!IsPlayerSpawnPosition(fallbackPosition))
+            Vector2 spawnCenter = _map.GetSpawnWorldPosition();
+            if (!IsPlayerSpawnPosition(spawnCenter))
             {
-                Position = fallbackPosition;
-                _occupiedSpawnPositions.Add(fallbackPosition);
+                Position = spawnCenter;
+                _occupiedSpawnPositions.Add(spawnCenter);
             }
         }
 
@@ -186,6 +181,19 @@ namespace QuestFantasy.Characters
                 Attributes.TotalAtk = 1;
                 Attributes.HP.SetMaxHPAndCurrentHP(5);
             }
+
+            // Add HP bar
+            _healthBar = new ProgressBar
+            {
+                RectSize = new Vector2(96, 4),
+                RectPosition = new Vector2(-40, -70),
+                PercentVisible = false
+            };
+            var bgStyle = new StyleBoxFlat { BgColor = new Color(0.5f, 0.5f, 0.5f, 1f) };
+            var fgStyle = new StyleBoxFlat { BgColor = new Color(0.9f, 0.1f, 0.1f, 1f) };
+            _healthBar.AddStyleboxOverride("bg", bgStyle);
+            _healthBar.AddStyleboxOverride("fg", fgStyle);
+            AddChild(_healthBar);
 
             GD.Print($"Monster ready at {GlobalPosition}");
         }
@@ -232,6 +240,12 @@ namespace QuestFantasy.Characters
                 return;
             }
 
+            if (Attributes != null && Attributes.HP != null && _healthBar != null)
+            {
+                _healthBar.MaxValue = Attributes.HP.MaxHP;
+                _healthBar.Value = Attributes.HP.CurrentHP;
+            }
+
             if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)
             {
                 Die();
@@ -254,6 +268,18 @@ namespace QuestFantasy.Characters
 
             if (_map == null || _player == null) return;
 
+            float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
+            if (distanceToPlayer > 450f)
+            {
+                Velocity = Vector2.Zero;
+                if (_isWalkFrame)
+                {
+                    _isWalkFrame = false;
+                    Texture = _standTexture;
+                }
+                return;
+            }
+
             if (_attackCooldownTimer > 0f)
             {
                 _attackCooldownTimer -= delta;
@@ -271,7 +297,6 @@ namespace QuestFantasy.Characters
                 return; // Skip moving while attacking
             }
 
-            float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
             if (distanceToPlayer <= AttackRange && _attackCooldownTimer <= 0f)
             {
                 PerformAttack();
@@ -284,7 +309,7 @@ namespace QuestFantasy.Characters
             }
 
             CheckPathflowAndStuck(delta);
-            MoveProcess(delta);
+            MoveProcess(delta, distanceToPlayer);
             UpdateAnimation(delta);
         }
 
@@ -367,6 +392,10 @@ namespace QuestFantasy.Characters
                     RecomputePath();
                     _repathCooldown = RepathInterval + (float)_random.NextDouble() * 0.2f;
                 }
+                else
+                {
+                    _repathCooldown = 0.2f + (float)_random.NextDouble() * 0.3f;
+                }
             }
         }
 
@@ -389,7 +418,7 @@ namespace QuestFantasy.Characters
             }
         }
 
-        private void MoveProcess(float delta)
+        private void MoveProcess(float delta, float distanceToPlayer)
         {
             if (_currentPath.Count == 0)
             {
@@ -407,7 +436,6 @@ namespace QuestFantasy.Characters
                 nextWaypoint = _currentPath[0];
             }
 
-            float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
             float speedMultiplier = distanceToPlayer > 200f ? 1.5f : (distanceToPlayer > 80f ? 1.0f : 0.8f);
 
             // In case Player doesnt have MoveSpeed, hardcode fallback to 100f. Assuming it might have been refactored in main.
@@ -416,10 +444,10 @@ namespace QuestFantasy.Characters
             Vector2 direction = (nextWaypoint - GlobalPosition).Normalized();
             Velocity = direction * speed;
 
-            MoveAndSlide();
+            MoveAndSlide(distanceToPlayer);
         }
 
-        private void MoveAndSlide()
+        private void MoveAndSlide(float distanceToPlayer)
         {
             Vector2 deltaMove = Velocity * GetPhysicsProcessDeltaTime();
             Vector2 newPos = GlobalPosition + deltaMove;
@@ -428,22 +456,38 @@ namespace QuestFantasy.Characters
             // Anti-overlap with player
             if (_player != null && _player.Attributes?.HP?.IsAlive == true)
             {
-                if (newPos.DistanceTo(_player.GlobalPosition) < minDistance)
+                if (Math.Abs(newPos.x - _player.GlobalPosition.x) < minDistance &&
+                    Math.Abs(newPos.y - _player.GlobalPosition.y) < minDistance)
                 {
-                    Vector2 pushDir = (newPos - _player.GlobalPosition).Normalized();
-                    newPos = _player.GlobalPosition + pushDir * minDistance;
+                    if (newPos.DistanceTo(_player.GlobalPosition) < minDistance)
+                    {
+                        Vector2 pushDir = (newPos - _player.GlobalPosition).Normalized();
+                        newPos = _player.GlobalPosition + pushDir * minDistance;
+                    }
                 }
             }
 
             // Anti-overlap with other monsters
-            foreach (var monster in _activeMonsters)
+            if (distanceToPlayer < 400f)
             {
-                if (monster == null || monster == this || monster.Attributes?.HP?.IsAlive != true) continue;
-                if (newPos.DistanceTo(monster.GlobalPosition) < minDistance)
+                int checks = 0;
+                foreach (var monster in _activeMonsters)
                 {
-                    Vector2 pushDir = (newPos - monster.GlobalPosition).Normalized();
-                    if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0); // fallback
-                    newPos = monster.GlobalPosition + pushDir * minDistance;
+                    if (monster == null || monster == this || monster.Attributes?.HP?.IsAlive != true) continue;
+
+                    if (Math.Abs(newPos.x - monster.GlobalPosition.x) > minDistance ||
+                        Math.Abs(newPos.y - monster.GlobalPosition.y) > minDistance)
+                        continue;
+
+                    if (newPos.DistanceTo(monster.GlobalPosition) < minDistance)
+                    {
+                        Vector2 pushDir = (newPos - monster.GlobalPosition).Normalized();
+                        if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0); // fallback
+                        newPos = monster.GlobalPosition + pushDir * minDistance;
+
+                        checks++;
+                        if (checks > 5) break;
+                    }
                 }
             }
 
@@ -587,6 +631,7 @@ namespace QuestFantasy.Characters
             _isDead = true;
             Texture = _deadTexture;
             Velocity = Vector2.Zero;
+            if (_healthBar != null) _healthBar.Visible = false;
             GD.Print($"[Monster] {EntityName} Died");
             TrySpawnDrops();
         }
