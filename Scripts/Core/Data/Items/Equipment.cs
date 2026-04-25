@@ -6,7 +6,7 @@ using QuestFantasy.Core.Data.Attributes;
 
 namespace QuestFantasy.Core.Data.Items
 {
-    public enum EquipmentType { None, Head, Body, Arms, Legs, Shoes }
+    public enum EquipmentType { None, Head, Body, Arms, Legs, Shoes, Other }
 
     /// <summary>
     /// Manages all equipped items on a character.
@@ -89,6 +89,11 @@ namespace QuestFantasy.Core.Data.Items
     {
         public EquipmentType EquipmentType { get; set; }
         public Abilities EquipmentAbilities { get; set; }
+        public int Rarity { get; set; } = 1;
+        public int LevelRequirement { get; set; } = 1;
+        public string SpritePath { get; set; }
+        public string Source { get; set; }
+        public Texture Sprite { get; set; }
 
         public Equipment()
         {
