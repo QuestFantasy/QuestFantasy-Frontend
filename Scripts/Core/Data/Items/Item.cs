@@ -15,7 +15,7 @@ namespace QuestFantasy.Core.Data.Items
     /// </summary>
     public class Item : NameAndDescription
     {
-        public int Price { get; protected set; }
+        public int Price { get; set; }
         public ItemType ItemType { get; protected set; }
         public int Quantity { get; set; } = 1;
 

@@ -17,6 +17,8 @@ public class Main : Node2D
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
     private Player _player;
+    private readonly EquipmentManager _equipManagerRef = new EquipmentManager();
+    private readonly TreasureChest _chestRef = new TreasureChest();
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
     private readonly string _syncSessionId = Guid.NewGuid().ToString("N");
     private int _syncSequence = 0;
@@ -46,6 +48,23 @@ public class Main : Node2D
         _progressIndicator = new ProgressSyncIndicator();
         AddChild(_progressIndicator);
         _progressIndicator.SetState(ProgressSyncIndicator.SyncState.Hidden);
+
+        if (_equipManagerRef.GetParent() == null)
+        {
+            AddChild(_equipManagerRef);
+        }
+
+        if (_chestRef.GetParent() == null)
+        {
+            AddChild(_chestRef);
+        }
+
+        // Ensure EquipmentPreview exists in the scene so pickups can call EquipmentPreview.Instance
+        if (EquipmentPreview.Instance == null)
+        {
+            var preview = new EquipmentPreview();
+            AddChild(preview);
+        }
     }
 
     public override void _Process(float delta)
@@ -74,8 +93,7 @@ public class Main : Node2D
         DestroyPlayableWorld();
         _pendingProfileSnapshot = profileSnapshot;
         _sidebarMenu?.SetMenuVisible(true);
-
-        // Login success should enter lobby first. Actual map/player is created only when difficulty is chosen.
+        // Build lobby instead of directly loading a game map
         BuildLobby();
     }
 
@@ -338,6 +356,8 @@ public class Main : Node2D
         _map.RoomsY = 2;
         AddChild(_map);
         _map.RegenerateWithRandomSeed();
+        // Connect map's BoxOpened directly to TreasureChest so Main doesn't need to forward.
+        _map.Connect("BoxOpened", _chestRef, nameof(TreasureChest.HandleMapBoxOpened));
 
         _player = new Player();
         AddChild(_player);
@@ -379,4 +399,8 @@ public class Main : Node2D
         // Rebuild the lobby for another session
         BuildLobby();
     }
+
+    // Note: Map.BoxOpened is handled directly by TreasureChest.HandleMapBoxOpened now.
+
+
 }
