@@ -252,6 +252,16 @@ namespace QuestFantasy.Characters.PlayerSystems
             GD.Print($"[PlayerAnimationSystem] Playing attack animation with {_attackFrames.Length} frames");
         }
 
+        public void SetAttackFrames(Texture[] attackFrames)
+        {
+            if (attackFrames == null || attackFrames.Length == 0)
+            {
+                return;
+            }
+
+            _attackFrames = attackFrames;
+        }
+
         public void PlayDeadAnimation(Texture deadTexture)
         {
             if (_currentState == AnimationState.Dead) return;

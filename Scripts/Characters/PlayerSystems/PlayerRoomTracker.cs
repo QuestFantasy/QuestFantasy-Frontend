@@ -70,9 +70,12 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return false;
             }
 
+            GD.Print($"[MapGeneration] Exit reached at room ({_currentRoomIndex.x}, {_currentRoomIndex.y}). Generating new room layout...");
+
             map.RegenerateWithRandomSeed();
             _currentRoomIndex = Vector2.Zero;
             nextPosition = map.GetSpawnWorldPosition();
+            GD.Print($"[MapGeneration] New room generated. Spawn position=({nextPosition.x}, {nextPosition.y}), roomIndex=({_currentRoomIndex.x}, {_currentRoomIndex.y}).");
             SetPortalCooldown(GameConstants.PORTAL_TELEPORT_COOLDOWN);
             return true;
         }

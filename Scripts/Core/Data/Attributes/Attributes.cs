@@ -1,3 +1,5 @@
+using System;
+
 namespace QuestFantasy.Core.Data.Attributes
 {
     public enum ElementsTypes { Normal, Earth, Water, Fire, Wind }
@@ -39,6 +41,8 @@ namespace QuestFantasy.Core.Data.Attributes
     {
         private const int VIT_TO_HP_RATE = 10;
 
+        public event Action<int, int> OnChanged;
+
         public int MaxHP { get; private set; }
         public int CurrentHP { get; private set; }
 
@@ -49,6 +53,7 @@ namespace QuestFantasy.Core.Data.Attributes
         {
             MaxHP = 10 * VIT_TO_HP_RATE; // 100 HP by default
             CurrentHP = MaxHP;
+            EmitChanged();
         }
 
         /// <summary>
@@ -56,8 +61,19 @@ namespace QuestFantasy.Core.Data.Attributes
         /// </summary>
         public void SetMaxHPAndCurrentHP(int value)
         {
-            MaxHP = value;
-            CurrentHP = value;
+            SetMaxHPAndCurrentHP(value, value);
+        }
+
+        public void SetMaxHPAndCurrentHP(int maxValue, int currentValue)
+        {
+            MaxHP = maxValue < 1 ? 1 : maxValue;
+            CurrentHP = currentValue < 0 ? 0 : currentValue;
+            if (CurrentHP > MaxHP)
+            {
+                CurrentHP = MaxHP;
+            }
+
+            EmitChanged();
         }
 
         /// <summary>
@@ -73,6 +89,8 @@ namespace QuestFantasy.Core.Data.Attributes
             {
                 CurrentHP = MaxHP;
             }
+
+            EmitChanged();
         }
 
         /// <summary>
@@ -88,6 +106,8 @@ namespace QuestFantasy.Core.Data.Attributes
             {
                 CurrentHP = 0;
             }
+
+            EmitChanged();
         }
 
         /// <summary>
@@ -103,12 +123,19 @@ namespace QuestFantasy.Core.Data.Attributes
             {
                 CurrentHP = MaxHP;
             }
+
+            EmitChanged();
         }
 
         /// <summary>
         /// Check if character is alive
         /// </summary>
         public bool IsAlive => CurrentHP > 0;
+
+        private void EmitChanged()
+        {
+            OnChanged?.Invoke(CurrentHP, MaxHP);
+        }
     }
 
     public class Attributes

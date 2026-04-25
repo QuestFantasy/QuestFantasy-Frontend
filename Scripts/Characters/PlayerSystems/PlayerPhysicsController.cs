@@ -19,6 +19,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         private readonly PlayerRoomTracker _roomTracker;
         private readonly PlayerCameraManager _cameraManager;
 
+        public event Action<Vector2, string> OnRoomChanged;
+
         public PlayerPhysicsController(
             PlayerMovementController movementController,
             PlayerRoomTracker roomTracker,
@@ -72,6 +74,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (_roomTracker.TryHandlePortal(map, player.Position, out Vector2 destinationPosition))
             {
                 TransitionToLocation(player, map, destinationPosition);
+                OnRoomChanged?.Invoke(_roomTracker.CurrentRoomIndex, "portal");
             }
         }
 
@@ -87,6 +90,8 @@ namespace QuestFantasy.Characters.PlayerSystems
             // Prioritize room exit (level completion)
             if (_roomTracker.TryHandleExit(map, player.Position, out Vector2 exitPosition))
             {
+                TransitionToLocation(player, map, exitPosition);
+                OnRoomChanged?.Invoke(_roomTracker.CurrentRoomIndex, "generated_room_enter");
                 // Fire event that player reached an exit
                 ExitReached?.Invoke();
                 return;  // Prevent multiple transitions in same frame
@@ -96,6 +101,7 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (_roomTracker.TryUpdateRoomByPosition(map, player.Position))
             {
                 LockCameraToCurrentRoom(player, map);
+                OnRoomChanged?.Invoke(_roomTracker.CurrentRoomIndex, "room_enter");
             }
         }
 

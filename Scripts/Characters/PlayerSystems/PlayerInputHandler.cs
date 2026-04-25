@@ -23,6 +23,13 @@ namespace QuestFantasy.Characters.PlayerSystems
             InputMap.ActionAddEvent("interact", interactKey);
         }
 
+        public void EnsureSkillInputActions()
+        {
+            EnsureSingleKeyAction("skill_slot_1", KeyList.Key1);
+            EnsureSingleKeyAction("skill_slot_2", KeyList.Key2);
+            EnsureSingleKeyAction("skill_slot_3", KeyList.Key3);
+        }
+
         public bool IsRespawnPressed()
         {
             return Input.IsActionJustPressed("ui_cancel");
@@ -65,6 +72,45 @@ namespace QuestFantasy.Characters.PlayerSystems
             }
 
             return input;
+        }
+
+        public int ConsumeSelectedSkillIndex()
+        {
+            if (Input.IsActionJustPressed("skill_slot_1"))
+            {
+                return 0;
+            }
+
+            if (Input.IsActionJustPressed("skill_slot_2"))
+            {
+                return 1;
+            }
+
+            if (Input.IsActionJustPressed("skill_slot_3"))
+            {
+                return 2;
+            }
+
+            return -1;
+        }
+
+        private static void EnsureSingleKeyAction(string actionName, KeyList key)
+        {
+            if (!InputMap.HasAction(actionName))
+            {
+                InputMap.AddAction(actionName);
+            }
+
+            if (InputMap.GetActionList(actionName).Count > 0)
+            {
+                return;
+            }
+
+            var inputEvent = new InputEventKey
+            {
+                Scancode = (uint)key,
+            };
+            InputMap.ActionAddEvent(actionName, inputEvent);
         }
     }
 }
