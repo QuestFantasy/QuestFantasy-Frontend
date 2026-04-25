@@ -22,12 +22,13 @@ namespace QuestFantasy.Characters
     public class NPC : Character
     {
         private const float DefaultInteractionRangePixels = 80f;
+        private const float PortraitDrawScale = 0.20f;
 
         private Player _nearbyPlayer;
         private bool _playerInRange;
-        private Color _baseModulate = Colors.White;
         private Label _namePlateLabel;
         private Label _interactionPromptLabel;
+        private Texture _portraitTexture;
 
         public string Dialogue { get; private set; } = "Hello, traveler!";
         public NpcRole Role { get; private set; } = NpcRole.Guide;
@@ -54,6 +55,7 @@ namespace QuestFantasy.Characters
             Dialogue = string.IsNullOrWhiteSpace(dialogue) ? "Hello, traveler!" : dialogue;
             Role = role;
             IsShopkeeper = isShopkeeper;
+            _portraitTexture = LoadPortraitTexture(role, EntityName);
 
             if (ShopInventory == null)
             {
@@ -63,8 +65,7 @@ namespace QuestFantasy.Characters
 
         public void SetBaseTint(Color tint)
         {
-            _baseModulate = tint;
-            Modulate = tint;
+            _ = tint;
         }
 
         private void BuildOverlayLabels()
@@ -83,7 +84,7 @@ namespace QuestFantasy.Characters
             {
                 Text = GetInteractionPromptText(),
                 Align = Label.AlignEnum.Center,
-                RectPosition = new Vector2(-80f, -36f),
+                RectPosition = new Vector2(-80f, 24f),
                 RectMinSize = new Vector2(160f, 18f),
                 Visible = false,
                 MouseFilter = Control.MouseFilterEnum.Ignore
@@ -142,6 +143,39 @@ namespace QuestFantasy.Characters
         public IReadOnlyList<Item> GetShopItems()
         {
             return ShopInventory.Items.AsReadOnly();
+        }
+
+        public void SetShopInventory(IEnumerable<Item> items)
+        {
+            if (ShopInventory == null)
+            {
+                ShopInventory = new Bag { MaxSlots = 0 };
+            }
+
+            ShopInventory.Clear();
+
+            if (items == null)
+            {
+                return;
+            }
+
+            foreach (var item in items)
+            {
+                if (item != null)
+                {
+                    ShopInventory.AddItem(item);
+                }
+            }
+        }
+
+        public bool AddShopItem(Item item)
+        {
+            if (ShopInventory == null)
+            {
+                ShopInventory = new Bag { MaxSlots = 0 };
+            }
+
+            return item != null && ShopInventory.AddItem(item);
         }
 
         public bool TrySellToPlayer(Player player, Item item, int price)
@@ -217,28 +251,63 @@ namespace QuestFantasy.Characters
 
         public override void _Draw()
         {
-            Vector2 bodyCenter = new Vector2(0f, -4f);
-            Vector2 bodySize = new Vector2(22f, 28f);
-
-            Color bodyColor = IsShopkeeper
-                ? new Color(0.55f, 0.72f, 1f)
-                : new Color(0.68f, 0.78f, 0.72f);
-
-            DrawRect(new Rect2(bodyCenter.x - bodySize.x / 2f, bodyCenter.y - bodySize.y / 2f, bodySize.x, bodySize.y), bodyColor);
-            DrawCircle(new Vector2(0f, -24f), 9f, new Color(0.93f, 0.82f, 0.72f));
-
-            if (IsShopkeeper)
+            if (_portraitTexture != null)
             {
-                DrawRect(new Rect2(-7f, -7f, 14f, 10f), new Color(0.18f, 0.2f, 0.24f));
+                Vector2 portraitSize = _portraitTexture.GetSize() * PortraitDrawScale;
+                var portraitRect = new Rect2(new Vector2(-portraitSize.x / 2f, -12f - portraitSize.y / 2f), portraitSize);
+                DrawTextureRect(_portraitTexture, portraitRect, false);
             }
             else
             {
-                DrawRect(new Rect2(-6f, -8f, 12f, 6f), new Color(0.18f, 0.2f, 0.24f));
+                Vector2 bodyCenter = new Vector2(0f, -4f);
+                Vector2 bodySize = new Vector2(22f, 28f);
+
+                Color bodyColor = IsShopkeeper
+                    ? new Color(0.55f, 0.72f, 1f)
+                    : new Color(0.68f, 0.78f, 0.72f);
+
+                DrawRect(new Rect2(bodyCenter.x - bodySize.x / 2f, bodyCenter.y - bodySize.y / 2f, bodySize.x, bodySize.y), bodyColor);
+                DrawCircle(new Vector2(0f, -24f), 9f, new Color(0.93f, 0.82f, 0.72f));
+
+                if (IsShopkeeper)
+                {
+                    DrawRect(new Rect2(-7f, -7f, 14f, 10f), new Color(0.18f, 0.2f, 0.24f));
+                }
+                else
+                {
+                    DrawRect(new Rect2(-6f, -8f, 12f, 6f), new Color(0.18f, 0.2f, 0.24f));
+                }
+
+                DrawCircle(new Vector2(-4f, -26f), 1.2f, Colors.Black);
+                DrawCircle(new Vector2(4f, -26f), 1.2f, Colors.Black);
             }
 
-            DrawCircle(new Vector2(-4f, -26f), 1.2f, Colors.Black);
-            DrawCircle(new Vector2(4f, -26f), 1.2f, Colors.Black);
             Update();
+        }
+
+        private Texture LoadPortraitTexture(NpcRole role, string entityName)
+        {
+            string texturePath = ResolvePortraitPath(role, entityName);
+            if (string.IsNullOrEmpty(texturePath))
+            {
+                return null;
+            }
+
+            return GD.Load<Texture>(texturePath);
+        }
+
+        private string ResolvePortraitPath(NpcRole role, string entityName)
+        {
+            switch (role)
+            {
+                case NpcRole.Blacksmith:
+                    return "res://Assets/NPC/NPC-blacksmith.png";
+                case NpcRole.Merchant:
+                    return "res://Assets/NPC/NPC-poet.png";
+                case NpcRole.Guide:
+                default:
+                    return "res://Assets/NPC/NPC-previous-hero.png";
+            }
         }
 
         private Player ResolveNearbyPlayer()
@@ -260,7 +329,6 @@ namespace QuestFantasy.Characters
             }
 
             _playerInRange = inRange;
-            Modulate = inRange ? new Color(1f, 1f, 0.75f) : _baseModulate;
             if (_interactionPromptLabel != null)
             {
                 _interactionPromptLabel.Visible = inRange;

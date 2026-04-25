@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data;
+using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Environment;
 
 namespace QuestFantasy.Prototype
@@ -26,6 +27,7 @@ namespace QuestFantasy.Prototype
         private Teleporter _teleporter;
         private DifficultySelectionUI _difficultyUI;
         private NpcShopUI _shopUI;
+        private readonly EquipmentManager _equipmentFactory = new EquipmentManager();
         private readonly List<NPC> _lobbyNpcs = new List<NPC>();
 
         public override void _Ready()
@@ -102,24 +104,24 @@ namespace QuestFantasy.Prototype
         private void SetupNpcCharacters()
         {
             SpawnNpc(
-                "Map Guide",
-                "I can point you to the teleporter, explain the lobby, and handle simple trading.",
+                "Previous Hero",
+                "I used to walk these lands. I can point you to the teleporter and explain the lobby.",
                 NpcRole.Guide,
-                true,
+                false,
                 new Vector2(7, 11),
                 new Color(0.85f, 0.95f, 1f));
 
             SpawnNpc(
-                "Travel Merchant",
-                "My shop list is empty for now, but the trade flow is ready.",
+                "Poet",
+                "I speak in verses, but I still know the roads and the winds.",
                 NpcRole.Merchant,
-                true,
+                false,
                 new Vector2(23, 11),
                 new Color(1f, 0.92f, 0.75f));
 
             SpawnNpc(
-                "Lobby Blacksmith",
-                "I'll handle equipment sales once item data is in place.",
+                "Blacksmith",
+                "I stock basic gear for new adventurers.",
                 NpcRole.Blacksmith,
                 true,
                 new Vector2(15, 23),
@@ -138,6 +140,10 @@ namespace QuestFantasy.Prototype
 
             npc.Position = spawnPosition;
             npc.SetBaseTint(tint);
+            if (isShopkeeper && role == NpcRole.Blacksmith)
+            {
+                npc.SetShopInventory(CreateBlacksmithStock());
+            }
             npc.InteractionStarted += OnNpcInteractionStarted;
             npc.DialogueRequested += OnNpcDialogueRequested;
             npc.ShopRequested += OnNpcShopRequested;
@@ -176,7 +182,30 @@ namespace QuestFantasy.Prototype
 
             ShopNpcInteractionRequested?.Invoke(npc);
             _shopUI?.ShowShop(npc, _player);
-            GD.Print($"[Lobby] Shop requested from {npc.EntityName}. Inventory is currently empty.");
+            GD.Print($"[Lobby] Shop requested from {npc.EntityName}. Stock count: {npc.GetShopItems().Count}");
+        }
+
+        private IEnumerable<Item> CreateBlacksmithStock()
+        {
+            var stock = new List<Item>();
+
+            AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/sword/basic-sword.png", "sword", 1));
+            AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/chestplate/basic-chestplate.png", "chestplate", 1));
+            AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/gloves/basic-gloves.png", "gloves", 1));
+            AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/helmet/basic-helmet.png", "helmet", 1));
+            AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/shoes/basic-shoes.png", "shoes", 1));
+
+            return stock;
+        }
+
+        private void AddIfNotNull(List<Item> stock, Item item)
+        {
+            if (stock == null || item == null)
+            {
+                return;
+            }
+
+            stock.Add(item);
         }
 
         private void SetupShopUI()
