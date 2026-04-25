@@ -436,7 +436,6 @@ namespace QuestFantasy.Characters
 				nextWaypoint = _currentPath[0];
 			}
 
-			float distanceToPlayer = GlobalPosition.DistanceTo(_player.GlobalPosition);
 			float speedMultiplier = distanceToPlayer > 200f ? 1.5f : (distanceToPlayer > 80f ? 1.0f : 0.8f);
 
 			// In case Player doesnt have MoveSpeed, hardcode fallback to 100f. Assuming it might have been refactored in main.
