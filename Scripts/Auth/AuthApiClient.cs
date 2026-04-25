@@ -40,37 +40,191 @@ public class AuthApiResult
             return fallback;
         }
 
-        string detail = GetString("detail");
-        if (!string.IsNullOrWhiteSpace(detail))
+        var messages = new List<string>();
+        CollectErrorMessages(Data, null, messages, 0);
+
+        if (messages.Count <= 0)
         {
-            return detail;
+            return fallback;
         }
 
-        string message = GetString("message");
-        if (!string.IsNullOrWhiteSpace(message))
+        var uniqueMessages = new List<string>();
+        for (int i = 0; i < messages.Count; i++)
         {
-            return message;
-        }
-
-        if (Data.Contains("non_field_errors")
-            && Data["non_field_errors"] is Godot.Collections.Array nonFieldErrors
-            && nonFieldErrors.Count > 0)
-        {
-            return nonFieldErrors[0].ToString();
-        }
-
-        foreach (object keyObj in Data.Keys)
-        {
-            string key = keyObj?.ToString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(key) || !(Data[key] is Godot.Collections.Array errors) || errors.Count <= 0)
+            string msg = messages[i];
+            if (string.IsNullOrWhiteSpace(msg))
             {
                 continue;
             }
 
-            return errors[0]?.ToString() ?? fallback;
+            bool exists = false;
+            for (int j = 0; j < uniqueMessages.Count; j++)
+            {
+                if (string.Equals(uniqueMessages[j], msg, StringComparison.OrdinalIgnoreCase))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists)
+            {
+                uniqueMessages.Add(msg);
+            }
         }
 
-        return fallback;
+        if (uniqueMessages.Count <= 0)
+        {
+            return fallback;
+        }
+
+        if (uniqueMessages.Count == 1)
+        {
+            return uniqueMessages[0];
+        }
+
+        return string.Join("\n", uniqueMessages.ToArray());
+    }
+
+    private static void CollectErrorMessages(object value, string fieldName, List<string> output, int depth)
+    {
+        if (value == null || output == null || depth > 4)
+        {
+            return;
+        }
+
+        if (value is Godot.Collections.Dictionary dict)
+        {
+            foreach (object keyObj in dict.Keys)
+            {
+                string key = keyObj?.ToString() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    continue;
+                }
+
+                // Never expose backend status code in UI.
+                if (string.Equals(key, "status_code", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                object next = dict[key];
+
+                // Unwrap generic error container from backend exception handler.
+                if (string.Equals(key, "error", StringComparison.OrdinalIgnoreCase)
+                    && (next is Godot.Collections.Dictionary || next is Godot.Collections.Array))
+                {
+                    CollectErrorMessages(next, fieldName, output, depth + 1);
+                    continue;
+                }
+
+                if (string.Equals(key, "error", StringComparison.OrdinalIgnoreCase))
+                {
+                    CollectErrorMessages(next, null, output, depth + 1);
+                    continue;
+                }
+
+                // Top-level generic message keys are displayed without field prefix.
+                if (string.Equals(key, "detail", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(key, "message", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(key, "non_field_errors", StringComparison.OrdinalIgnoreCase))
+                {
+                    CollectErrorMessages(next, null, output, depth + 1);
+                    continue;
+                }
+
+                CollectErrorMessages(next, key, output, depth + 1);
+            }
+
+            return;
+        }
+
+        if (value is Godot.Collections.Array arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                CollectErrorMessages(arr[i], fieldName, output, depth + 1);
+            }
+
+            return;
+        }
+
+        string raw = value.ToString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return;
+        }
+
+        string cleaned = CleanMessage(raw);
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return;
+        }
+
+        string label = ToDisplayFieldName(fieldName);
+        output.Add(string.IsNullOrWhiteSpace(label) ? cleaned : (label + ": " + cleaned));
+    }
+
+    private static string ToDisplayFieldName(string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return string.Empty;
+        }
+
+        string normalized = fieldName.Trim().ToLowerInvariant();
+        switch (normalized)
+        {
+            case "username":
+                return "Username";
+            case "email":
+                return "Email";
+            case "password":
+                return "Password";
+            case "confirm_password":
+                return "Confirm password";
+            default:
+                return HumanizeFieldName(fieldName);
+        }
+    }
+
+    private static string HumanizeFieldName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        string normalized = value.Replace("_", " ").Trim();
+        if (normalized.Length <= 0)
+        {
+            return string.Empty;
+        }
+
+        return char.ToUpper(normalized[0]) + normalized.Substring(1);
+    }
+
+    private static string CleanMessage(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        string text = raw.Trim();
+
+        // Common DRF serializer-to-string format: ['message']
+        if (text.Length >= 4 && text.StartsWith("['") && text.EndsWith("']"))
+        {
+            text = text.Substring(2, text.Length - 4).Trim();
+        }
+        else if (text.Length >= 4 && text.StartsWith("[\"") && text.EndsWith("\"]"))
+        {
+            text = text.Substring(2, text.Length - 4).Trim();
+        }
+
+        return text;
     }
 }
 
