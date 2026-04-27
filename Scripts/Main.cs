@@ -3,6 +3,7 @@ using System;
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Prototype;
 
 public class Main : Node2D
@@ -14,6 +15,7 @@ public class Main : Node2D
     private AuthApiClient _playerDataApiClient;
     private SidebarMenu _sidebarMenu;
     private PlayerHud _playerHud;
+    private BackpackUI _backpackUi;
     private DeathScreenUI _deathScreen;
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
@@ -37,12 +39,21 @@ public class Main : Node2D
     {
         GD.Print("遊戲開始了，正在讀取登入畫面...");
         SetProcess(true);
+        GetTree().Connect("node_added", this, nameof(OnSceneNodeAdded));
         SetupSidebarMenu();
         SetupProgressIndicator();
         SetupPlayerDataClient();
         SetupAuthFlowController();
         SetupDeathScreen();
         GD.Print("登入成功...");
+    }
+
+    public override void _ExitTree()
+    {
+        if (GetTree() != null && GetTree().IsConnected("node_added", this, nameof(OnSceneNodeAdded)))
+        {
+            GetTree().Disconnect("node_added", this, nameof(OnSceneNodeAdded));
+        }
     }
 
     private void SetupProgressIndicator()
@@ -340,6 +351,13 @@ public class Main : Node2D
         }
         _playerHud = null;
 
+        if (Godot.Object.IsInstanceValid(_backpackUi))
+        {
+            _backpackUi.DropRequested -= OnBackpackDropRequested;
+            _backpackUi.QueueFree();
+        }
+        _backpackUi = null;
+
         if (Godot.Object.IsInstanceValid(_map))
         {
             _map.QueueFree();
@@ -397,6 +415,12 @@ public class Main : Node2D
         AddChild(_playerHud);
         _playerHud.Initialize(_player);
 
+        _backpackUi = new BackpackUI();
+        AddChild(_backpackUi);
+        _backpackUi.Initialize(_player);
+        _backpackUi.SetGameplayVisible(true);
+        _backpackUi.DropRequested += OnBackpackDropRequested;
+
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;
         var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
@@ -422,6 +446,78 @@ public class Main : Node2D
     }
 
     // Note: Map.BoxOpened is handled directly by TreasureChest.HandleMapBoxOpened now.
+
+    private void OnSceneNodeAdded(Node node)
+    {
+        if (node is EquipmentPickup pickup)
+        {
+            AttachPickupSignal(pickup);
+        }
+    }
+
+    private void AttachPickupSignal(EquipmentPickup pickup)
+    {
+        if (pickup == null)
+        {
+            return;
+        }
+
+        if (!pickup.IsConnected(nameof(EquipmentPickup.PickupRequested), this, nameof(OnPickupRequested)))
+        {
+            pickup.Connect(nameof(EquipmentPickup.PickupRequested), this, nameof(OnPickupRequested));
+        }
+    }
+
+    private void OnPickupRequested(EquipmentPickup pickup)
+    {
+        if (_player == null || pickup == null || !Godot.Object.IsInstanceValid(pickup))
+        {
+            return;
+        }
+
+        if (!(pickup.ItemData is Item item))
+        {
+            GD.Print("[Backpack] Pickup ignored: item data missing or invalid.");
+            return;
+        }
+
+        if (!_player.AddItem(item))
+        {
+            GD.Print("[Backpack] Pickup failed: inventory add rejected.");
+            return;
+        }
+
+        EquipmentPreview.Instance?.HidePreview();
+        pickup.QueueFree();
+        TransmitPlayerProfile("pickup_item");
+    }
+
+    private void OnBackpackDropRequested(Item item)
+    {
+        if (_player == null || item == null)
+        {
+            return;
+        }
+
+        if (!_player.DiscardItem(item))
+        {
+            GD.Print("[Backpack] Drop failed: item not in inventory.");
+            return;
+        }
+
+        var droppedPickup = new EquipmentPickup
+        {
+            ItemData = item,
+            SpriteScale = _equipManagerRef?.PickupSpriteScale ?? 0.5f,
+        };
+
+        var rng = new RandomNumberGenerator();
+        rng.Randomize();
+        droppedPickup.Position = _player.Position + new Vector2(rng.RandfRange(-36f, 36f), rng.RandfRange(-24f, 24f));
+        AddChild(droppedPickup);
+
+        TransmitPlayerProfile("discard_item");
+    }
 
 
 }
