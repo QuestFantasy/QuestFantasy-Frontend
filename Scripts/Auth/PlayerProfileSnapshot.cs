@@ -84,7 +84,7 @@ public static class PlayerItemSnapshotCodec
             baseDict["rarity"] = Math.Max(1, equipment.Rarity);
             baseDict["level_requirement"] = Math.Max(1, equipment.LevelRequirement);
             baseDict["source"] = equipment.Source ?? string.Empty;
-            baseDict["sprite_path"] = equipment.SpritePath ?? string.Empty;
+            baseDict["sprite_path"] = NormalizeSpritePathForStorage(equipment.SpritePath, equipment.Sprite);
             baseDict["abilities"] = EncodeAbilities(equipment.EquipmentAbilities);
             return baseDict;
         }
@@ -95,7 +95,7 @@ public static class PlayerItemSnapshotCodec
             baseDict["rarity"] = Math.Max(1, weapon.Rarity);
             baseDict["level_requirement"] = Math.Max(1, weapon.LevelRequirement);
             baseDict["source"] = weapon.Source ?? string.Empty;
-            baseDict["sprite_path"] = weapon.SpritePath ?? string.Empty;
+            baseDict["sprite_path"] = NormalizeSpritePathForStorage(weapon.SpritePath, weapon.Sprite);
             baseDict["abilities"] = EncodeAbilities(weapon.WeaponAbilities);
             return baseDict;
         }
@@ -123,7 +123,7 @@ public static class PlayerItemSnapshotCodec
                 Rarity = ReadInt(data, "rarity", 1, 1),
                 LevelRequirement = ReadInt(data, "level_requirement", 1, 1),
                 Source = ReadString(data, "source", string.Empty),
-                SpritePath = ReadString(data, "sprite_path", string.Empty),
+                SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", string.Empty)),
                 EquipmentAbilities = DecodeAbilities(data),
             };
             equipment.Sprite = LoadTextureOrNull(equipment.SpritePath);
@@ -142,7 +142,7 @@ public static class PlayerItemSnapshotCodec
                 Rarity = ReadInt(data, "rarity", 1, 1),
                 LevelRequirement = ReadInt(data, "level_requirement", 1, 1),
                 Source = ReadString(data, "source", string.Empty),
-                SpritePath = ReadString(data, "sprite_path", string.Empty),
+                SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", string.Empty)),
                 WeaponAbilities = DecodeAbilities(data),
             };
             weapon.Sprite = LoadTextureOrNull(weapon.SpritePath);
@@ -194,10 +194,73 @@ public static class PlayerItemSnapshotCodec
             return null;
         }
 
-        string path = spritePath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
-            ? "res://" + spritePath
-            : spritePath;
-        return GD.Load<Texture>(path);
+        string normalized = NormalizeSpritePathForRuntime(spritePath);
+        Texture tex = GD.Load<Texture>(normalized);
+        if (tex != null)
+        {
+            return tex;
+        }
+
+        string fileName = System.IO.Path.GetFileName(normalized);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return null;
+        }
+
+        Texture fallback = GD.Load<Texture>("res://Assets/Equipments/" + fileName);
+        if (fallback != null)
+        {
+            return fallback;
+        }
+
+        return GD.Load<Texture>("res://Assets/" + fileName);
+    }
+
+    private static string NormalizeSpritePathForStorage(string spritePath, Texture sprite)
+    {
+        if (!string.IsNullOrWhiteSpace(spritePath))
+        {
+            return NormalizeSpritePathForRuntime(spritePath);
+        }
+
+        string resourcePath = sprite?.ResourcePath;
+        if (!string.IsNullOrWhiteSpace(resourcePath))
+        {
+            return NormalizeSpritePathForRuntime(resourcePath);
+        }
+
+        return string.Empty;
+    }
+
+    private static string NormalizeSpritePathForRuntime(string spritePath)
+    {
+        if (string.IsNullOrWhiteSpace(spritePath))
+        {
+            return string.Empty;
+        }
+
+        string path = spritePath.Trim().Replace('\\', '/');
+        if (path.StartsWith("res://", StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        if (path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "res://" + path;
+        }
+
+        if (path.StartsWith("/"))
+        {
+            return "res://" + path.TrimStart('/');
+        }
+
+        if (!path.Contains("/"))
+        {
+            return "res://Assets/Equipments/" + path;
+        }
+
+        return "res://" + path;
     }
 
     private static string ReadString(Godot.Collections.Dictionary data, string key, string fallback)

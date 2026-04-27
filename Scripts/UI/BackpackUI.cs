@@ -451,11 +451,46 @@ public class BackpackUI : CanvasLayer
             return null;
         }
 
-        string normalized = spritePath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
-            ? "res://" + spritePath
-            : spritePath;
+        string path = spritePath.Trim().Replace('\\', '/');
+        string normalized = path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
+            ? "res://" + path
+            : path;
 
-        return GD.Load<Texture>(normalized);
+        if (!normalized.StartsWith("res://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (normalized.StartsWith("/"))
+            {
+                normalized = "res://" + normalized.TrimStart('/');
+            }
+            else if (!normalized.Contains("/"))
+            {
+                normalized = "res://Assets/Equipments/" + normalized;
+            }
+            else
+            {
+                normalized = "res://" + normalized;
+            }
+        }
+
+        Texture tex = GD.Load<Texture>(normalized);
+        if (tex != null)
+        {
+            return tex;
+        }
+
+        string fileName = System.IO.Path.GetFileName(normalized);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return null;
+        }
+
+        tex = GD.Load<Texture>("res://Assets/Equipments/" + fileName);
+        if (tex != null)
+        {
+            return tex;
+        }
+
+        return GD.Load<Texture>("res://Assets/" + fileName);
     }
 
     private void OnSlotGuiInput(InputEvent @event, int globalIndex)
