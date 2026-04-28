@@ -86,7 +86,7 @@ public class EquipmentPickup : Area2D
     {
         if (@event is InputEventMouseButton mb)
         {
-            if (mb.ButtonIndex == (int)ButtonList.Left && mb.Pressed)
+            if (mb.ButtonIndex == (int)ButtonList.Right && mb.Pressed)
             {
                 RequestPickup();
             }

@@ -191,7 +191,8 @@ public class BackpackUI : CanvasLayer
             SizeFlagsHorizontal = (int)Control.SizeFlags.Fill,
         };
         moneyRow.AddConstantOverride("separation", 8);
-        moneyRow.AddChild(new Control { RectMinSize = new Vector2(12f, 1f) });
+        content.AddChild(new Control { RectMinSize = new Vector2(1f, 12f) });
+        moneyRow.AddChild(new Control { RectMinSize = new Vector2(48f, 1f) });
         var moneyIcon = new TextureRect
         {
             RectMinSize = new Vector2(30f, 30f),
@@ -424,18 +425,6 @@ public class BackpackUI : CanvasLayer
         }
 
         vbox.AddChild(icon);
-
-        var nameLabel = new Label
-        {
-            Align = Label.AlignEnum.Center,
-            Valign = Label.VAlign.Center,
-            Text = item?.Name ?? "(空)",
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ClipText = true,
-            RectMinSize = new Vector2(60f, 0f),
-        };
-        nameLabel.AddColorOverride("font_color", item == null ? new Color(0.6f, 0.6f, 0.6f) : new Color(0.9f, 0.95f, 1f));
-        vbox.AddChild(nameLabel);
 
         frame.Connect("gui_input", this, nameof(OnSlotGuiInput), new Godot.Collections.Array { globalIndex });
         frame.Connect("mouse_entered", this, nameof(OnSlotMouseEntered), new Godot.Collections.Array { globalIndex });

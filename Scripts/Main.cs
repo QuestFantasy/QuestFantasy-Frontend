@@ -105,6 +105,7 @@ public class Main : Node2D
         GetTree().Paused = false;
         DestroyPlayableWorld();
         _pendingProfileSnapshot = profileSnapshot;
+        EnsureLobbyBackpackContext();
         _sidebarMenu?.SetMenuVisible(true);
         // Build lobby instead of directly loading a game map
         BuildLobby();
@@ -368,9 +369,37 @@ public class Main : Node2D
     }
     private void BuildLobby()
     {
+        EnsureLobbyBackpackContext();
+
         _lobbyManager = new LobbyManager();
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
+    }
+
+    private void EnsureLobbyBackpackContext()
+    {
+        if (!Godot.Object.IsInstanceValid(_player))
+        {
+            _player = new Player();
+            AddChild(_player);
+        }
+
+        _player.Visible = false;
+
+        if (_pendingProfileSnapshot != null)
+        {
+            _player.ApplyProfile(_pendingProfileSnapshot);
+        }
+
+        if (!Godot.Object.IsInstanceValid(_backpackUi))
+        {
+            _backpackUi = new BackpackUI();
+            AddChild(_backpackUi);
+            _backpackUi.DropRequested += OnBackpackDropRequested;
+        }
+
+        _backpackUi.Initialize(_player);
+        _backpackUi.SetGameplayVisible(true);
     }
 
     private void OnDifficultySelected(DifficultyLevel difficulty)
@@ -439,6 +468,7 @@ public class Main : Node2D
     private void ReturnToLobby()
     {
         GD.Print("[Main] Player reached exit - returning to lobby");
+        _pendingProfileSnapshot = _player?.BuildProfileSnapshot();
         DestroyPlayableWorld();
 
         // Rebuild the lobby for another session
