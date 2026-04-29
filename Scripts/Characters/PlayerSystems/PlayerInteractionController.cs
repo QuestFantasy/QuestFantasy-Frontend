@@ -26,6 +26,9 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void HandleRespawnInput(Player player, Map map)
         {
+            if (map == null || map.DisableRoomExits)
+                return;
+
             if (!_inputHandler.IsRespawnPressed())
                 return;
 
