@@ -166,7 +166,7 @@ namespace QuestFantasy.Characters
             };
 
             // Initialize inventory system
-            _inventorySystem = new PlayerInventorySystem(initialGold: 0, maxInventorySlots: 20);
+            _inventorySystem = new PlayerInventorySystem(initialGold: 0, maxInventorySlots: 0);
             _inventorySystem.OnExperienceChanged += (exp) => OnExperienceChanged?.Invoke(exp);
             _inventorySystem.OnGoldChanged += (gold) => OnGoldChanged?.Invoke(gold);
             _inventorySystem.OnInventoryChanged += (item) => OnInventoryChanged?.Invoke(item);
@@ -231,6 +231,9 @@ namespace QuestFantasy.Characters
         /// </summary>
         public System.Collections.Generic.IReadOnlyList<Item> InventoryItems =>
             _inventorySystem?.Inventory?.Items.AsReadOnly() ?? new System.Collections.Generic.List<Item>().AsReadOnly();
+
+        public System.Collections.Generic.IReadOnlyList<Item> DiscardedItems =>
+            _inventorySystem?.Discarded?.Items.AsReadOnly() ?? new System.Collections.Generic.List<Item>().AsReadOnly();
 
         /// <summary>
         /// Set the map reference and initialize room tracking
@@ -418,6 +421,21 @@ namespace QuestFantasy.Characters
             SetLevel(snapshot.Level);
             Attributes?.HP?.SetMaxHPAndCurrentHP(snapshot.HpMax, snapshot.HpCurrent);
             _inventorySystem?.SetSnapshot(snapshot.Experience, snapshot.Gold);
+
+            if (snapshot.HasInventoryItemsPayload || snapshot.HasDiscardedItemsPayload)
+            {
+                _inventorySystem?.ReplaceSnapshot(
+                    snapshot.HasInventoryItemsPayload
+                        ? PlayerItemSnapshotCodec.DecodeMany(snapshot.InventoryItems)
+                        : null,
+                    snapshot.HasDiscardedItemsPayload
+                        ? PlayerItemSnapshotCodec.DecodeMany(snapshot.DiscardedItems)
+                        : null,
+                    notify: true,
+                    replaceInventory: snapshot.HasInventoryItemsPayload,
+                    replaceDiscarded: snapshot.HasDiscardedItemsPayload);
+            }
+
             _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills));
 
             // Re-broadcast HP to refresh HUD after profile application.
@@ -437,6 +455,8 @@ namespace QuestFantasy.Characters
                 HpMax = Attributes?.HP?.MaxHP ?? 100,
                 HpCurrent = Attributes?.HP?.CurrentHP ?? 100,
                 Skills = GetSkillSnapshots().ToList(),
+                InventoryItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Inventory?.Items),
+                DiscardedItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Discarded?.Items),
             };
 
             return snapshot;
@@ -685,6 +705,11 @@ namespace QuestFantasy.Characters
         public bool RemoveItem(Item item)
         {
             return _inventorySystem?.RemoveItem(item) ?? false;
+        }
+
+        public bool DiscardItem(Item item)
+        {
+            return _inventorySystem?.DiscardItem(item) ?? false;
         }
 
         // ==================== Equipment System ====================

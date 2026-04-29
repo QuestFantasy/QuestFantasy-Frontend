@@ -4,6 +4,9 @@ using Godot;
 
 public class EquipmentPickup : Area2D
 {
+    [Signal]
+    public delegate void PickupRequested(EquipmentPickup pickup);
+
     public object ItemData;
 
     [Export]
@@ -11,6 +14,7 @@ public class EquipmentPickup : Area2D
 
     private Sprite _sprite;
     private CollisionShape2D _shape;
+    private bool _isHovered = false;
     private ulong _pressStartMs = 0;
     private const int LONG_PRESS_MS = 500;
 
@@ -48,23 +52,45 @@ public class EquipmentPickup : Area2D
         Connect("mouse_entered", this, nameof(OnMouseEntered));
         Connect("mouse_exited", this, nameof(OnMouseExited));
         Connect("input_event", this, nameof(OnInputEvent));
+
+        SetProcessUnhandledInput(true);
     }
 
     private void OnMouseEntered()
     {
+        _isHovered = true;
         if (ItemData != null)
             EquipmentPreview.Instance?.ShowPreview(ItemData, GlobalPosition);
     }
 
     private void OnMouseExited()
     {
+        _isHovered = false;
         EquipmentPreview.Instance?.HidePreview();
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (!_isHovered)
+        {
+            return;
+        }
+
+        if (@event is InputEventKey key && key.Pressed && !key.Echo && key.Scancode == (uint)KeyList.G)
+        {
+            RequestPickup();
+        }
     }
 
     public void OnInputEvent(Viewport viewport, InputEvent @event, int shapeIdx)
     {
         if (@event is InputEventMouseButton mb)
         {
+            if (mb.ButtonIndex == (int)ButtonList.Right && mb.Pressed)
+            {
+                RequestPickup();
+            }
+
             if (mb.Pressed)
             {
                 _pressStartMs = OS.GetTicksMsec();
@@ -102,5 +128,10 @@ public class EquipmentPickup : Area2D
                 _pressStartMs = 0;
             }
         }
+    }
+
+    private void RequestPickup()
+    {
+        EmitSignal(nameof(PickupRequested), this);
     }
 }
