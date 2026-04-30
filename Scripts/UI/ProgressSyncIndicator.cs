@@ -9,7 +9,6 @@ public class ProgressSyncIndicator : CanvasLayer
         Saving,
     }
 
-    private const string ExternalGifPath = "C:/Users/1buff/Documents/OOP_Project/Loading_icon.gif";
 
     private PanelContainer _panel;
     private TextureRect _icon;
@@ -105,7 +104,7 @@ public class ProgressSyncIndicator : CanvasLayer
             RectMinSize = new Vector2(20f, 20f),
             Expand = true,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            Texture = LoadExternalGifOrFallback(),
+            Texture = GD.Load<Texture>("res://icon.png"),
         };
         row.AddChild(_icon);
 
@@ -118,19 +117,4 @@ public class ProgressSyncIndicator : CanvasLayer
         row.AddChild(_label);
     }
 
-    private Texture LoadExternalGifOrFallback()
-    {
-        var image = new Image();
-        Error loadError = image.Load(ExternalGifPath);
-        if (loadError == Error.Ok)
-        {
-            var texture = new ImageTexture();
-            texture.CreateFromImage(image);
-            GD.Print($"[ProgressSync] Loaded sync icon from {ExternalGifPath}.");
-            return texture;
-        }
-
-        GD.PrintErr($"[ProgressSync] Failed to load {ExternalGifPath} (Error={loadError}). Falling back to project icon.");
-        return GD.Load<Texture>("res://icon.png");
-    }
 }
