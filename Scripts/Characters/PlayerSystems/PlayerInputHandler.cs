@@ -1,10 +1,17 @@
 using Godot;
 
+using QuestFantasy.UI;
+
 namespace QuestFantasy.Characters.PlayerSystems
 {
     public class PlayerInputHandler
     {
         private bool _lastMouseButtonState = false;
+        
+        // Mobile touch pad state
+        private bool _isTouchPadActive = false;
+        private Vector2 _touchPadCenter = Vector2.Zero;
+        private float _touchPadRadius = 0f;
 
         public void EnsureInteractInputAction()
         {
@@ -45,6 +52,12 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public bool IsSkillActivationPressed()
         {
+            if (MobileInputUI.IsAnyDPadPressActive)
+            {
+                _lastMouseButtonState = Input.IsMouseButtonPressed(1);
+                return false;
+            }
+
             bool currentMouseState = Input.IsMouseButtonPressed(1);
             bool justPressed = currentMouseState && !_lastMouseButtonState;
             _lastMouseButtonState = currentMouseState;
@@ -53,6 +66,47 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         public Vector2 GetMovementInput()
         {
+            Vector2 input = Vector2.Zero;
+            if (Input.IsActionPressed("ui_right"))
+            {
+                input.x += 1f;
+            }
+            if (Input.IsActionPressed("ui_left"))
+            {
+                input.x -= 1f;
+            }
+            if (Input.IsActionPressed("ui_down"))
+            {
+                input.y += 1f;
+            }
+            if (Input.IsActionPressed("ui_up"))
+            {
+                input.y -= 1f;
+            }
+
+            return input;
+        }
+
+        /// <summary>
+        /// Update virtual touch pad state (called from MobileInputUI)
+        /// </summary>
+        public void SetTouchPadActive(bool active, Vector2 center, float radius)
+        {
+            _isTouchPadActive = active;
+            _touchPadCenter = center;
+            _touchPadRadius = radius;
+        }
+
+        /// <summary>
+        /// Get movement input from virtual touch pad
+        /// </summary>
+        public Vector2 GetTouchPadInput()
+        {
+            if (!_isTouchPadActive)
+            {
+                return Vector2.Zero;
+            }
+
             Vector2 input = Vector2.Zero;
             if (Input.IsActionPressed("ui_right"))
             {

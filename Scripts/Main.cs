@@ -5,11 +5,13 @@ using Godot;
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Prototype;
+using QuestFantasy.UI;
 
 public class Main : Node2D
 {
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public bool EnableMobileInputUI = true; // Force enable virtual D-pad for testing
 
     private AuthFlowController _authFlowController;
     private AuthApiClient _playerDataApiClient;
@@ -20,6 +22,7 @@ public class Main : Node2D
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
     private Player _player;
+    private MobileInputUI _mobileInputUI;
     private readonly EquipmentManager _equipManagerRef = new EquipmentManager();
     private readonly TreasureChest _chestRef = new TreasureChest();
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
@@ -40,6 +43,7 @@ public class Main : Node2D
         GD.Print("遊戲開始了，正在讀取登入畫面...");
         SetProcess(true);
         GetTree().Connect("node_added", this, nameof(OnSceneNodeAdded));
+        SetupMobileInputUI();
         SetupSidebarMenu();
         SetupProgressIndicator();
         SetupPlayerDataClient();
@@ -219,6 +223,18 @@ public class Main : Node2D
         _sidebarMenu.AddMenuItem("logout", "Logout", OnLogoutPressed);
     }
 
+    private void SetupMobileInputUI()
+    {
+        // Create mobile input UI once for the entire game lifetime
+        bool shouldEnableMobileUI = EnableMobileInputUI || OS.HasTouchscreenUiHint();
+        if (shouldEnableMobileUI)
+        {
+            _mobileInputUI = new MobileInputUI();
+            AddChild(_mobileInputUI);
+            GD.Print("[Main] Mobile input UI enabled globally for touch controls");
+        }
+    }
+
     private void SetupDeathScreen()
     {
         _deathScreen = new DeathScreenUI();
@@ -358,6 +374,14 @@ public class Main : Node2D
             _backpackUi.QueueFree();
         }
         _backpackUi = null;
+
+        // DO NOT destroy _mobileInputUI - it should persist throughout the game
+        // Only hide it temporarily if needed
+        // if (Godot.Object.IsInstanceValid(_mobileInputUI))
+        // {
+        //     _mobileInputUI.QueueFree();
+        // }
+        // _mobileInputUI = null;
 
         if (Godot.Object.IsInstanceValid(_map))
         {
