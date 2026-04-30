@@ -215,6 +215,7 @@ public class NpcShopUI : CanvasLayer
 
         RebuildLists();
 
+        _root.Visible = true;
         _panel.Visible = true;
         _isVisible = true;
         GetTree().Paused = true;
@@ -222,6 +223,11 @@ public class NpcShopUI : CanvasLayer
 
     public void HideShop()
     {
+        if (_root != null)
+        {
+            _root.Visible = false;
+        }
+
         if (_panel != null)
         {
             _panel.Visible = false;

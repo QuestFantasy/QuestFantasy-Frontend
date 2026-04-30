@@ -18,6 +18,7 @@ namespace QuestFantasy.Characters.PlayerSystems
         private readonly PlayerInputHandler _inputHandler;
         private readonly PlayerAnimationController _animationController;
         private int _selectedSkillIndex;
+        private int _pendingUISkillIndex = -1;
 
         public int SelectedSkillIndex => _selectedSkillIndex;
 
@@ -36,6 +37,23 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void HandleSkillInput(Player player, Map map)
         {
+            // 優先執行 UI 觸發的待執行技能
+            if (_pendingUISkillIndex >= 0)
+            {
+                int skillIndex = _pendingUISkillIndex;
+                _pendingUISkillIndex = -1;
+                _selectedSkillIndex = skillIndex;
+                
+                // 消耗鼠標輸入，避免同一幀內又觸發舊技能
+                _inputHandler.ConsumeSkillActivationInput();
+
+                if (!_animationController.IsAttacking)
+                {
+                    ExecuteSkill(player, map, skillIndex);
+                }
+                return; // 跳過鍵盤和鼠標檢測
+            }
+
             int requestedSkillIndex = _inputHandler.ConsumeSelectedSkillIndex();
             if (requestedSkillIndex >= 0)
             {
@@ -49,33 +67,53 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (!_inputHandler.IsSkillActivationPressed())
                 return;
 
-            Vector2 mousePos = player.GetGlobalMousePosition();
-            float diffX = mousePos.x - player.GlobalPosition.x;
-            _animationController.SetFacingDirection(diffX);
+            TriggerSkill(_selectedSkillIndex, player, map);
+        }
 
-            ExecuteSkill(player, map);
+        /// <summary>
+        /// Trigger a specific skill slot directly from UI input.
+        /// </summary>
+        public bool TriggerSkill(int skillIndex, Player player, Map map)
+        {
+            if (skillIndex < 0)
+            {
+                return false;
+            }
+
+            // 設置待執行技能，讓 HandleSkillInput 優先處理，避免與鼠標輸入衝突
+            _pendingUISkillIndex = skillIndex;
+            _selectedSkillIndex = skillIndex;
+            GD.Print($"[PlayerCombatController] UI triggered skill slot {skillIndex + 1}");
+
+            return true;
         }
 
         /// <summary>
         /// Execute the basic attack skill
         /// </summary>
-        private void ExecuteSkill(Player player, Map map)
+        private bool ExecuteSkill(Player player, Map map, int skillIndex)
         {
             var skills = _combatSystem.CurrentSkills;
             if (skills == null || skills.Count == 0)
             {
                 GD.PrintErr("[PlayerCombatController] No skills available");
-                return;
+                return false;
             }
 
-            int skillIndex = Mathf.Clamp(_selectedSkillIndex, 0, skills.Count - 1);
-            var selectedSkill = skills[skillIndex];
+            int selectedIndex = Mathf.Clamp(skillIndex, 0, skills.Count - 1);
+            _selectedSkillIndex = selectedIndex;
+
+            Vector2 mousePos = player.GetGlobalMousePosition();
+            float diffX = mousePos.x - player.GlobalPosition.x;
+            _animationController.SetFacingDirection(diffX);
+
+            var selectedSkill = skills[selectedIndex];
 
             // Check if skill is on cooldown
             if (!selectedSkill.CoolDown.IsReady)
             {
                 GD.Print("[PlayerCombatController] Skill on cooldown");
-                return;
+                return false;
             }
 
             // Find target (optional - can attack with no target)
@@ -87,12 +125,12 @@ namespace QuestFantasy.Characters.PlayerSystems
             // Execute the attack with or without a target
             _animationController.PlayAttackAnimation(GetAttackAnimationStyle(selectedSkill));
 
-            bool success = _combatSystem.UseSkill(skillIndex, player, targetCharacter);
+            bool success = _combatSystem.UseSkill(selectedIndex, player, targetCharacter);
             if (!success)
             {
                 GD.PrintErr("[PlayerCombatController] Skill execution failed despite validation");
                 _animationController.ResetAttackState();
-                return;
+                return false;
             }
 
             if (targetCharacter != null)
@@ -103,6 +141,8 @@ namespace QuestFantasy.Characters.PlayerSystems
             {
                 GD.Print("[PlayerCombatController] Performed attack - no targets in range (empty swing)");
             }
+
+            return true;
         }
 
         private static AttackAnimationStyle GetAttackAnimationStyle(Skills skill)

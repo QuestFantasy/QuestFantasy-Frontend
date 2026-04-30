@@ -27,6 +27,7 @@ namespace QuestFantasy.UI
         
         // Container control to properly handle touch events
         private Control _inputContainer;
+        private bool _allowAutoShow = true;
 
         public static bool IsAnyDPadPressActive { get; private set; } = false;
         
@@ -76,12 +77,27 @@ namespace QuestFantasy.UI
 
         public override void _Process(float delta)
         {
-            // Ensure visibility
-            if (Visible == false)
+            // Only restore visibility when the UI is meant to be shown.
+            if (_allowAutoShow && Visible == false)
             {
                 GD.PrintErr("[MobileInputUI] Was hidden! Re-enabling...");
                 Visible = true;
             }
+        }
+
+        public void ShowDPad()
+        {
+            _allowAutoShow = true;
+            SetProcessInput(true);
+            Visible = true;
+        }
+
+        public void HideDPad()
+        {
+            _allowAutoShow = false;
+            ReleaseAllDirections();
+            SetProcessInput(false);
+            Visible = false;
         }
 
         /// <summary>

@@ -111,6 +111,7 @@ public class Main : Node2D
         _pendingProfileSnapshot = profileSnapshot;
         EnsureLobbyBackpackContext();
         _sidebarMenu?.SetMenuVisible(true);
+        _mobileInputUI?.ShowDPad();
         // Build lobby instead of directly loading a game map
         BuildLobby();
     }
@@ -126,6 +127,7 @@ public class Main : Node2D
         AddChild(_authFlowController);
         _authFlowController.Authenticated += OnAuthenticated;
         _authFlowController.LoggedOut += HandleLoggedOut;
+        _authFlowController.AuthViewShown += () => _mobileInputUI?.HideDPad();
     }
 
     private void SetupPlayerDataClient()
@@ -231,6 +233,7 @@ public class Main : Node2D
         {
             _mobileInputUI = new MobileInputUI();
             AddChild(_mobileInputUI);
+            _mobileInputUI.HideDPad();
             GD.Print("[Main] Mobile input UI enabled globally for touch controls");
         }
     }
@@ -277,6 +280,7 @@ public class Main : Node2D
         _isProfileFetchPending = false;
         _profileFetchTimeoutTimer?.Stop();
         _progressIndicator?.SetState(ProgressSyncIndicator.SyncState.Hidden);
+        _mobileInputUI?.HideDPad();
         DestroyPlayableWorld();
         _gameLoadedAlready = false;
         _sidebarMenu?.SetMenuVisible(false);
@@ -376,12 +380,8 @@ public class Main : Node2D
         _backpackUi = null;
 
         // DO NOT destroy _mobileInputUI - it should persist throughout the game
-        // Only hide it temporarily if needed
-        // if (Godot.Object.IsInstanceValid(_mobileInputUI))
-        // {
-        //     _mobileInputUI.QueueFree();
-        // }
-        // _mobileInputUI = null;
+        // Hide it when leaving gameplay; it will be re-shown only when entering a game level
+        _mobileInputUI?.HideDPad();
 
         if (Godot.Object.IsInstanceValid(_map))
         {
@@ -466,13 +466,16 @@ public class Main : Node2D
 
         _playerHud = new PlayerHud();
         AddChild(_playerHud);
-        _playerHud.Initialize(_player);
+        _playerHud.Initialize(_player, _map);
 
         _backpackUi = new BackpackUI();
         AddChild(_backpackUi);
         _backpackUi.Initialize(_player);
         _backpackUi.SetGameplayVisible(true);
         _backpackUi.DropRequested += OnBackpackDropRequested;
+
+        // Show D-pad only during actual gameplay
+        _mobileInputUI?.ShowDPad();
 
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;

@@ -659,6 +659,22 @@ namespace QuestFantasy.Characters
         }
 
         /// <summary>
+        /// Trigger a specific skill slot using the full combat flow.
+        /// </summary>
+        public bool TriggerSkill(int skillIndex, Map map)
+        {
+            return _combatController?.TriggerSkill(skillIndex, this, map) ?? false;
+        }
+
+        /// <summary>
+        /// Consume mouse input to prevent the same button press from triggering multiple actions
+        /// </summary>
+        public void ConsumeSkillActivationInput()
+        {
+            _inputHandler?.ConsumeSkillActivationInput();
+        }
+
+        /// <summary>
         /// Learn a new skill
         /// </summary>
         public void LearnSkill(Skills skill)

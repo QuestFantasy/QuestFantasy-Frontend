@@ -64,6 +64,14 @@ namespace QuestFantasy.Characters.PlayerSystems
             return justPressed;
         }
 
+        /// <summary>
+        /// Consume the current mouse button state to prevent future detection in this frame
+        /// </summary>
+        public void ConsumeSkillActivationInput()
+        {
+            _lastMouseButtonState = Input.IsMouseButtonPressed(1);
+        }
+
         public Vector2 GetMovementInput()
         {
             Vector2 input = Vector2.Zero;
