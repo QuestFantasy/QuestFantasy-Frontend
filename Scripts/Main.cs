@@ -411,7 +411,7 @@ public class Main : Node2D
         _lobbyManager = new LobbyManager();
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
-        
+
         // Show D-pad in the lobby, but hide map button
         _mobileInputUI?.ShowDPad();
         _mobileInputUI?.ShowMapButton(false);

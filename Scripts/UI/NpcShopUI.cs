@@ -470,7 +470,7 @@ public class NpcShopUI : CanvasLayer
             Visible = false
         };
         _previewBuyButton.Connect("pressed", this, nameof(OnPreviewBuyPressed));
-        
+
         // Use margin container to push it to the bottom
         var buyButtonMargin = new MarginContainer();
         buyButtonMargin.AddConstantOverride("margin_top", 16);
@@ -778,7 +778,7 @@ public class NpcShopUI : CanvasLayer
         _previewMetaLabel.Text = BuildPreviewMeta(item);
         _previewDescriptionLabel.Text = BuildPreviewStats(item);
         _previewDescriptionLabel.RectMinSize = new Vector2(0f, 0f);
-        
+
         // Show the buy button if the item is selected (not just hovered)
         if (_previewBuyButton != null)
         {
@@ -832,7 +832,7 @@ public class NpcShopUI : CanvasLayer
         _previewPriceLabel.Text = "";
         _previewMetaLabel.Text = "";
         _previewDescriptionLabel.Text = "Move the cursor over a slot to inspect it.\nTap a slot to select it, then tap Buy.";
-        
+
         if (_previewBuyButton != null)
         {
             _previewBuyButton.Visible = false;

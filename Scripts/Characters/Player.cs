@@ -359,7 +359,7 @@ namespace QuestFantasy.Characters
             {
                 InteractionButtonUI.Instance?.Show("🔓 Open", boxWorld);
             }
-            
+
             _interactionController.HandleRespawnInput(this, _map);
             _interactionController.HandleInteractionInput(_map, Position);
 

@@ -1,5 +1,6 @@
-using Godot;
 using System;
+
+using Godot;
 
 namespace QuestFantasy.UI
 {
@@ -13,25 +14,25 @@ namespace QuestFantasy.UI
         [Export] public float DPadMargin = 15f; // Distance from screen edge
         [Export] public Color DPadColor = new Color(0.2f, 0.2f, 0.2f, 0.7f);
         [Export] public Color DPadPressedColor = new Color(0.4f, 0.6f, 1f, 0.9f);
-        
+
         // D-pad button panels
         private Panel _upButton;
         private Panel _downButton;
         private Panel _leftButton;
         private Panel _rightButton;
         private Panel _mapButton;
-        
+
         // Touch tracking
         private int _activeTouchId = -1;
         private bool _isMouseDpadActive = false;
         private string _currentPressedAction = null;
-        
+
         // Container control to properly handle touch events
         private Control _inputContainer;
         private bool _allowAutoShow = true;
 
         public static bool IsAnyDPadPressActive { get; private set; } = false;
-        
+
         private const string UP_ACTION = "ui_up";
         private const string DOWN_ACTION = "ui_down";
         private const string LEFT_ACTION = "ui_left";
@@ -42,12 +43,12 @@ namespace QuestFantasy.UI
         {
             // Set layer to render on top - use highest layer
             Layer = 1000;  // Very high to ensure it's above everything
-            
+
             // Ensure visibility
             Visible = true;
-            
+
             GD.Print("[MobileInputUI] _Ready() called, Layer=" + Layer + ", Visible=" + Visible);
-            
+
             // Create a container for visual representation
             _inputContainer = new Control
             {
@@ -55,13 +56,13 @@ namespace QuestFantasy.UI
                 Visible = true,
             };
             AddChild(_inputContainer);
-            
+
             // Create D-pad buttons inside container
             CreateDPadButtons();
-            
+
             // Enable input processing
             SetProcessInput(true);
-            
+
             GD.Print("[MobileInputUI] Virtual D-pad initialized successfully");
         }
 
@@ -120,13 +121,13 @@ namespace QuestFantasy.UI
             var viewport = GetViewport();
             float viewportWidth = viewport.GetVisibleRect().Size.x;
             float viewportHeight = viewport.GetVisibleRect().Size.y;
-            
+
             GD.Print($"[MobileInputUI] Viewport size: {viewportWidth}x{viewportHeight}");
-            
+
             // Set container size to match viewport
             _inputContainer.RectSize = new Vector2(viewportWidth, viewportHeight);
             _inputContainer.RectPosition = Vector2.Zero;
-            
+
             int startX = margin;
             int startY = (int)viewportHeight - margin - buttonSize * 3;
 
@@ -136,21 +137,21 @@ namespace QuestFantasy.UI
 
             // UP button
             _upButton = CreateButton(UP_ACTION, centerX, startY, buttonSize, "▲");
-            
+
             // DOWN button
             _downButton = CreateButton(DOWN_ACTION, centerX, startY + buttonSize * 2, buttonSize, "▼");
-            
+
             // LEFT button
             _leftButton = CreateButton(LEFT_ACTION, startX, centerY, buttonSize, "◄");
-            
+
             // RIGHT button
             _rightButton = CreateButton(RIGHT_ACTION, startX + buttonSize * 2, centerY, buttonSize, "►");
-            
+
             // MAP button (Bottom-right corner, 0.7x size)
             int mapBtnSize = (int)(buttonSize * 0.7f);
             int offset = (buttonSize - mapBtnSize) / 2;
             _mapButton = CreateIconButton(MAP_ACTION, startX + buttonSize * 2 + offset, startY + buttonSize * 2 + offset, mapBtnSize, "res://Assets/Map/map_icon.png");
-            
+
             GD.Print($"[MobileInputUI] D-pad created at: UP=({centerX},{startY}), DOWN=({centerX},{startY + buttonSize * 2}), LEFT=({startX},{centerY}), RIGHT=({startX + buttonSize * 2},{centerY}), MAP=({startX + buttonSize * 2 + offset},{startY + buttonSize * 2 + offset})");
             GD.Print($"[MobileInputUI] Container size set to: {_inputContainer.RectSize}");
         }
@@ -164,13 +165,13 @@ namespace QuestFantasy.UI
                 MouseFilter = Control.MouseFilterEnum.Ignore,
                 Visible = true,
             };
-            
+
             var panelStyle = new StyleBoxEmpty();
-            
+
             var theme = new Theme();
             theme.SetStylebox("panel", "Panel", panelStyle);
             panel.Theme = theme;
-            
+
             var icon = new TextureRect
             {
                 Texture = ResourceLoader.Load<Texture>(iconPath),
@@ -186,7 +187,7 @@ namespace QuestFantasy.UI
             };
             icon.SelfModulate = new Color(0.9f, 0.9f, 0.9f, 1f);
             panel.AddChild(icon);
-            
+
             _inputContainer.AddChild(panel);
             return panel;
         }
@@ -203,7 +204,7 @@ namespace QuestFantasy.UI
                 MouseFilter = Control.MouseFilterEnum.Ignore,  // Ignore so we handle input in _Input()
                 Visible = true,
             };
-            
+
             // Set panel styling
             var panelStyle = new StyleBoxFlat
             {
@@ -213,11 +214,11 @@ namespace QuestFantasy.UI
                 BorderWidthRight = 2,
                 BorderWidthTop = 2,
             };
-            
+
             var theme = new Theme();
             theme.SetStylebox("panel", "Panel", panelStyle);
             panel.Theme = theme;
-            
+
             // Add label
             var labelControl = new Label
             {
@@ -231,12 +232,12 @@ namespace QuestFantasy.UI
                 Visible = true,
             };
             panel.AddChild(labelControl);
-            
+
             // Add to container
             _inputContainer.AddChild(panel);
-            
+
             GD.Print($"[MobileInputUI] Created button {label} at ({x},{y}) size {size}x{size}, Visible={panel.Visible}, Parent={_inputContainer.Name}");
-            
+
             return panel;
         }
 

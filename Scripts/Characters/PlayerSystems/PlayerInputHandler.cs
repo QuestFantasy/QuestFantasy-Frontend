@@ -8,7 +8,7 @@ namespace QuestFantasy.Characters.PlayerSystems
     {
         private bool _lastMouseButtonState = false;
         private int _uiSkillActivationIndex = -1;
-        
+
         // Mobile touch pad state
         private bool _isTouchPadActive = false;
         private Vector2 _touchPadCenter = Vector2.Zero;

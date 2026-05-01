@@ -135,13 +135,13 @@ namespace QuestFantasy.UI
             _worldTarget = worldPosition;
             _tracking = true;
             _framesSinceLastShow = 0;
-            
+
             if (!_button.Visible)
             {
                 _button.Visible = true;
                 IsButtonVisible = true;
             }
-            
+
             UpdateScreenPosition();
         }
 
