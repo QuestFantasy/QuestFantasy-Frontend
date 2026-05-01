@@ -10,6 +10,7 @@ using QuestFantasy.Core.Data.Assets;
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Core.Data.Skills;
+using QuestFantasy.UI;
 
 namespace QuestFantasy.Characters
 {
@@ -354,6 +355,11 @@ namespace QuestFantasy.Characters
             _combatController.HandleSkillInput(this, _map);
 
             // 4. Handle environmental interactions
+            if (_map.HasNearbyBox(Position, out Vector2 boxWorld))
+            {
+                InteractionButtonUI.Instance?.Show("🔓 Open", boxWorld);
+            }
+            
             _interactionController.HandleRespawnInput(this, _map);
             _interactionController.HandleInteractionInput(_map, Position);
 

@@ -7,6 +7,13 @@ public class EquipmentPickup : Area2D
     [Signal]
     public delegate void PickupRequested(EquipmentPickup pickup);
 
+    /// <summary>
+    /// Static flag set to true when any EquipmentPickup receives a touch/click input
+    /// this frame. Used by PlayerInputHandler to suppress attack activation.
+    /// Reset each physics frame by the first pickup that processes.
+    /// </summary>
+    public static bool WasPickupTouched { get; set; }
+
     public object ItemData;
 
     [Export]
@@ -17,6 +24,10 @@ public class EquipmentPickup : Area2D
     private bool _isHovered = false;
     private ulong _pressStartMs = 0;
     private const int LONG_PRESS_MS = 500;
+    private const int TAP_MAX_MS = 400; // Short tap threshold for pickup
+
+    // Increase touch hit area for mobile - minimum 48x48
+    private const float MinTouchExtent = 24f;
 
     public override void _Ready()
     {
@@ -34,19 +45,26 @@ public class EquipmentPickup : Area2D
         _sprite.Scale = new Vector2(SpriteScale, SpriteScale);
         AddChild(_sprite);
 
-        // Collision shape based on sprite size
+        // Collision shape based on sprite size with minimum touch target
         _shape = new CollisionShape2D();
         var rect = new RectangleShape2D();
         if (_sprite.Texture != null)
         {
-            rect.Extents = new Vector2(_sprite.Texture.GetWidth() * 0.5f * SpriteScale, _sprite.Texture.GetHeight() * 0.5f * SpriteScale);
+            float halfW = _sprite.Texture.GetWidth() * 0.5f * SpriteScale;
+            float halfH = _sprite.Texture.GetHeight() * 0.5f * SpriteScale;
+            rect.Extents = new Vector2(
+                Mathf.Max(halfW, MinTouchExtent),
+                Mathf.Max(halfH, MinTouchExtent));
         }
         else
         {
-            rect.Extents = new Vector2(16, 16);
+            rect.Extents = new Vector2(MinTouchExtent, MinTouchExtent);
         }
         _shape.Shape = rect;
         AddChild(_shape);
+
+        // Enable input picking for touch/mouse
+        InputPickable = true;
 
         // Connect signals
         Connect("mouse_entered", this, nameof(OnMouseEntered));
@@ -84,28 +102,42 @@ public class EquipmentPickup : Area2D
 
     public void OnInputEvent(Viewport viewport, InputEvent @event, int shapeIdx)
     {
+        // Mark that a pickup was touched this frame to suppress attacks
+        WasPickupTouched = true;
+
         if (@event is InputEventMouseButton mb)
         {
+            // Right-click: immediate pickup (legacy)
             if (mb.ButtonIndex == (int)ButtonList.Right && mb.Pressed)
             {
                 RequestPickup();
+                return;
             }
 
-            if (mb.Pressed)
+            // Left-click: tap-to-pickup / long-press-to-preview
+            if (mb.ButtonIndex == (int)ButtonList.Left)
             {
-                _pressStartMs = OS.GetTicksMsec();
-            }
-            else
-            {
-                if (_pressStartMs > 0)
+                if (mb.Pressed)
                 {
-                    var held = (long)(OS.GetTicksMsec() - _pressStartMs);
-                    if (held >= LONG_PRESS_MS)
-                    {
-                        EquipmentPreview.Instance?.ShowPreview(ItemData, GlobalPosition);
-                    }
+                    _pressStartMs = OS.GetTicksMsec();
                 }
-                _pressStartMs = 0;
+                else
+                {
+                    if (_pressStartMs > 0)
+                    {
+                        var held = (long)(OS.GetTicksMsec() - _pressStartMs);
+                        if (held >= LONG_PRESS_MS)
+                        {
+                            EquipmentPreview.Instance?.ShowPreview(ItemData, GlobalPosition);
+                        }
+                        else if (held < TAP_MAX_MS)
+                        {
+                            // Short tap = pick up
+                            RequestPickup();
+                        }
+                    }
+                    _pressStartMs = 0;
+                }
             }
         }
 
@@ -123,6 +155,11 @@ public class EquipmentPickup : Area2D
                     if (held >= LONG_PRESS_MS)
                     {
                         EquipmentPreview.Instance?.ShowPreview(ItemData, GlobalPosition);
+                    }
+                    else if (held < TAP_MAX_MS)
+                    {
+                        // Short tap = pick up
+                        RequestPickup();
                     }
                 }
                 _pressStartMs = 0;

@@ -49,10 +49,28 @@ namespace QuestFantasy.Characters.PlayerSystems
         }
 
         /// <summary>
-        /// Check if skill activation input is triggered (left mouse button - single click detection)
+        /// Check if skill activation input is triggered (left mouse button - single click detection).
+        /// Suppressed when D-pad is active, HUD is hovered, the interaction button is visible,
+        /// or an equipment pickup was just touched.
         /// </summary>
         public bool IsSkillActivationPressed()
         {
+            // Suppress attacks when the interaction button is showing
+            // (player is near an interactable object)
+            if (InteractionButtonUI.IsButtonVisible)
+            {
+                _lastMouseButtonState = Input.IsMouseButtonPressed(1);
+                return false;
+            }
+
+            // Suppress attacks when a pickup was just touched
+            if (EquipmentPickup.WasPickupTouched)
+            {
+                _lastMouseButtonState = Input.IsMouseButtonPressed(1);
+                EquipmentPickup.WasPickupTouched = false;
+                return false;
+            }
+
             if (MobileInputUI.IsAnyDPadPressActive)
             {
                 _lastMouseButtonState = Input.IsMouseButtonPressed(1);

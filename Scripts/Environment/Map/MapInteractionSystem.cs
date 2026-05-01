@@ -45,6 +45,61 @@ public class MapInteractionSystem
         return false;
     }
 
+    public bool HasNearbyBox(MapTileData data, Vector2 worldPosition, out Vector2 boxWorld, float maxDistanceTiles = -1f)
+    {
+        boxWorld = Vector2.Zero;
+        if (maxDistanceTiles < 0)
+        {
+            maxDistanceTiles = GameConstants.BOX_INTERACTION_MAX_DISTANCE_TILES;
+        }
+        Vector2 center = data.WorldToTile(worldPosition);
+        int cx = (int)center.x;
+        int cy = (int)center.y;
+        float maxDistanceSquared = maxDistanceTiles * maxDistanceTiles;
+        float bestDistance = float.MaxValue;
+        Vector2 bestTile = Vector2.Zero;
+        bool found = false;
+
+        for (int x = cx - 1; x <= cx + 1; x++)
+        {
+            for (int y = cy - 1; y <= cy + 1; y++)
+            {
+                if (x < 0 || y < 0 || x >= data.WorldTileWidth || y >= data.WorldTileHeight)
+                {
+                    continue;
+                }
+
+                if (data.Tiles[x, y] != MapTileType.Box || data.OpenedBoxes[x, y])
+                {
+                    continue;
+                }
+
+                float dx = x - cx;
+                float dy = y - cy;
+                float distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared > maxDistanceSquared)
+                {
+                    continue;
+                }
+
+                if (distanceSquared < bestDistance)
+                {
+                    bestDistance = distanceSquared;
+                    bestTile = new Vector2(x, y);
+                    found = true;
+                }
+            }
+        }
+
+        if (!found)
+        {
+            return false;
+        }
+
+        boxWorld = data.TileToWorldCenter((int)bestTile.x, (int)bestTile.y);
+        return true;
+    }
+
     public bool TryOpenNearbyBox(MapTileData data, Vector2 worldPosition, out Vector2 openedWorld, float maxDistanceTiles = -1f)
     {
         openedWorld = Vector2.Zero;

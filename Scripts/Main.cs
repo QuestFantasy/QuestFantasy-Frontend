@@ -82,6 +82,13 @@ public class Main : Node2D
             var preview = new EquipmentPreview();
             AddChild(preview);
         }
+
+        // Ensure InteractionButtonUI exists in the scene
+        if (InteractionButtonUI.Instance == null)
+        {
+            var interactBtn = new InteractionButtonUI();
+            AddChild(interactBtn);
+        }
     }
 
     public override void _Process(float delta)
