@@ -412,8 +412,9 @@ public class Main : Node2D
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
         
-        // Show D-pad in the lobby
+        // Show D-pad in the lobby, but hide map button
         _mobileInputUI?.ShowDPad();
+        _mobileInputUI?.ShowMapButton(false);
     }
 
     private void EnsureLobbyBackpackContext()
@@ -500,6 +501,7 @@ public class Main : Node2D
 
         // Show D-pad only during actual gameplay
         _mobileInputUI?.ShowDPad();
+        _mobileInputUI?.ShowMapButton(true);
 
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;

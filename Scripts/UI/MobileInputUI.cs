@@ -19,6 +19,7 @@ namespace QuestFantasy.UI
         private Panel _downButton;
         private Panel _leftButton;
         private Panel _rightButton;
+        private Panel _mapButton;
         
         // Touch tracking
         private int _activeTouchId = -1;
@@ -35,6 +36,7 @@ namespace QuestFantasy.UI
         private const string DOWN_ACTION = "ui_down";
         private const string LEFT_ACTION = "ui_left";
         private const string RIGHT_ACTION = "ui_right";
+        private const string MAP_ACTION = "toggle_minimap";
 
         public override void _Ready()
         {
@@ -100,6 +102,14 @@ namespace QuestFantasy.UI
             Visible = false;
         }
 
+        public void ShowMapButton(bool visible)
+        {
+            if (_mapButton != null)
+            {
+                _mapButton.Visible = visible;
+            }
+        }
+
         /// <summary>
         /// Create D-pad button UI nodes
         /// </summary>
@@ -136,8 +146,49 @@ namespace QuestFantasy.UI
             // RIGHT button
             _rightButton = CreateButton(RIGHT_ACTION, startX + buttonSize * 2, centerY, buttonSize, "►");
             
-            GD.Print($"[MobileInputUI] D-pad created at: UP=({centerX},{startY}), DOWN=({centerX},{startY + buttonSize * 2}), LEFT=({startX},{centerY}), RIGHT=({startX + buttonSize * 2},{centerY})");
+            // MAP button (Bottom-right corner, 0.7x size)
+            int mapBtnSize = (int)(buttonSize * 0.7f);
+            int offset = (buttonSize - mapBtnSize) / 2;
+            _mapButton = CreateIconButton(MAP_ACTION, startX + buttonSize * 2 + offset, startY + buttonSize * 2 + offset, mapBtnSize, "res://Assets/Map/map_icon.png");
+            
+            GD.Print($"[MobileInputUI] D-pad created at: UP=({centerX},{startY}), DOWN=({centerX},{startY + buttonSize * 2}), LEFT=({startX},{centerY}), RIGHT=({startX + buttonSize * 2},{centerY}), MAP=({startX + buttonSize * 2 + offset},{startY + buttonSize * 2 + offset})");
             GD.Print($"[MobileInputUI] Container size set to: {_inputContainer.RectSize}");
+        }
+
+        private Panel CreateIconButton(string action, int x, int y, int size, string iconPath)
+        {
+            var panel = new Panel
+            {
+                RectPosition = new Vector2(x, y),
+                RectSize = new Vector2(size, size),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                Visible = true,
+            };
+            
+            var panelStyle = new StyleBoxEmpty();
+            
+            var theme = new Theme();
+            theme.SetStylebox("panel", "Panel", panelStyle);
+            panel.Theme = theme;
+            
+            var icon = new TextureRect
+            {
+                Texture = ResourceLoader.Load<Texture>(iconPath),
+                AnchorRight = 1f,
+                AnchorBottom = 1f,
+                MarginLeft = 0f,
+                MarginTop = 0f,
+                MarginRight = 0f,
+                MarginBottom = 0f,
+                Expand = true,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+            };
+            icon.SelfModulate = new Color(0.9f, 0.9f, 0.9f, 1f);
+            panel.AddChild(icon);
+            
+            _inputContainer.AddChild(panel);
+            return panel;
         }
 
         /// <summary>
@@ -295,6 +346,7 @@ namespace QuestFantasy.UI
             Input.ActionRelease(DOWN_ACTION);
             Input.ActionRelease(LEFT_ACTION);
             Input.ActionRelease(RIGHT_ACTION);
+            Input.ActionRelease(MAP_ACTION);
 
             _currentPressedAction = null;
             IsAnyDPadPressActive = false;
@@ -324,6 +376,7 @@ namespace QuestFantasy.UI
             _downButton.SelfModulate = activeAction == DOWN_ACTION ? DPadPressedColor : new Color(1, 1, 1, 1);
             _leftButton.SelfModulate = activeAction == LEFT_ACTION ? DPadPressedColor : new Color(1, 1, 1, 1);
             _rightButton.SelfModulate = activeAction == RIGHT_ACTION ? DPadPressedColor : new Color(1, 1, 1, 1);
+            _mapButton.SelfModulate = activeAction == MAP_ACTION ? DPadPressedColor : new Color(1, 1, 1, 1);
         }
 
         private bool TryGetActionAtPoint(Vector2 point, out string action)
@@ -349,6 +402,12 @@ namespace QuestFantasy.UI
             if (IsPointInButton(_rightButton, point))
             {
                 action = RIGHT_ACTION;
+                return true;
+            }
+
+            if (IsPointInButton(_mapButton, point))
+            {
+                action = MAP_ACTION;
                 return true;
             }
 
