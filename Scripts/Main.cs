@@ -118,7 +118,6 @@ public class Main : Node2D
         _pendingProfileSnapshot = profileSnapshot;
         EnsureLobbyBackpackContext();
         _sidebarMenu?.SetMenuVisible(true);
-        _mobileInputUI?.ShowDPad();
         // Build lobby instead of directly loading a game map
         BuildLobby();
     }
@@ -405,6 +404,9 @@ public class Main : Node2D
         _lobbyManager = new LobbyManager();
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
+        
+        // Show D-pad in the lobby
+        _mobileInputUI?.ShowDPad();
     }
 
     private void EnsureLobbyBackpackContext()
