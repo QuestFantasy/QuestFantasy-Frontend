@@ -18,7 +18,6 @@ namespace QuestFantasy.Characters.PlayerSystems
         private readonly PlayerInputHandler _inputHandler;
         private readonly PlayerAnimationController _animationController;
         private int _selectedSkillIndex;
-        private int _pendingUISkillIndex = -1;
 
         public int SelectedSkillIndex => _selectedSkillIndex;
 
@@ -37,28 +36,24 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void HandleSkillInput(Player player, Map map)
         {
-            // 優先執行 UI 觸發的待執行技能
-            if (_pendingUISkillIndex >= 0)
-            {
-                int skillIndex = _pendingUISkillIndex;
-                _pendingUISkillIndex = -1;
-                _selectedSkillIndex = skillIndex;
-                
-                // 消耗鼠標輸入，避免同一幀內又觸發舊技能
-                _inputHandler.ConsumeSkillActivationInput();
-
-                if (!_animationController.IsAttacking)
-                {
-                    ExecuteSkill(player, map, skillIndex);
-                }
-                return; // 跳過鍵盤和鼠標檢測
-            }
-
             int requestedSkillIndex = _inputHandler.ConsumeSelectedSkillIndex();
             if (requestedSkillIndex >= 0)
             {
                 _selectedSkillIndex = requestedSkillIndex;
                 GD.Print($"[PlayerCombatController] Selected skill slot {_selectedSkillIndex + 1}");
+            }
+
+            // Check for UI-triggered skill activation (tap on HUD skill slot)
+            int uiSkillIndex = _inputHandler.ConsumeUiSkillActivation();
+            if (uiSkillIndex >= 0)
+            {
+                _selectedSkillIndex = uiSkillIndex;
+                _inputHandler.ConsumeSkillActivationInput();
+                if (!_animationController.IsAttacking)
+                {
+                    ExecuteSkill(player, map, uiSkillIndex);
+                }
+                return;
             }
 
             if (_animationController.IsAttacking)
@@ -67,26 +62,9 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (!_inputHandler.IsSkillActivationPressed())
                 return;
 
-            TriggerSkill(_selectedSkillIndex, player, map);
+            ExecuteSkill(player, map, _selectedSkillIndex);
         }
 
-        /// <summary>
-        /// Trigger a specific skill slot directly from UI input.
-        /// </summary>
-        public bool TriggerSkill(int skillIndex, Player player, Map map)
-        {
-            if (skillIndex < 0)
-            {
-                return false;
-            }
-
-            // 設置待執行技能，讓 HandleSkillInput 優先處理，避免與鼠標輸入衝突
-            _pendingUISkillIndex = skillIndex;
-            _selectedSkillIndex = skillIndex;
-            GD.Print($"[PlayerCombatController] UI triggered skill slot {skillIndex + 1}");
-
-            return true;
-        }
 
         /// <summary>
         /// Execute the basic attack skill

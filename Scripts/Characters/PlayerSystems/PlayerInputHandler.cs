@@ -7,6 +7,7 @@ namespace QuestFantasy.Characters.PlayerSystems
     public class PlayerInputHandler
     {
         private bool _lastMouseButtonState = false;
+        private int _uiSkillActivationIndex = -1;
         
         // Mobile touch pad state
         private bool _isTouchPadActive = false;
@@ -58,10 +59,36 @@ namespace QuestFantasy.Characters.PlayerSystems
                 return false;
             }
 
+            if (PlayerHud.IsMouseOverHud)
+            {
+                _lastMouseButtonState = Input.IsMouseButtonPressed(1);
+                return false;
+            }
+
             bool currentMouseState = Input.IsMouseButtonPressed(1);
             bool justPressed = currentMouseState && !_lastMouseButtonState;
             _lastMouseButtonState = currentMouseState;
             return justPressed;
+        }
+
+        /// <summary>
+        /// Queue a skill activation request from the UI (e.g. tapping a skill slot).
+        /// This will both select and activate the skill on the next combat frame.
+        /// </summary>
+        public void RequestSkillActivation(int skillIndex)
+        {
+            _uiSkillActivationIndex = skillIndex;
+        }
+
+        /// <summary>
+        /// Consume and return any pending UI skill activation request.
+        /// Returns the skill index to activate, or -1 if none.
+        /// </summary>
+        public int ConsumeUiSkillActivation()
+        {
+            int index = _uiSkillActivationIndex;
+            _uiSkillActivationIndex = -1;
+            return index;
         }
 
         /// <summary>

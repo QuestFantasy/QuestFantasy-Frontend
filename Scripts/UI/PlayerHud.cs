@@ -22,6 +22,11 @@ public class PlayerHud : CanvasLayer
 
     private readonly List<SkillSlotUi> _skillSlots = new List<SkillSlotUi>();
 
+    /// <summary>
+    /// Fired when a skill slot is pressed/tapped. The int parameter is the skill index.
+    /// </summary>
+    public event Action<int> OnSkillSlotPressed;
+
     private Player _player;
     private Map _map;
 
@@ -30,6 +35,13 @@ public class PlayerHud : CanvasLayer
     private Label _hpValue;
     private GridContainer _skillsContainer;
     private Control _rootControl;
+    private PanelContainer _hudPanel;
+
+    /// <summary>
+    /// True when the mouse cursor is over the HUD panel area.
+    /// Used by PlayerInputHandler to suppress attack activation.
+    /// </summary>
+    public static bool IsMouseOverHud { get; private set; }
 
     public override void _Ready()
     {
@@ -38,6 +50,17 @@ public class PlayerHud : CanvasLayer
 
     public override void _Process(float delta)
     {
+        // Update mouse-over-HUD flag every frame
+        if (_hudPanel != null && IsInstanceValid(_hudPanel))
+        {
+            var mousePos = _hudPanel.GetGlobalMousePosition();
+            IsMouseOverHud = _hudPanel.GetGlobalRect().HasPoint(mousePos);
+        }
+        else
+        {
+            IsMouseOverHud = false;
+        }
+
         if (_player == null)
         {
             return;
@@ -99,9 +122,10 @@ public class PlayerHud : CanvasLayer
             MarginRight = HudWidth * 0.5f,
             MarginTop = -(HudHeight + HudBottomOffset),
             MarginBottom = -HudBottomOffset,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
+            MouseFilter = Control.MouseFilterEnum.Stop,
         };
         root.AddChild(panel);
+        _hudPanel = panel;
 
         var style = new StyleBoxFlat
         {
@@ -253,10 +277,13 @@ public class PlayerHud : CanvasLayer
 
     private SkillSlotUi CreateSkillSlot()
     {
-        var slotRoot = new PanelContainer
+        var slotButton = new Button
         {
             RectMinSize = new Vector2(SkillSlotSize, SkillSlotSize),
             MouseFilter = Control.MouseFilterEnum.Stop,
+            FocusMode = Control.FocusModeEnum.None,
+            ClipText = false,
+            Text = "",
         };
 
         var slotStyle = new StyleBoxFlat
@@ -272,14 +299,17 @@ public class PlayerHud : CanvasLayer
             CornerRadiusBottomLeft = 6,
             CornerRadiusBottomRight = 6,
         };
-        slotRoot.AddStyleboxOverride("panel", slotStyle);
+        slotButton.AddStyleboxOverride("normal", slotStyle);
+        slotButton.AddStyleboxOverride("hover", slotStyle);
+        slotButton.AddStyleboxOverride("pressed", slotStyle);
+        slotButton.AddStyleboxOverride("focus", new StyleBoxEmpty());
 
         var content = new Control
         {
             RectMinSize = new Vector2(SkillSlotSize, SkillSlotSize),
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
-        slotRoot.AddChild(content);
+        slotButton.AddChild(content);
 
         var icon = new TextureRect
         {
@@ -318,23 +348,22 @@ public class PlayerHud : CanvasLayer
         cooldownValue.AddColorOverride("font_color_shadow", new Color(0f, 0f, 0f, 0.9f));
         content.AddChild(cooldownValue);
 
-        var slotButton = new Button
-        {
-            RectPosition = Vector2.Zero,
-            RectMinSize = new Vector2(SkillSlotSize, SkillSlotSize),
-            Flat = true,
-            Text = string.Empty,
-            FocusMode = Control.FocusModeEnum.None,
-            MouseFilter = Control.MouseFilterEnum.Stop,
-        };
-        slotButton.Connect("pressed", this, nameof(HandleSkillSlotPressed), new Godot.Collections.Array { _skillSlots.Count });
-        slotButton.AddStyleboxOverride("normal", BuildSlotButtonStyle(new Color(0f, 0f, 0f, 0f)));
-        slotButton.AddStyleboxOverride("hover", BuildSlotButtonStyle(new Color(1f, 1f, 1f, 0.04f)));
-        slotButton.AddStyleboxOverride("pressed", BuildSlotButtonStyle(new Color(1f, 1f, 1f, 0.10f)));
-        slotButton.AddStyleboxOverride("disabled", BuildSlotButtonStyle(new Color(0f, 0f, 0f, 0f)));
-        content.AddChild(slotButton);
+        var slot = new SkillSlotUi(slotButton, slotStyle, icon, cooldownOverlay, cooldownValue);
+        slotButton.Connect("pressed", this, nameof(HandleSkillSlotPressed), new Godot.Collections.Array { slotButton });
+        return slot;
+    }
 
-        return new SkillSlotUi(slotRoot, slotStyle, icon, cooldownOverlay, cooldownValue, slotButton);
+    private void HandleSkillSlotPressed(Button button)
+    {
+        if (button == null) return;
+        for (int i = 0; i < _skillSlots.Count; i++)
+        {
+            if (_skillSlots[i].Root == button)
+            {
+                OnSkillSlotPressed?.Invoke(i);
+                return;
+            }
+        }
     }
 
     private void UpdateSkillSlot(SkillSlotUi slot, PlayerSkillSnapshot skill, bool isSelected)
@@ -356,7 +385,6 @@ public class PlayerHud : CanvasLayer
             ? "Unknown Skill"
             : skill.Name;
         slot.Root.HintTooltip = tooltip;
-        slot.Button.Disabled = onCooldown || string.IsNullOrWhiteSpace(skill?.SkillId);
 
         slot.Style.BorderColor = isSelected
             ? new Color(1f, 0.88f, 0.42f, 1f)
@@ -435,47 +463,20 @@ public class PlayerHud : CanvasLayer
         _skillSlots.Clear();
     }
 
-    private StyleBoxFlat BuildSlotButtonStyle(Color bgColor)
-    {
-        return new StyleBoxFlat
-        {
-            BgColor = bgColor,
-            BorderWidthTop = 0,
-            BorderWidthRight = 0,
-            BorderWidthBottom = 0,
-            BorderWidthLeft = 0,
-            CornerRadiusTopLeft = 6,
-            CornerRadiusTopRight = 6,
-            CornerRadiusBottomLeft = 6,
-            CornerRadiusBottomRight = 6,
-        };
-    }
 
-    private void HandleSkillSlotPressed(int skillIndex)
-    {
-        if (_player == null || _map == null)
-        {
-            return;
-        }
-
-        // 立即消耗鼠標輸入，防止同一幀內再次觸發
-        _player.ConsumeSkillActivationInput();
-        _player.TriggerSkill(skillIndex, _map);
-    }
 
     private sealed class SkillSlotUi
     {
-        public SkillSlotUi(PanelContainer root, StyleBoxFlat style, TextureRect icon, ColorRect cooldownOverlay, Label cooldownValue, Button button)
+        public SkillSlotUi(Button root, StyleBoxFlat style, TextureRect icon, ColorRect cooldownOverlay, Label cooldownValue)
         {
             Root = root;
             Style = style;
             Icon = icon;
             CooldownOverlay = cooldownOverlay;
             CooldownValue = cooldownValue;
-            Button = button;
         }
 
-        public PanelContainer Root { get; }
+        public Button Root { get; }
 
         public StyleBoxFlat Style { get; }
 
@@ -484,7 +485,5 @@ public class PlayerHud : CanvasLayer
         public ColorRect CooldownOverlay { get; }
 
         public Label CooldownValue { get; }
-
-        public Button Button { get; }
     }
 }

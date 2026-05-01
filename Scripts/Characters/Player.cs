@@ -83,6 +83,7 @@ namespace QuestFantasy.Characters
 
         // ==================== Prototype systems (used by controllers) ====================
         private readonly PlayerInputHandler _inputHandler = new PlayerInputHandler();
+        public PlayerInputHandler InputHandler => _inputHandler;
         private readonly PlayerMovementController _movementController = new PlayerMovementController();
         private readonly PlayerAnimationSystem _animationSystem = new PlayerAnimationSystem();
         private readonly PlayerCameraManager _cameraManager = new PlayerCameraManager();
@@ -658,21 +659,7 @@ namespace QuestFantasy.Characters
             return _combatSystem?.UseSkill(skillIndex, this, target) ?? false;
         }
 
-        /// <summary>
-        /// Trigger a specific skill slot using the full combat flow.
-        /// </summary>
-        public bool TriggerSkill(int skillIndex, Map map)
-        {
-            return _combatController?.TriggerSkill(skillIndex, this, map) ?? false;
-        }
 
-        /// <summary>
-        /// Consume mouse input to prevent the same button press from triggering multiple actions
-        /// </summary>
-        public void ConsumeSkillActivationInput()
-        {
-            _inputHandler?.ConsumeSkillActivationInput();
-        }
 
         /// <summary>
         /// Learn a new skill

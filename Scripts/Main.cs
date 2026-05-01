@@ -467,6 +467,10 @@ public class Main : Node2D
         _playerHud = new PlayerHud();
         AddChild(_playerHud);
         _playerHud.Initialize(_player, _map);
+        _playerHud.OnSkillSlotPressed += (skillIndex) =>
+        {
+            _player?.InputHandler?.RequestSkillActivation(skillIndex);
+        };
 
         _backpackUi = new BackpackUI();
         AddChild(_backpackUi);
