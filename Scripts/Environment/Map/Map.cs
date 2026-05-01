@@ -1,9 +1,13 @@
+using System;
+
 using Godot;
 
 public class Map : Node2D
 {
     [Signal]
     public delegate void BoxOpened(Vector2 worldPosition);
+
+    public event Action<MapTileData> MapGenerated;
 
     [Export] public MapGenerationConfig GenerationConfig = new MapGenerationConfig();
 
@@ -40,6 +44,7 @@ public class Map : Node2D
     public int WorldTileHeight => _data != null ? _data.WorldTileHeight : RoomsY * RoomTileSize;
     public int WorldPixelWidth => _data != null ? _data.WorldPixelWidth : WorldTileWidth * TileSize;
     public int WorldPixelHeight => _data != null ? _data.WorldPixelHeight : WorldTileHeight * TileSize;
+    public MapTileData TileData => _data;
 
     public void Generate()
     {
@@ -71,6 +76,7 @@ public class Map : Node2D
             config);
 
         _renderSystem.Rebuild(_data, config.BoxClosedTexturePath, config.BoxOpenTexturePath);
+        MapGenerated?.Invoke(_data);
         Update();
     }
 

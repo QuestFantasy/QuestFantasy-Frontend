@@ -18,6 +18,7 @@ public class Main : Node2D
     private SidebarMenu _sidebarMenu;
     private PlayerHud _playerHud;
     private BackpackUI _backpackUi;
+    private MiniMapUI _miniMapUi;
     private DeathScreenUI _deathScreen;
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
@@ -378,6 +379,12 @@ public class Main : Node2D
         }
         _playerHud = null;
 
+        if (Godot.Object.IsInstanceValid(_miniMapUi))
+        {
+            _miniMapUi.QueueFree();
+        }
+        _miniMapUi = null;
+
         if (Godot.Object.IsInstanceValid(_backpackUi))
         {
             _backpackUi.DropRequested -= OnBackpackDropRequested;
@@ -480,6 +487,10 @@ public class Main : Node2D
         {
             _player?.InputHandler?.RequestSkillActivation(skillIndex);
         };
+
+        _miniMapUi = new MiniMapUI();
+        AddChild(_miniMapUi);
+        _miniMapUi.Initialize(_map, _player);
 
         _backpackUi = new BackpackUI();
         AddChild(_backpackUi);
