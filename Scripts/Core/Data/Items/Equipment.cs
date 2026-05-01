@@ -57,6 +57,54 @@ namespace QuestFantasy.Core.Data.Items
         }
 
         /// <summary>
+        /// Unequip an item from the given slot. Returns the removed item or null.
+        /// </summary>
+        public Equipment Unequip(EquipmentType slot)
+        {
+            Equipment removed = null;
+            switch (slot)
+            {
+                case EquipmentType.Head:
+                    removed = Head;
+                    Head = null;
+                    break;
+                case EquipmentType.Body:
+                    removed = Body;
+                    Body = null;
+                    break;
+                case EquipmentType.Arms:
+                    removed = Arms;
+                    Arms = null;
+                    break;
+                case EquipmentType.Legs:
+                    removed = Legs;
+                    Legs = null;
+                    break;
+                case EquipmentType.Shoes:
+                    removed = Shoes;
+                    Shoes = null;
+                    break;
+            }
+            return removed;
+        }
+
+        /// <summary>
+        /// Get the equipment in a specific slot.
+        /// </summary>
+        public Equipment GetBySlot(EquipmentType slot)
+        {
+            switch (slot)
+            {
+                case EquipmentType.Head: return Head;
+                case EquipmentType.Body: return Body;
+                case EquipmentType.Arms: return Arms;
+                case EquipmentType.Legs: return Legs;
+                case EquipmentType.Shoes: return Shoes;
+                default: return null;
+            }
+        }
+
+        /// <summary>
         /// Generic method to calculate total stat contribution from all equipped items.
         /// </summary>
         private int CalculateTotalStat(System.Func<Abilities, int> statSelector)
