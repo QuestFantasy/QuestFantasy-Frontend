@@ -208,10 +208,14 @@ public class BackpackUI : CanvasLayer
         {
             BgColor = new Color(0.08f, 0.09f, 0.14f, 0.92f),
             BorderColor = new Color(0.35f, 0.30f, 0.50f, 0.8f),
-            BorderWidthTop = 2, BorderWidthBottom = 2,
-            BorderWidthLeft = 2, BorderWidthRight = 2,
-            CornerRadiusTopLeft = 10, CornerRadiusTopRight = 10,
-            CornerRadiusBottomLeft = 10, CornerRadiusBottomRight = 10,
+            BorderWidthTop = 2,
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            BorderWidthRight = 2,
+            CornerRadiusTopLeft = 10,
+            CornerRadiusTopRight = 10,
+            CornerRadiusBottomLeft = 10,
+            CornerRadiusBottomRight = 10,
         };
         equipBg.AddStyleboxOverride("panel", equipBgStyle);
         _panelRoot.AddChild(equipBg);
@@ -227,10 +231,14 @@ public class BackpackUI : CanvasLayer
 
         _equipSlotsContainer = new VBoxContainer
         {
-            AnchorLeft = 0f, AnchorRight = 1f,
-            AnchorTop = 0f, AnchorBottom = 1f,
-            MarginLeft = 8f, MarginTop = 10f,
-            MarginRight = -8f, MarginBottom = -10f,
+            AnchorLeft = 0f,
+            AnchorRight = 1f,
+            AnchorTop = 0f,
+            AnchorBottom = 1f,
+            MarginLeft = 8f,
+            MarginTop = 10f,
+            MarginRight = -8f,
+            MarginBottom = -10f,
         };
         _equipSlotsContainer.AddConstantOverride("separation", 4);
         _equipSlotsContainer.AddChild(equipTitle);
@@ -239,8 +247,10 @@ public class BackpackUI : CanvasLayer
         // Backpack background (right side, offset to make room for equip panel)
         _panelBackground = new TextureRect
         {
-            AnchorLeft = 0f, AnchorRight = 1f,
-            AnchorTop = 0f, AnchorBottom = 1f,
+            AnchorLeft = 0f,
+            AnchorRight = 1f,
+            AnchorTop = 0f,
+            AnchorBottom = 1f,
             MarginLeft = 150f,
             Expand = true,
             StretchMode = TextureRect.StretchModeEnum.Scale,
@@ -495,12 +505,18 @@ public class BackpackUI : CanvasLayer
                 ? new Color(0.12f, 0.15f, 0.25f, 0.9f)
                 : new Color(0.06f, 0.07f, 0.12f, 0.7f),
             BorderColor = borderCol,
-            BorderWidthTop = 1, BorderWidthBottom = 1,
-            BorderWidthLeft = 1, BorderWidthRight = 1,
-            CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6,
-            CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6,
-            ContentMarginTop = 4, ContentMarginBottom = 4,
-            ContentMarginLeft = 6, ContentMarginRight = 6,
+            BorderWidthTop = 1,
+            BorderWidthBottom = 1,
+            BorderWidthLeft = 1,
+            BorderWidthRight = 1,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomLeft = 6,
+            CornerRadiusBottomRight = 6,
+            ContentMarginTop = 4,
+            ContentMarginBottom = 4,
+            ContentMarginLeft = 6,
+            ContentMarginRight = 6,
         };
         frame.AddStyleboxOverride("panel", style);
 
