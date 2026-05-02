@@ -250,13 +250,19 @@ public class AuthFlowController : Node
             IssuedAt = DateTime.UtcNow
         };
 
+        string responseUsername = ReadUsernameFromAuthResponse(result);
+        if (!string.IsNullOrWhiteSpace(responseUsername))
+        {
+            _currentSession.Username = responseUsername;
+        }
+
         // Try to extract user info from token (if JWT)
         if (TokenValidator.TryGetUserId(token, out long userId))
         {
             _currentSession.UserId = userId;
         }
 
-        if (TokenValidator.TryGetUsername(token, out string username))
+        if (string.IsNullOrWhiteSpace(_currentSession.Username) && TokenValidator.TryGetUsername(token, out string username))
         {
             _currentSession.Username = username;
         }
@@ -342,5 +348,48 @@ public class AuthFlowController : Node
     private void SetAuthBusy(bool isBusy)
     {
         _authView?.SetInteractable(!isBusy);
+    }
+
+    private static string ReadUsernameFromAuthResponse(AuthApiResult result)
+    {
+        if (result?.Data == null)
+        {
+            return string.Empty;
+        }
+
+        if (result.Data.Contains("username"))
+        {
+            string directUsername = result.Data["username"]?.ToString() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(directUsername))
+            {
+                return directUsername;
+            }
+        }
+
+        if (result.Data.Contains("user") && result.Data["user"] is Godot.Collections.Dictionary userDict)
+        {
+            if (userDict.Contains("username"))
+            {
+                string nestedUsername = userDict["username"]?.ToString() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(nestedUsername))
+                {
+                    return nestedUsername;
+                }
+            }
+        }
+
+        if (result.Data.Contains("user_data") && result.Data["user_data"] is Godot.Collections.Dictionary userDataDict)
+        {
+            if (userDataDict.Contains("username"))
+            {
+                string nestedUsername = userDataDict["username"]?.ToString() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(nestedUsername))
+                {
+                    return nestedUsername;
+                }
+            }
+        }
+
+        return string.Empty;
     }
 }

@@ -71,6 +71,7 @@ public static class PlayerItemSnapshotCodec
 
         var baseDict = new Godot.Collections.Dictionary
         {
+            ["instance_id"] = item.InstanceId ?? string.Empty,
             ["name"] = item.Name ?? "Unnamed",
             ["description"] = item.Description ?? string.Empty,
             ["item_type"] = item.ItemType.ToString(),
@@ -115,6 +116,7 @@ public static class PlayerItemSnapshotCodec
         {
             var equipment = new Equipment
             {
+                InstanceId = ReadString(data, "instance_id", string.Empty),
                 Name = ReadString(data, "name", "Equipment"),
                 Description = ReadString(data, "description", string.Empty),
                 Quantity = ReadInt(data, "quantity", 1, 1),
@@ -134,6 +136,7 @@ public static class PlayerItemSnapshotCodec
         {
             var weapon = new Weapon
             {
+                InstanceId = ReadString(data, "instance_id", string.Empty),
                 Name = ReadString(data, "name", "Weapon"),
                 Description = ReadString(data, "description", string.Empty),
                 Quantity = ReadInt(data, "quantity", 1, 1),
@@ -151,6 +154,7 @@ public static class PlayerItemSnapshotCodec
 
         var generic = new Item
         {
+            InstanceId = ReadString(data, "instance_id", string.Empty),
             Name = ReadString(data, "name", "Item"),
             Description = ReadString(data, "description", string.Empty),
             Quantity = ReadInt(data, "quantity", 1, 1),

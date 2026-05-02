@@ -61,6 +61,38 @@ namespace QuestFantasy.Systems.Inventory
             if (item == null)
                 return false;
 
+            if (!string.IsNullOrWhiteSpace(item.InstanceId) && RemoveItemByInstanceId(item.InstanceId))
+            {
+                return true;
+            }
+
+            return Items.Remove(item);
+        }
+
+        /// <summary>
+        /// Find an item by its backend instance identifier.
+        /// </summary>
+        public Item FindItemByInstanceId(string instanceId)
+        {
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                return null;
+            }
+
+            return Items.FirstOrDefault(i => i != null && !string.IsNullOrWhiteSpace(i.InstanceId) && string.Equals(i.InstanceId, instanceId, StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// Remove an item by its backend instance identifier.
+        /// </summary>
+        public bool RemoveItemByInstanceId(string instanceId)
+        {
+            Item item = FindItemByInstanceId(instanceId);
+            if (item == null)
+            {
+                return false;
+            }
+
             return Items.Remove(item);
         }
 
@@ -69,7 +101,12 @@ namespace QuestFantasy.Systems.Inventory
         /// </summary>
         public Item FindItem(string itemName)
         {
-            return Items.FirstOrDefault(i => i.Name == itemName);
+            if (string.IsNullOrWhiteSpace(itemName))
+            {
+                return null;
+            }
+
+            return Items.FirstOrDefault(i => i != null && string.Equals(i.Name, itemName, StringComparison.Ordinal));
         }
 
         /// <summary>

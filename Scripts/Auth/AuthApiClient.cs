@@ -9,6 +9,8 @@ public class AuthApiResult
     public int ResponseCode { get; set; }
     public string ErrorMessage { get; set; }
     public Godot.Collections.Dictionary Data { get; set; }
+    // Set when the backend returns a JSON array (e.g. marketplace listing list).
+    public Godot.Collections.Array ArrayData { get; set; }
 
     public bool IsSuccessStatus(params int[] expectedCodes)
     {
@@ -242,7 +244,11 @@ public class AuthApiClient : Node
         FetchPlayerInventory,
         UpdatePlayerInventory,
         FetchPlayerGold,
-        UpdatePlayerGold
+        UpdatePlayerGold,
+        FetchMarketplaceListings,
+        CreateMarketplaceListing,
+        CancelMarketplaceListing,
+        BuyMarketplaceListing
     }
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
@@ -391,6 +397,58 @@ public class AuthApiClient : Node
             callback);
     }
 
+    // -----------------------------------------------------------------------
+    // Marketplace endpoints
+    // -----------------------------------------------------------------------
+
+    /// <summary>GET /api/player/marketplace/ — returns all active listings as an array.</summary>
+    public bool FetchMarketplaceListings(string token, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.FetchMarketplaceListings,
+            "/api/player/marketplace/",
+            HTTPClient.Method.Get,
+            null,
+            token,
+            callback);
+    }
+
+    /// <summary>POST /api/player/marketplace/ — list an item from inventory.</summary>
+    public bool CreateMarketplaceListing(string token, Godot.Collections.Dictionary payload, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.CreateMarketplaceListing,
+            "/api/player/marketplace/",
+            HTTPClient.Method.Post,
+            payload,
+            token,
+            callback);
+    }
+
+    /// <summary>DELETE /api/player/marketplace/{id}/ — cancel own listing.</summary>
+    public bool CancelMarketplaceListing(string token, int listingId, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.CancelMarketplaceListing,
+            $"/api/player/marketplace/{listingId}/",
+            HTTPClient.Method.Delete,
+            null,
+            token,
+            callback);
+    }
+
+    /// <summary>POST /api/player/marketplace/{id}/buy/ — purchase a listing.</summary>
+    public bool BuyMarketplaceListing(string token, int listingId, Action<AuthApiResult> callback)
+    {
+        return SendRequest(
+            AuthRequestKind.BuyMarketplaceListing,
+            $"/api/player/marketplace/{listingId}/buy/",
+            HTTPClient.Method.Post,
+            null,
+            token,
+            callback);
+    }
+
     private bool SendRequest(
         AuthRequestKind kind,
         string endpointPath,
@@ -442,6 +500,10 @@ public class AuthApiClient : Node
     {
         string bodyText = body != null ? System.Text.Encoding.UTF8.GetString(body) : string.Empty;
 
+        // Try dict first, then array (marketplace list returns JSON array).
+        Godot.Collections.Dictionary dictData = ParseJsonDictionary(bodyText);
+        Godot.Collections.Array arrayData = dictData == null ? ParseJsonArray(bodyText) : null;
+
         CompleteRequest(new AuthApiResult
         {
             NetworkOk = result == (int)HTTPRequest.Result.Success,
@@ -449,7 +511,8 @@ public class AuthApiClient : Node
             ErrorMessage = result == (int)HTTPRequest.Result.Success
                 ? string.Empty
                 : "Network request failed. Please make sure the backend server is running.",
-            Data = ParseJsonDictionary(bodyText)
+            Data = dictData,
+            ArrayData = arrayData
         });
     }
 
@@ -481,5 +544,21 @@ public class AuthApiClient : Node
         }
 
         return parsed.Result as Godot.Collections.Dictionary;
+    }
+
+    private static Godot.Collections.Array ParseJsonArray(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        JSONParseResult parsed = JSON.Parse(json);
+        if (parsed.Error != Error.Ok)
+        {
+            return null;
+        }
+
+        return parsed.Result as Godot.Collections.Array;
     }
 }

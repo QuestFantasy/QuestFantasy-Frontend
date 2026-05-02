@@ -10,7 +10,6 @@ public class EquipmentPreview : CanvasLayer
     private Panel _panel;
     private Panel _shadowPanel;
     private VBoxContainer _box;
-    private readonly ColorRect _bg;
     [Export]
     public int FixedPreviewHeight = 150;
     [Export]

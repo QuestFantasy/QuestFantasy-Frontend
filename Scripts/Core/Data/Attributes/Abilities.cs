@@ -61,5 +61,15 @@ namespace QuestFantasy.Core.Data.Attributes
         /// Get total ability value
         /// </summary>
         public int GetTotal() => Atk + Def + Spd + Vit;
+
+        /// <summary>
+        /// Clone this Abilities instance
+        /// </summary>
+        public Abilities Clone()
+        {
+            var clone = new Abilities();
+            clone.Set(Atk, Def, Spd, Vit);
+            return clone;
+        }
     }
 }

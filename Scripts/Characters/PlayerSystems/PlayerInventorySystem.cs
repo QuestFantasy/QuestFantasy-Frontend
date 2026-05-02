@@ -134,6 +134,20 @@ namespace QuestFantasy.Characters.PlayerSystems
         }
 
         /// <summary>
+        /// Remove item from inventory by backend instance identifier.
+        /// </summary>
+        public bool RemoveItemByInstanceId(string instanceId)
+        {
+            bool removed = _inventory.RemoveItemByInstanceId(instanceId);
+            if (removed)
+            {
+                OnInventoryStateChanged?.Invoke();
+            }
+
+            return removed;
+        }
+
+        /// <summary>
         /// Move an inventory item into discarded records.
         /// </summary>
         public bool DiscardItem(Item item)

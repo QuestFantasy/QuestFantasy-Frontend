@@ -16,7 +16,6 @@ public class Main : Node2D
     private SidebarMenu _sidebarMenu;
     private PlayerHud _playerHud;
     private BackpackUI _backpackUi;
-    private MiniMapUI _miniMapUi;
     private DeathScreenUI _deathScreen;
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
@@ -353,15 +352,10 @@ public class Main : Node2D
         }
         _playerHud = null;
 
-        if (Godot.Object.IsInstanceValid(_miniMapUi))
-        {
-            _miniMapUi.QueueFree();
-        }
-        _miniMapUi = null;
-
         if (Godot.Object.IsInstanceValid(_backpackUi))
         {
             _backpackUi.DropRequested -= OnBackpackDropRequested;
+            _backpackUi.SyncRequested -= OnInventorySyncRequested;
             _backpackUi.QueueFree();
         }
         _backpackUi = null;
@@ -379,8 +373,10 @@ public class Main : Node2D
         EnsureLobbyBackpackContext();
 
         _lobbyManager = new LobbyManager();
+        _lobbyManager.Initialize(_player, _playerDataApiClient, _authFlowController?.CurrentSession?.Token);
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
+        _lobbyManager.SyncRequested += OnInventorySyncRequested;
     }
 
     private void EnsureLobbyBackpackContext()
@@ -403,6 +399,7 @@ public class Main : Node2D
             _backpackUi = new BackpackUI();
             AddChild(_backpackUi);
             _backpackUi.DropRequested += OnBackpackDropRequested;
+            _backpackUi.SyncRequested += OnInventorySyncRequested;
         }
 
         _backpackUi.Initialize(_player);
@@ -451,15 +448,12 @@ public class Main : Node2D
         AddChild(_playerHud);
         _playerHud.Initialize(_player);
 
-        _miniMapUi = new MiniMapUI();
-        AddChild(_miniMapUi);
-        _miniMapUi.Initialize(_map, _player);
-
         _backpackUi = new BackpackUI();
         AddChild(_backpackUi);
         _backpackUi.Initialize(_player);
         _backpackUi.SetGameplayVisible(true);
         _backpackUi.DropRequested += OnBackpackDropRequested;
+        _backpackUi.SyncRequested += OnInventorySyncRequested;
 
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;
@@ -558,6 +552,11 @@ public class Main : Node2D
         AddChild(droppedPickup);
 
         TransmitPlayerProfile("discard_item");
+    }
+
+    private void OnInventorySyncRequested()
+    {
+        TransmitPlayerProfile("inventory_sync");
     }
 
 

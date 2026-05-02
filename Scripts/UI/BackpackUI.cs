@@ -18,6 +18,11 @@ public class BackpackUI : CanvasLayer
     [Export] public string MoneyIconTexturePath = "res://Assets/money/money-f1.png";
 
     public event Action<Item> DropRequested;
+    /// <summary>
+    /// Fired when the backpack panel is opened. Subscribe in Main to trigger a backend sync
+    /// so that all items receive their instance_id before the player can interact with them.
+    /// </summary>
+    public event Action SyncRequested;
 
     private Player _player;
     private Control _root;
@@ -313,6 +318,7 @@ public class BackpackUI : CanvasLayer
         if (visible)
         {
             _viewDirty = true;
+            SyncRequested?.Invoke();   // Ask Main to sync so items get their instance_id.
             RefreshView();
         }
         else
@@ -425,6 +431,24 @@ public class BackpackUI : CanvasLayer
         }
 
         vbox.AddChild(icon);
+
+        if (item != null)
+        {
+            var idLabel = new Label
+            {
+                Text = string.IsNullOrEmpty(item.InstanceId) ? "ID: (pending sync)" : $"ID: {item.InstanceId.Substring(0, 8)}…",
+                Align = Label.AlignEnum.Center,
+                SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+            };
+            idLabel.AddColorOverride("font_color", new Color(0.55f, 0.65f, 0.8f, 0.85f));
+            idLabel.RectMinSize = new Vector2(0f, 14f);
+            vbox.AddChild(idLabel);
+
+            // Full instance_id visible on hover via tooltip.
+            frame.HintTooltip = string.IsNullOrEmpty(item.InstanceId)
+                ? $"{item.Name}\nID: (尚未同步 — 請先儲存背包以取得 ID)"
+                : $"{item.Name}\nInstance ID: {item.InstanceId}";
+        }
 
         frame.Connect("gui_input", this, nameof(OnSlotGuiInput), new Godot.Collections.Array { globalIndex });
         frame.Connect("mouse_entered", this, nameof(OnSlotMouseEntered), new Godot.Collections.Array { globalIndex });

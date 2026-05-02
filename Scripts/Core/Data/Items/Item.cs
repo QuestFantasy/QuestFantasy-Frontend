@@ -19,6 +19,13 @@ namespace QuestFantasy.Core.Data.Items
         public ItemType ItemType { get; protected set; }
         public int Quantity { get; set; } = 1;
 
+        /// <summary>
+        /// Unique instance identifier assigned by the backend.
+        /// Empty string means the item has not yet been synced and does not have a server-side ID.
+        /// Never generate this on the client — the backend owns it.
+        /// </summary>
+        public string InstanceId { get; set; } = string.Empty;
+
         public event Action<Item> OnItemUsed;
 
         /// <summary>
@@ -34,6 +41,15 @@ namespace QuestFantasy.Core.Data.Items
 
             GD.Print($"[Item] {Name} used by {player.EntityName}");
             OnItemUsed?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Clone this item. Override in derived classes to perform deep copies if necessary.
+        /// </summary>
+        public virtual Item Clone()
+        {
+            var clone = (Item)this.MemberwiseClone();
+            return clone;
         }
 
         /// <summary>

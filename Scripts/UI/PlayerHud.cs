@@ -68,7 +68,7 @@ public class PlayerHud : CanvasLayer
         }
     }
 
-    public void SetVisible(bool visible)
+    public new void SetVisible(bool visible)
     {
         if (_rootControl != null)
         {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Godot;
 
 using QuestFantasy.Core.Base;
+using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
 
@@ -191,16 +192,16 @@ namespace QuestFantasy.Characters
                 return false;
             }
 
-            if (!ShopInventory.RemoveItem(item))
+            Item purchasedItem = CreateShopItemCopy(item);
+            if (purchasedItem == null)
             {
                 player.AddGold(price);
-                GD.Print($"[NPC] {EntityName}: Could not remove {item.Name} from the shop inventory");
+                GD.PrintErr($"[NPC] {EntityName}: Could not clone {item.Name} for purchase");
                 return false;
             }
 
-            if (!player.AddItem(item))
+            if (!player.AddItem(purchasedItem))
             {
-                ShopInventory.AddItem(item);
                 player.AddGold(price);
                 GD.Print($"[NPC] {EntityName}: Player inventory is full, trade cancelled");
                 return false;
@@ -217,7 +218,11 @@ namespace QuestFantasy.Characters
                 return false;
             }
 
-            if (!player.RemoveItem(item))
+            bool removed = !string.IsNullOrWhiteSpace(item.InstanceId)
+                ? player.RemoveItemByInstanceId(item.InstanceId)
+                : player.RemoveItem(item);
+
+            if (!removed)
             {
                 GD.Print($"[NPC] {EntityName}: Player does not have {item.Name}");
                 return false;
@@ -233,6 +238,74 @@ namespace QuestFantasy.Characters
             player.AddGold(price);
             GD.Print($"[NPC] {EntityName}: Bought {item.Name} for {price} gold");
             return true;
+        }
+
+        private Item CreateShopItemCopy(Item item)
+        {
+            if (item == null)
+            {
+                return null;
+            }
+
+            if (item is Equipment equipment)
+            {
+                return new Equipment
+                {
+                    Name = equipment.Name,
+                    Description = equipment.Description,
+                    Price = equipment.Price,
+                    Quantity = equipment.Quantity,
+                    EquipmentType = equipment.EquipmentType,
+                    EquipmentAbilities = equipment.EquipmentAbilities == null
+                        ? null
+                        : new Abilities
+                        {
+                            Atk = equipment.EquipmentAbilities.Atk,
+                            Def = equipment.EquipmentAbilities.Def,
+                            Spd = equipment.EquipmentAbilities.Spd,
+                            Vit = equipment.EquipmentAbilities.Vit
+                        },
+                    Rarity = equipment.Rarity,
+                    LevelRequirement = equipment.LevelRequirement,
+                    SpritePath = equipment.SpritePath,
+                    Source = equipment.Source,
+                    Sprite = equipment.Sprite
+                };
+            }
+
+            if (item is Weapon weapon)
+            {
+                return new Weapon
+                {
+                    Name = weapon.Name,
+                    Description = weapon.Description,
+                    Price = weapon.Price,
+                    Quantity = weapon.Quantity,
+                    WeaponType = weapon.WeaponType,
+                    WeaponAbilities = weapon.WeaponAbilities == null
+                        ? null
+                        : new Abilities
+                        {
+                            Atk = weapon.WeaponAbilities.Atk,
+                            Def = weapon.WeaponAbilities.Def,
+                            Spd = weapon.WeaponAbilities.Spd,
+                            Vit = weapon.WeaponAbilities.Vit
+                        },
+                    Rarity = weapon.Rarity,
+                    LevelRequirement = weapon.LevelRequirement,
+                    SpritePath = weapon.SpritePath,
+                    Source = weapon.Source,
+                    Sprite = weapon.Sprite
+                };
+            }
+
+            return new Item
+            {
+                Name = item.Name,
+                Description = item.Description,
+                Price = item.Price,
+                Quantity = item.Quantity
+            };
         }
 
         /// <summary>

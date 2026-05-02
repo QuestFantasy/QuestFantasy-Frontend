@@ -15,7 +15,7 @@ public class DeathScreenUI : CanvasLayer
         SetVisible(false);
     }
 
-    public void SetVisible(bool visible)
+    public new void SetVisible(bool visible)
     {
         if (_root != null)
         {
