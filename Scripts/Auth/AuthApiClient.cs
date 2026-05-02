@@ -410,7 +410,7 @@ public class AuthApiClient : Node
             GD.Print($"[AuthApiClient] OFFLINE MODE: Intercepting {kind} request to {endpointPath}");
             _pendingKind = kind;
             _pendingCallback = callback;
-            
+
             var mockResult = CreateMockResult(kind, payload);
             GD.Print($"[AuthApiClient] OFFLINE MODE: Scheduling deferred completion for {kind}");
             CallDeferred(nameof(CompleteRequest), mockResult);
