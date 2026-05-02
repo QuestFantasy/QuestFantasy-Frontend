@@ -18,6 +18,16 @@ config/icon="res://icon.png"
 
 VirtualDPad="res://Scenes/UI/VirtualDPad.tscn"
 
+[display]
+
+window/size/width=1280
+window/size/height=720
+window/size/test_width=1280
+window/size/test_height=720
+window/handheld/orientation="sensor_landscape"
+window/stretch/mode="2d"
+window/stretch/aspect="expand"
+
 [gui]
 
 common/drop_mouse_on_gui_input_disabled=true

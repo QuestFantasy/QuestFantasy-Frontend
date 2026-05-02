@@ -12,8 +12,8 @@ public class SidebarMenu : CanvasLayer
         public Action Callback;
     }
 
-    private const float CollapsedWidth = 54f;
-    private const float ExpandedWidth = 220f;
+    private const float CollapsedWidth = 90f;
+    private const float ExpandedWidth = 320f;
     private const float TransitionDurationSeconds = 0.22f;
 
     private readonly List<SidebarMenuItem> _items = new List<SidebarMenuItem>();
@@ -74,8 +74,8 @@ public class SidebarMenu : CanvasLayer
 
         _panel = new PanelContainer
         {
-            RectPosition = new Vector2(14f, 14f),
-            RectSize = new Vector2(CollapsedWidth, 44f),
+            RectPosition = new Vector2(15f, 15f),
+            RectSize = new Vector2(CollapsedWidth, 40f),
             MouseFilter = Control.MouseFilterEnum.Stop
         };
         root.AddChild(_panel);
@@ -159,10 +159,10 @@ public class SidebarMenu : CanvasLayer
             CornerRadiusTopRight = 8,
             CornerRadiusBottomLeft = 8,
             CornerRadiusBottomRight = 8,
-            ContentMarginLeft = 10,
-            ContentMarginRight = 10,
-            ContentMarginTop = 7,
-            ContentMarginBottom = 7
+            ContentMarginLeft = 14,
+            ContentMarginRight = 14,
+            ContentMarginTop = 10,
+            ContentMarginBottom = 10
         };
 
         var hover = normal.Duplicate() as StyleBoxFlat;
@@ -259,10 +259,10 @@ public class SidebarMenu : CanvasLayer
             return;
         }
 
-        float height = 44f;
+        float height = 50f;
         if (_isExpanded)
         {
-            height += Mathf.Max(0f, _items.Count) * 38f + (_items.Count > 0 ? 8f : 0f);
+            height += Mathf.Max(0f, _items.Count) * 40f + (_items.Count > 0 ? 12f : 0f);
         }
 
         _panel.RectSize = new Vector2(_panel.RectSize.x, height);

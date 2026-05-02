@@ -148,8 +148,8 @@ namespace QuestFantasy.UI
             _rightButton = CreateButton(RIGHT_ACTION, startX + buttonSize * 2, centerY, buttonSize, "►");
 
             // MAP button (Bottom-right corner, 0.7x size)
-            int mapBtnSize = (int)(buttonSize * 0.7f);
-            int offset = (buttonSize - mapBtnSize) / 2;
+            int mapBtnSize = (int)(buttonSize * 1.0f);
+            int offset = 0;
             _mapButton = CreateIconButton(MAP_ACTION, startX + buttonSize * 2 + offset, startY + buttonSize * 2 + offset, mapBtnSize, "res://Assets/map/map_icon.png");
 
             GD.Print($"[MobileInputUI] D-pad created at: UP=({centerX},{startY}), DOWN=({centerX},{startY + buttonSize * 2}), LEFT=({startX},{centerY}), RIGHT=({startX + buttonSize * 2},{centerY}), MAP=({startX + buttonSize * 2 + offset},{startY + buttonSize * 2 + offset})");
