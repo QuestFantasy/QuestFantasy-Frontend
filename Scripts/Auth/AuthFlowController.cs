@@ -9,6 +9,7 @@ using Godot;
 public class AuthFlowController : Node
 {
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public bool OfflineMode = false;
 
     public event Action Authenticated;
     public event Action LoggedOut;
@@ -52,7 +53,8 @@ public class AuthFlowController : Node
     {
         _authApiClient = new AuthApiClient
         {
-            BackendBaseUrl = BackendBaseUrl
+            BackendBaseUrl = BackendBaseUrl,
+            OfflineMode = OfflineMode
         };
         AddChild(_authApiClient);
 

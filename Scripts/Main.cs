@@ -11,6 +11,7 @@ public class Main : Node2D
 {
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public bool OfflineMode = false;
     [Export] public bool EnableMobileInputUI = true; // Force enable virtual D-pad for testing
 
     private AuthFlowController _authFlowController;
@@ -129,6 +130,7 @@ public class Main : Node2D
         _authFlowController = new AuthFlowController
         {
             BackendBaseUrl = BackendBaseUrl,
+            OfflineMode = OfflineMode,
             PauseMode = PauseModeEnum.Process
         };
         AddChild(_authFlowController);
@@ -142,6 +144,7 @@ public class Main : Node2D
         _playerDataApiClient = new AuthApiClient
         {
             BackendBaseUrl = BackendBaseUrl,
+            OfflineMode = OfflineMode,
             PauseMode = PauseModeEnum.Process,
         };
         AddChild(_playerDataApiClient);

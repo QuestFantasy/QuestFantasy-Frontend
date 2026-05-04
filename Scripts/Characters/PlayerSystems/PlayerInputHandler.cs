@@ -43,9 +43,24 @@ namespace QuestFantasy.Characters.PlayerSystems
             return Input.IsActionJustPressed("ui_cancel");
         }
 
+        private int _lastInteractFrame = -1;
+
+        /// <summary>
+        /// Check and consume the interaction input (F key).
+        /// Returns true only for the first caller in a frame.
+        /// </summary>
         public bool IsInteractPressed()
         {
-            return Input.IsActionJustPressed("interact");
+            if (Input.IsActionJustPressed("interact"))
+            {
+                int currentFrame = (int)Engine.GetIdleFrames();
+                if (_lastInteractFrame != currentFrame)
+                {
+                    _lastInteractFrame = currentFrame;
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -67,7 +82,6 @@ namespace QuestFantasy.Characters.PlayerSystems
             if (EquipmentPickup.WasPickupTouched)
             {
                 _lastMouseButtonState = Input.IsMouseButtonPressed(1);
-                EquipmentPickup.WasPickupTouched = false;
                 return false;
             }
 

@@ -119,7 +119,7 @@ namespace QuestFantasy.Characters
                     InteractionButtonUI.Instance?.Show(label, GlobalPosition);
 
                     // Accept either F key or interaction button tap
-                    if (Input.IsActionJustPressed("interact") || InteractionButtonUI.IsPressed())
+                    if (_nearbyPlayer.InputHandler.IsInteractPressed() || InteractionButtonUI.ConsumePress())
                     {
                         OnInteract(_nearbyPlayer);
                     }

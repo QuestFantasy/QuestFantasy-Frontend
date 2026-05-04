@@ -526,6 +526,14 @@ public class AuthApiClient : Node
                 };
                 break;
 
+            case AuthRequestKind.FetchPlayerInventory:
+                result.Data["inventory_items"] = new Godot.Collections.Array();
+                break;
+
+            case AuthRequestKind.FetchPlayerGold:
+                result.Data["gold"] = 100;
+                break;
+
             case AuthRequestKind.UpdatePlayerProfile:
             case AuthRequestKind.UpdatePlayerInventory:
             case AuthRequestKind.UpdatePlayerGold:

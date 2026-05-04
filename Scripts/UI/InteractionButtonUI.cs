@@ -156,13 +156,23 @@ namespace QuestFantasy.UI
         }
 
         /// <summary>
-        /// Check if the button was pressed this frame. Does not consume the press,
-        /// allowing multiple scripts to react (matching keyboard 'F' behavior).
+        /// Check if the button was pressed this frame and consume the press.
+        /// Returns true only for the first caller in a frame.
         /// </summary>
-        public static bool IsPressed()
+        public static bool ConsumePress()
         {
-            return WasJustPressed;
+            if (WasJustPressed)
+            {
+                WasJustPressed = false;
+                return true;
+            }
+            return false;
         }
+
+        /// <summary>
+        /// Deprecated: Use ConsumePress() instead to prevent multiple interactions.
+        /// </summary>
+        public static bool IsPressed() => ConsumePress();
 
         private void OnButtonPressed()
         {

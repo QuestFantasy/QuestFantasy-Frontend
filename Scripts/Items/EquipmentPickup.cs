@@ -7,12 +7,18 @@ public class EquipmentPickup : Area2D
     [Signal]
     public delegate void PickupRequested(EquipmentPickup pickup);
 
+    private static ulong _lastTouchFrame = 0;
+
     /// <summary>
     /// Static flag set to true when any EquipmentPickup receives a touch/click input
     /// this frame. Used by PlayerInputHandler to suppress attack activation.
-    /// Reset each physics frame by the first pickup that processes.
+    /// Uses a frame counter to automatically reset every physics frame.
     /// </summary>
-    public static bool WasPickupTouched { get; set; }
+    public static bool WasPickupTouched
+    {
+        get => _lastTouchFrame == Engine.GetPhysicsFrames();
+        set { if (value) _lastTouchFrame = Engine.GetPhysicsFrames(); }
+    }
 
     public object ItemData;
 

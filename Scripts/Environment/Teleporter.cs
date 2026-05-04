@@ -19,7 +19,6 @@ namespace QuestFantasy.Environment
         private const float INTERACTION_RANGE_PIXELS = 80f; // Interact within 80 pixels
         private Player _nearbyPlayer;
         private bool _playerInRange = false;
-        private bool _fKeyPressed = false;  // Debounce flag for F key
 
         public override void _Ready()
         {
@@ -74,9 +73,7 @@ namespace QuestFantasy.Environment
                     }
 
                     // Check if player pressed F key or tapped the interaction button
-                    bool fKeyPressed = Input.IsActionPressed("interact");
-                    bool buttonPressed = InteractionButtonUI.IsPressed();
-                    if ((fKeyPressed && !_fKeyPressed) || buttonPressed)
+                    if (_nearbyPlayer.InputHandler.IsInteractPressed() || InteractionButtonUI.ConsumePress())
                     {
                         GD.Print("[Teleporter] Interact triggered!");
                         if (_playerInRange)
@@ -84,12 +81,7 @@ namespace QuestFantasy.Environment
                             GD.Print("[Teleporter] Player in range - triggering interaction");
                             OnInteract(_nearbyPlayer);
                         }
-                        else
-                        {
-                            GD.Print("[Teleporter] Interact pressed but player NOT in range");
-                        }
                     }
-                    _fKeyPressed = fKeyPressed;  // Update for next frame
                 }
             }
             catch (System.Exception ex)
