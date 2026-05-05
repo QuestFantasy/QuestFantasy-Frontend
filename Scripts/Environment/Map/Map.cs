@@ -203,6 +203,17 @@ public class Map : Node2D
         return _collisionSystem.IsWalkableTile(_data, tileX, tileY);
     }
 
+    public bool HasNearbyBox(Vector2 worldPosition, out Vector2 boxWorld, float maxDistanceTiles = 1.15f)
+    {
+        if (_data == null)
+        {
+            boxWorld = Vector2.Zero;
+            return false;
+        }
+
+        return _interactionSystem.HasNearbyBox(_data, worldPosition, out boxWorld, maxDistanceTiles);
+    }
+
     public bool TryOpenNearbyBox(Vector2 worldPosition, float maxDistanceTiles = 1.15f)
     {
         if (_data == null)

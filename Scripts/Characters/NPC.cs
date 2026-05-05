@@ -6,6 +6,7 @@ using Godot;
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Systems.Inventory;
+using QuestFantasy.UI;
 
 namespace QuestFantasy.Characters
 {
@@ -111,9 +112,17 @@ namespace QuestFantasy.Characters
                 bool inRange = Position.DistanceTo(_nearbyPlayer.Position) <= InteractionRangePixels;
                 SetInRangeState(inRange);
 
-                if (inRange && Input.IsActionJustPressed("interact"))
+                if (inRange)
                 {
-                    OnInteract(_nearbyPlayer);
+                    // Show floating interaction button near this NPC
+                    string label = IsShopkeeper ? "🛒 Shop" : "💬 Talk";
+                    InteractionButtonUI.Instance?.Show(label, GlobalPosition);
+
+                    // Accept either F key or interaction button tap
+                    if (Input.IsActionJustPressed("interact") || InteractionButtonUI.IsPressed())
+                    {
+                        OnInteract(_nearbyPlayer);
+                    }
                 }
             }
             catch (Exception ex)

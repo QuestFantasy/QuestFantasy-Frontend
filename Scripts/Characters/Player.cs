@@ -10,6 +10,7 @@ using QuestFantasy.Core.Data.Assets;
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Core.Data.Skills;
+using QuestFantasy.UI;
 
 namespace QuestFantasy.Characters
 {
@@ -83,6 +84,7 @@ namespace QuestFantasy.Characters
 
         // ==================== Prototype systems (used by controllers) ====================
         private readonly PlayerInputHandler _inputHandler = new PlayerInputHandler();
+        public PlayerInputHandler InputHandler => _inputHandler;
         private readonly PlayerMovementController _movementController = new PlayerMovementController();
         private readonly PlayerAnimationSystem _animationSystem = new PlayerAnimationSystem();
         private readonly PlayerCameraManager _cameraManager = new PlayerCameraManager();
@@ -353,6 +355,11 @@ namespace QuestFantasy.Characters
             _combatController.HandleSkillInput(this, _map);
 
             // 4. Handle environmental interactions
+            if (_map.HasNearbyBox(Position, out Vector2 boxWorld))
+            {
+                InteractionButtonUI.Instance?.Show("🔓 Open", boxWorld);
+            }
+
             _interactionController.HandleRespawnInput(this, _map);
             _interactionController.HandleInteractionInput(_map, Position);
 
@@ -657,6 +664,8 @@ namespace QuestFantasy.Characters
         {
             return _combatSystem?.UseSkill(skillIndex, this, target) ?? false;
         }
+
+
 
         /// <summary>
         /// Learn a new skill

@@ -12,6 +12,7 @@ public class AuthFlowController : Node
 
     public event Action Authenticated;
     public event Action LoggedOut;
+    public event Action AuthViewShown;
 
     private AuthApiClient _authApiClient;
     private AuthView _authView;
@@ -80,7 +81,7 @@ public class AuthFlowController : Node
         }
 
         _authView.SetStatus("Please log in or register to continue.");
-        _authView.ShowView();
+        ShowAuthView();
     }
 
     private void OnLoginSubmitted(string credential, string password)
@@ -156,7 +157,7 @@ public class AuthFlowController : Node
         if (string.IsNullOrWhiteSpace(_currentSession.Token))
         {
             _authView.SetStatus("No valid session found.");
-            _authView.ShowView();
+            ShowAuthView();
             return;
         }
 
@@ -175,7 +176,7 @@ public class AuthFlowController : Node
         if (!result.NetworkOk)
         {
             _authView.SetStatus(result.ErrorMessage);
-            _authView.ShowView();
+            ShowAuthView();
             return;
         }
 
@@ -194,14 +195,14 @@ public class AuthFlowController : Node
             _currentSession.Clear();
             _authView.ClearInputs();
             _authView.SetStatus("Your session has expired. Please log in again.");
-            _authView.ShowView();
+            ShowAuthView();
             LoggedOut?.Invoke();
             return;
         }
 
         // Other errors
         _authView.SetStatus(result.GetApiErrorMessage("Session validation failed. Please log in again."));
-        _authView.ShowView();
+        ShowAuthView();
     }
 
     private void OnLoginCompleted(AuthApiResult result)
@@ -222,7 +223,7 @@ public class AuthFlowController : Node
         {
             _rateLimiter.RecordFailedAttempt();
             _authView.SetStatus(result.ErrorMessage);
-            _authView.ShowView();
+            ShowAuthView();
             return;
         }
 
@@ -230,7 +231,7 @@ public class AuthFlowController : Node
         {
             _rateLimiter.RecordFailedAttempt();
             _authView.SetStatus(result.GetApiErrorMessage(fallbackErrorMessage));
-            _authView.ShowView();
+            ShowAuthView();
             return;
         }
 
@@ -239,7 +240,7 @@ public class AuthFlowController : Node
         {
             _rateLimiter.RecordFailedAttempt();
             _authView.SetStatus("The backend did not return a token. Please try again later.");
-            _authView.ShowView();
+            ShowAuthView();
             return;
         }
 
@@ -328,7 +329,7 @@ public class AuthFlowController : Node
         _currentSession.Clear();
         _authView.ClearInputs();
         _authView.SetStatus(message);
-        _authView.ShowView();
+        ShowAuthView();
 
         // Reset rate limiter
         _rateLimiter.Reset();
@@ -337,6 +338,12 @@ public class AuthFlowController : Node
         LoggedOut?.Invoke();
 
         GD.Print("[Auth] Logout completed");
+    }
+
+    private void ShowAuthView()
+    {
+        _authView.ShowView();
+        AuthViewShown?.Invoke();
     }
 
     private void SetAuthBusy(bool isBusy)

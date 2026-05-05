@@ -5,11 +5,13 @@ using Godot;
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Prototype;
+using QuestFantasy.UI;
 
 public class Main : Node2D
 {
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public bool EnableMobileInputUI = true; // Force enable virtual D-pad for testing
 
     private AuthFlowController _authFlowController;
     private AuthApiClient _playerDataApiClient;
@@ -21,6 +23,7 @@ public class Main : Node2D
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
     private Player _player;
+    private MobileInputUI _mobileInputUI;
     private readonly EquipmentManager _equipManagerRef = new EquipmentManager();
     private readonly TreasureChest _chestRef = new TreasureChest();
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
@@ -41,6 +44,7 @@ public class Main : Node2D
         GD.Print("遊戲開始了，正在讀取登入畫面...");
         SetProcess(true);
         GetTree().Connect("node_added", this, nameof(OnSceneNodeAdded));
+        SetupMobileInputUI();
         SetupSidebarMenu();
         SetupProgressIndicator();
         SetupPlayerDataClient();
@@ -78,6 +82,13 @@ public class Main : Node2D
         {
             var preview = new EquipmentPreview();
             AddChild(preview);
+        }
+
+        // Ensure InteractionButtonUI exists in the scene
+        if (InteractionButtonUI.Instance == null)
+        {
+            var interactBtn = new InteractionButtonUI();
+            AddChild(interactBtn);
         }
     }
 
@@ -123,6 +134,7 @@ public class Main : Node2D
         AddChild(_authFlowController);
         _authFlowController.Authenticated += OnAuthenticated;
         _authFlowController.LoggedOut += HandleLoggedOut;
+        _authFlowController.AuthViewShown += () => _mobileInputUI?.HideDPad();
     }
 
     private void SetupPlayerDataClient()
@@ -220,6 +232,19 @@ public class Main : Node2D
         _sidebarMenu.AddMenuItem("logout", "Logout", OnLogoutPressed);
     }
 
+    private void SetupMobileInputUI()
+    {
+        // Create mobile input UI once for the entire game lifetime
+        bool shouldEnableMobileUI = EnableMobileInputUI || OS.HasTouchscreenUiHint();
+        if (shouldEnableMobileUI)
+        {
+            _mobileInputUI = new MobileInputUI();
+            AddChild(_mobileInputUI);
+            _mobileInputUI.HideDPad();
+            GD.Print("[Main] Mobile input UI enabled globally for touch controls");
+        }
+    }
+
     private void SetupDeathScreen()
     {
         _deathScreen = new DeathScreenUI();
@@ -262,6 +287,7 @@ public class Main : Node2D
         _isProfileFetchPending = false;
         _profileFetchTimeoutTimer?.Stop();
         _progressIndicator?.SetState(ProgressSyncIndicator.SyncState.Hidden);
+        _mobileInputUI?.HideDPad();
         DestroyPlayableWorld();
         _gameLoadedAlready = false;
         _sidebarMenu?.SetMenuVisible(false);
@@ -366,6 +392,10 @@ public class Main : Node2D
         }
         _backpackUi = null;
 
+        // DO NOT destroy _mobileInputUI - it should persist throughout the game
+        // Hide it when leaving gameplay; it will be re-shown only when entering a game level
+        _mobileInputUI?.HideDPad();
+
         if (Godot.Object.IsInstanceValid(_map))
         {
             _map.QueueFree();
@@ -381,6 +411,10 @@ public class Main : Node2D
         _lobbyManager = new LobbyManager();
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
+
+        // Show D-pad in the lobby, but hide map button
+        _mobileInputUI?.ShowDPad();
+        _mobileInputUI?.ShowMapButton(false);
     }
 
     private void EnsureLobbyBackpackContext()
@@ -449,7 +483,11 @@ public class Main : Node2D
 
         _playerHud = new PlayerHud();
         AddChild(_playerHud);
-        _playerHud.Initialize(_player);
+        _playerHud.Initialize(_player, _map);
+        _playerHud.OnSkillSlotPressed += (skillIndex) =>
+        {
+            _player?.InputHandler?.RequestSkillActivation(skillIndex);
+        };
 
         _miniMapUi = new MiniMapUI();
         AddChild(_miniMapUi);
@@ -460,6 +498,10 @@ public class Main : Node2D
         _backpackUi.Initialize(_player);
         _backpackUi.SetGameplayVisible(true);
         _backpackUi.DropRequested += OnBackpackDropRequested;
+
+        // Show D-pad only during actual gameplay
+        _mobileInputUI?.ShowDPad();
+        _mobileInputUI?.ShowMapButton(true);
 
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;
