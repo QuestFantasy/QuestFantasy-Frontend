@@ -4,6 +4,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
+using QuestFantasy.UI;
 
 namespace QuestFantasy.Environment
 {
@@ -66,11 +67,18 @@ namespace QuestFantasy.Environment
                         GD.Print("[Teleporter] Player LEFT range");
                     }
 
-                    // Check if player pressed F key to interact
-                    bool fKeyPressed = Input.IsActionPressed("interact");
-                    if (fKeyPressed && !_fKeyPressed)  // Debounce: only trigger on key press, not hold
+                    // Show floating interaction button when in range
+                    if (_playerInRange)
                     {
-                        GD.Print("[Teleporter] F key pressed!");
+                        InteractionButtonUI.Instance?.Show("⚔️ Enter", GlobalPosition);
+                    }
+
+                    // Check if player pressed F key or tapped the interaction button
+                    bool fKeyPressed = Input.IsActionPressed("interact");
+                    bool buttonPressed = InteractionButtonUI.IsPressed();
+                    if ((fKeyPressed && !_fKeyPressed) || buttonPressed)
+                    {
+                        GD.Print("[Teleporter] Interact triggered!");
                         if (_playerInRange)
                         {
                             GD.Print("[Teleporter] Player in range - triggering interaction");
@@ -78,7 +86,7 @@ namespace QuestFantasy.Environment
                         }
                         else
                         {
-                            GD.Print("[Teleporter] F pressed but player NOT in range");
+                            GD.Print("[Teleporter] Interact pressed but player NOT in range");
                         }
                     }
                     _fKeyPressed = fKeyPressed;  // Update for next frame

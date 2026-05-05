@@ -1,5 +1,7 @@
 using Godot;
 
+using QuestFantasy.UI;
+
 namespace QuestFantasy.Characters.PlayerSystems
 {
     /// <summary>
@@ -37,10 +39,14 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         /// <summary>
         /// Handle interaction input (opening boxes, etc.)
+        /// Accepts both keyboard (F key) and mobile interaction button tap.
         /// </summary>
         public void HandleInteractionInput(Map map, Vector2 playerPosition)
         {
-            if (!_inputHandler.IsInteractPressed())
+            bool keyPressed = _inputHandler.IsInteractPressed();
+            bool buttonPressed = InteractionButtonUI.IsPressed();
+
+            if (!keyPressed && !buttonPressed)
                 return;
 
             if (map.TryOpenNearbyBox(playerPosition))

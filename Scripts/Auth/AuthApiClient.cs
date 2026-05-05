@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using Godot;
 
-public class AuthApiResult
+public class AuthApiResult : Reference
 {
     public bool NetworkOk { get; set; }
     public int ResponseCode { get; set; }
@@ -252,10 +252,11 @@ public class AuthApiClient : Node
     }
 
     [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public bool OfflineMode = false;
 
     private HTTPRequest _request;
     private AuthRequestKind _pendingKind = AuthRequestKind.None;
-    private Action<AuthApiResult> _pendingCallback;
+    private Action<AuthApiResult> _pendingCallback = null;
 
     public bool IsBusy => _pendingKind != AuthRequestKind.None;
 
@@ -462,6 +463,18 @@ public class AuthApiClient : Node
             return false;
         }
 
+        if (OfflineMode)
+        {
+            GD.Print($"[AuthApiClient] OFFLINE MODE: Intercepting {kind} request to {endpointPath}");
+            _pendingKind = kind;
+            _pendingCallback = callback;
+
+            var mockResult = CreateMockResult(kind, payload);
+            GD.Print($"[AuthApiClient] OFFLINE MODE: Scheduling deferred completion for {kind}");
+            CallDeferred(nameof(CompleteRequest), mockResult);
+            return true;
+        }
+
         string url = BuildApiUrl(endpointPath);
         var headers = new List<string> { "Accept: application/json" };
 
@@ -518,16 +531,82 @@ public class AuthApiClient : Node
 
     private void CompleteRequest(AuthApiResult result)
     {
+        GD.Print($"[AuthApiClient] Completing request: {_pendingKind}");
         Action<AuthApiResult> callback = _pendingCallback;
         _pendingCallback = null;
+        AuthRequestKind completedKind = _pendingKind;
         _pendingKind = AuthRequestKind.None;
 
-        callback?.Invoke(result);
+        if (callback != null)
+        {
+            GD.Print($"[AuthApiClient] Invoking callback for {completedKind}");
+            callback.Invoke(result);
+        }
+        else
+        {
+            GD.Print($"[AuthApiClient] No callback found for {completedKind}");
+        }
     }
 
     private string BuildApiUrl(string endpointPath)
     {
         return BackendBaseUrl.TrimEnd('/') + endpointPath;
+    }
+
+    private AuthApiResult CreateMockResult(AuthRequestKind kind, Godot.Collections.Dictionary payload)
+    {
+        var result = new AuthApiResult
+        {
+            NetworkOk = true,
+            ResponseCode = 200,
+            ErrorMessage = string.Empty,
+            Data = new Godot.Collections.Dictionary()
+        };
+
+        switch (kind)
+        {
+            case AuthRequestKind.Login:
+            case AuthRequestKind.Register:
+                result.ResponseCode = (kind == AuthRequestKind.Login) ? 200 : 201;
+                result.Data["token"] = "offline_session_token_" + DateTime.Now.Ticks;
+                break;
+
+            case AuthRequestKind.ValidateToken:
+            case AuthRequestKind.FetchPlayerProfile:
+                result.Data["username"] = "OfflineHero";
+                result.Data["level"] = 1;
+                result.Data["experience"] = 0;
+                result.Data["gold"] = 100;
+                result.Data["hp_max"] = 100;
+                result.Data["hp_current"] = 100;
+                result.Data["inventory_items"] = new Godot.Collections.Array();
+                result.Data["skills"] = new Godot.Collections.Array {
+                    new Godot.Collections.Dictionary {
+                        ["skill_id"] = "basic_attack",
+                        ["name"] = "Basic Attack",
+                        ["cooldown_seconds"] = 1.0f
+                    }
+                };
+                break;
+
+            case AuthRequestKind.UpdatePlayerProfile:
+            case AuthRequestKind.UpdatePlayerInventory:
+            case AuthRequestKind.UpdatePlayerGold:
+                if (payload != null)
+                {
+                    foreach (object key in payload.Keys)
+                    {
+                        result.Data[key] = payload[key];
+                    }
+                }
+                break;
+
+            case AuthRequestKind.Logout:
+                result.ResponseCode = 204;
+                break;
+        }
+
+        return result;
     }
 
     private static Godot.Collections.Dictionary ParseJsonDictionary(string json)

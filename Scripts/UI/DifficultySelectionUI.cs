@@ -25,11 +25,20 @@ public class DifficultySelectionUI : CanvasLayer
 
     private void BuildUI()
     {
+        // Wrap everything in a MarginContainer anchored to the screen
+        var screenMargin = new MarginContainer();
+        screenMargin.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
+        screenMargin.AddConstantOverride("margin_right", 20);
+        screenMargin.AddConstantOverride("margin_top", 20);
+        screenMargin.AddConstantOverride("margin_left", 20);
+        screenMargin.AddConstantOverride("margin_bottom", 20);
+        AddChild(screenMargin);
+
         // Main container
         var panelContainer = new PanelContainer();
-        panelContainer.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Center);
-        panelContainer.RectMinSize = new Vector2(300, 350);
-        AddChild(panelContainer);
+        panelContainer.SizeFlagsHorizontal = (int)Control.SizeFlags.ShrinkCenter;
+        panelContainer.SizeFlagsVertical = (int)Control.SizeFlags.ShrinkCenter;
+        screenMargin.AddChild(panelContainer);
 
         // Create a VBox for the entire panel content
         var mainVBox = new VBoxContainer();
@@ -46,10 +55,18 @@ public class DifficultySelectionUI : CanvasLayer
         spacer.RectMinSize = new Vector2(0, 10);
         mainVBox.AddChild(spacer);
 
+        // Scroll container for buttons in case height is constrained
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
+        scrollContainer.SizeFlagsVertical = (int)Control.SizeFlags.ExpandFill;
+        scrollContainer.RectMinSize = new Vector2(240, 200); // Minimum view area
+        mainVBox.AddChild(scrollContainer);
+
         // Button container
         _buttonContainer = new VBoxContainer();
         _buttonContainer.AddConstantOverride("separation", 10);
-        mainVBox.AddChild(_buttonContainer);
+        _buttonContainer.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
+        scrollContainer.AddChild(_buttonContainer);
 
         // Easy button
         AddDifficultyButton("Easy", DifficultyLevel.Easy);
@@ -71,17 +88,18 @@ public class DifficultySelectionUI : CanvasLayer
         // Close button
         var closeButton = new Button();
         closeButton.Text = "Close";
+        closeButton.RectMinSize = new Vector2(200, 52);
         closeButton.Connect("pressed", this, nameof(OnClosePressed));
         mainVBox.AddChild(closeButton);
 
-        _uiContainer = panelContainer;
+        _uiContainer = screenMargin;
     }
 
     private void AddDifficultyButton(string label, DifficultyLevel difficulty)
     {
         var button = new Button();
         button.Text = label;
-        button.RectMinSize = new Vector2(200, 40);
+        button.RectMinSize = new Vector2(200, 52);
         var binds = new Godot.Collections.Array();
         binds.Add(difficulty);
         button.Connect("pressed", this, nameof(OnDifficultyButtonPressed), binds);
