@@ -716,6 +716,11 @@ namespace QuestFantasy.Characters
             return _inventorySystem?.RemoveItem(item) ?? false;
         }
 
+        public bool RemoveItemByInstanceId(string instanceId)
+        {
+            return _inventorySystem?.RemoveItemByInstanceId(instanceId) ?? false;
+        }
+
         public bool DiscardItem(Item item)
         {
             return _inventorySystem?.DiscardItem(item) ?? false;

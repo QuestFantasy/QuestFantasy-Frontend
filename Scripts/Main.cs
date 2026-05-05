@@ -18,12 +18,12 @@ public class Main : Node2D
     private SidebarMenu _sidebarMenu;
     private PlayerHud _playerHud;
     private BackpackUI _backpackUi;
-    private MiniMapUI _miniMapUi;
     private DeathScreenUI _deathScreen;
     private ProgressSyncIndicator _progressIndicator;
     private Map _map;
     private Player _player;
     private MobileInputUI _mobileInputUI;
+    private MiniMapUI _miniMapUi;
     private readonly EquipmentManager _equipManagerRef = new EquipmentManager();
     private readonly TreasureChest _chestRef = new TreasureChest();
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
@@ -365,6 +365,12 @@ public class Main : Node2D
         }
         _spawnedMonsters.Clear();
 
+        if (Godot.Object.IsInstanceValid(_miniMapUi))
+        {
+            _miniMapUi.QueueFree();
+        }
+        _miniMapUi = null;
+
         if (Godot.Object.IsInstanceValid(_player))
         {
             _player.OnDied -= OnPlayerDied;
@@ -379,15 +385,10 @@ public class Main : Node2D
         }
         _playerHud = null;
 
-        if (Godot.Object.IsInstanceValid(_miniMapUi))
-        {
-            _miniMapUi.QueueFree();
-        }
-        _miniMapUi = null;
-
         if (Godot.Object.IsInstanceValid(_backpackUi))
         {
             _backpackUi.DropRequested -= OnBackpackDropRequested;
+            _backpackUi.SyncRequested -= OnInventorySyncRequested;
             _backpackUi.QueueFree();
         }
         _backpackUi = null;
@@ -409,12 +410,14 @@ public class Main : Node2D
         EnsureLobbyBackpackContext();
 
         _lobbyManager = new LobbyManager();
+        _lobbyManager.Initialize(_player, _playerDataApiClient, _authFlowController?.CurrentSession?.Token);
         AddChild(_lobbyManager);
         _lobbyManager.DifficultySelected += OnDifficultySelected;
 
         // Show D-pad in the lobby, but hide map button
         _mobileInputUI?.ShowDPad();
         _mobileInputUI?.ShowMapButton(false);
+        _lobbyManager.SyncRequested += OnInventorySyncRequested;
     }
 
     private void EnsureLobbyBackpackContext()
@@ -437,6 +440,7 @@ public class Main : Node2D
             _backpackUi = new BackpackUI();
             AddChild(_backpackUi);
             _backpackUi.DropRequested += OnBackpackDropRequested;
+            _backpackUi.SyncRequested += OnInventorySyncRequested;
         }
 
         _backpackUi.Initialize(_player);
@@ -502,6 +506,7 @@ public class Main : Node2D
         // Show D-pad only during actual gameplay
         _mobileInputUI?.ShowDPad();
         _mobileInputUI?.ShowMapButton(true);
+        _backpackUi.SyncRequested += OnInventorySyncRequested;
 
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;
@@ -600,6 +605,11 @@ public class Main : Node2D
         AddChild(droppedPickup);
 
         TransmitPlayerProfile("discard_item");
+    }
+
+    private void OnInventorySyncRequested()
+    {
+        TransmitPlayerProfile("inventory_sync");
     }
 
 

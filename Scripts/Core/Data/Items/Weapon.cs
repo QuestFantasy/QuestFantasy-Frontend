@@ -36,5 +36,15 @@ namespace QuestFantasy.Core.Data.Items
             GD.Print($"[Weapon] {player.EntityName} equipped {Name} (+{WeaponAbilities?.Atk ?? 0} ATK)");
             base.Use(player);
         }
+
+        public override Item Clone()
+        {
+            var clone = (Weapon)base.Clone();
+            if (WeaponAbilities != null)
+            {
+                clone.WeaponAbilities = WeaponAbilities.Clone();
+            }
+            return clone;
+        }
     }
 }

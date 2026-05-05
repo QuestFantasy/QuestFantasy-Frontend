@@ -48,7 +48,7 @@ public class MiniMapUI : CanvasLayer
             SetPanelVisible(!_panel.Visible);
         }
 
-        if (!_panel.Visible || _map == null || _player == null)
+        if (!_panel.Visible || !Godot.Object.IsInstanceValid(_map) || !Godot.Object.IsInstanceValid(_player))
         {
             return;
         }
@@ -82,12 +82,12 @@ public class MiniMapUI : CanvasLayer
 
     public override void _ExitTree()
     {
-        if (_map != null)
+        if (Godot.Object.IsInstanceValid(_map))
         {
             _map.MapGenerated -= HandleMapGenerated;
         }
 
-        if (_player != null)
+        if (Godot.Object.IsInstanceValid(_player))
         {
             _player.OnRoomEntered -= HandleRoomEntered;
         }
@@ -220,7 +220,7 @@ public class MiniMapUI : CanvasLayer
 
     private void BuildMiniMapForCurrentRoom()
     {
-        if (_map == null || _map.TileData == null || _player == null)
+        if (!Godot.Object.IsInstanceValid(_map) || _map.TileData == null || !Godot.Object.IsInstanceValid(_player))
         {
             return;
         }
@@ -231,7 +231,7 @@ public class MiniMapUI : CanvasLayer
 
     private Vector2 GetCurrentRoomIndex()
     {
-        if (_map == null || _player == null)
+        if (!Godot.Object.IsInstanceValid(_map) || !Godot.Object.IsInstanceValid(_player))
         {
             return Vector2.Zero;
         }
@@ -300,7 +300,7 @@ public class MiniMapUI : CanvasLayer
 
     private void UpdatePlayerMarkerIfNeeded(bool force)
     {
-        if (_playerMarker == null || _map == null || _player == null)
+        if (_playerMarker == null || !Godot.Object.IsInstanceValid(_map) || !Godot.Object.IsInstanceValid(_player))
         {
             return;
         }

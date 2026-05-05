@@ -176,6 +176,7 @@ public class NpcShopUI : CanvasLayer
     private Button _previewBuyButton;
     private VBoxContainer _sellListContainer;
     private ShopItemSlot _selectedBuySlot;
+    private ShopItemSlot _selectedSellSlot;
     private Item _previewedItem;
     private Button _closeButton;
 
@@ -235,6 +236,7 @@ public class NpcShopUI : CanvasLayer
         }
 
         ClearBuySelection();
+        ClearSellSelection();
         ResetPreviewPanel();
         _activeNpc = null;
         _activePlayer = null;
@@ -579,6 +581,7 @@ public class NpcShopUI : CanvasLayer
             return;
         }
 
+        ClearSellSelection();
         ClearContainer(_sellListContainer);
 
         if (_activePlayer == null)
@@ -587,8 +590,23 @@ public class NpcShopUI : CanvasLayer
             return;
         }
 
-        _sellListContainer.AddChild(CreateInfoLabel("Selling is not wired yet."));
-        _sellListContainer.AddChild(CreateInfoLabel($"Inventory slots: {_activePlayer.InventoryItems.Count}"));
+        var items = _activePlayer.InventoryItems;
+        if (items == null || items.Count == 0)
+        {
+            _sellListContainer.AddChild(CreateInfoLabel("No items to sell"));
+            return;
+        }
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            _sellListContainer.AddChild(CreateSellSlot(item));
+        }
     }
 
     private Control CreateBuySlot(Item item)
@@ -604,6 +622,23 @@ public class NpcShopUI : CanvasLayer
         slot.HoverExited += OnBuySlotMouseExited;
         slot.Selected += OnBuySlotSelected;
         slot.ActivateRequested += OnBuySlotActivated;
+
+        return slot;
+    }
+
+    private Control CreateSellSlot(Item item)
+    {
+        var slot = new ShopItemSlot();
+        slot.RectMinSize = new Vector2(104f, 104f);
+        slot.MouseFilter = Control.MouseFilterEnum.Stop;
+
+        var iconTexture = ResolveItemTexture(item);
+        var rarityColor = GetRarityColor(item);
+        slot.Initialize(item, iconTexture, $"Sell {GetSellPrice(item)}g", rarityColor);
+        slot.HoverEntered += OnSellSlotMouseEntered;
+        slot.HoverExited += OnSellSlotMouseExited;
+        slot.Selected += OnSellSlotSelected;
+        slot.ActivateRequested += OnSellSlotActivated;
 
         return slot;
     }
@@ -748,6 +783,82 @@ public class NpcShopUI : CanvasLayer
         }
     }
 
+    private void OnSellSlotMouseEntered(ShopItemSlot slot)
+    {
+        if (slot == null || slot.ItemData == null)
+        {
+            return;
+        }
+
+        _previewedItem = slot.ItemData;
+        ShowPreviewPanel(slot.ItemData);
+    }
+
+    private void OnSellSlotMouseExited(ShopItemSlot slot)
+    {
+        if (slot == null)
+        {
+            return;
+        }
+
+        if (_selectedSellSlot != null)
+        {
+            ShowPreviewPanel(_selectedSellSlot.ItemData);
+            return;
+        }
+
+        if (_previewedItem == slot.ItemData)
+        {
+            ResetPreviewPanel();
+            _previewedItem = null;
+        }
+    }
+
+    private void OnSellSlotSelected(ShopItemSlot slot)
+    {
+        if (slot == null)
+        {
+            return;
+        }
+
+        if (_selectedSellSlot != null && _selectedSellSlot != slot)
+        {
+            _selectedSellSlot.SetSelected(false);
+        }
+
+        _selectedSellSlot = slot;
+        _selectedSellSlot.SetSelected(true);
+        _previewedItem = slot.ItemData;
+        ShowPreviewPanel(slot.ItemData);
+    }
+
+    private void OnSellSlotActivated(ShopItemSlot slot)
+    {
+        if (slot == null || slot.ItemData == null || _activeNpc == null || _activePlayer == null)
+        {
+            return;
+        }
+
+        int sellPrice = GetSellPrice(slot.ItemData);
+        if (_activeNpc.TryBuyFromPlayer(_activePlayer, slot.ItemData, sellPrice))
+        {
+            if (_statusLabel != null)
+            {
+                _statusLabel.Text = $"Sold {slot.ItemData.Name} for {sellPrice} gold.";
+            }
+
+            ClearSellSelection();
+            ResetPreviewPanel();
+            RebuildLists();
+            return;
+        }
+
+        if (_statusLabel != null)
+        {
+            _statusLabel.Text = $"Could not sell {slot.ItemData.Name}.";
+        }
+    }
+
     private void OnPreviewBuyPressed()
     {
         if (_selectedBuySlot != null)
@@ -848,6 +959,27 @@ public class NpcShopUI : CanvasLayer
         }
 
         _previewedItem = null;
+    }
+
+    private void ClearSellSelection()
+    {
+        if (_selectedSellSlot != null)
+        {
+            _selectedSellSlot.SetSelected(false);
+            _selectedSellSlot = null;
+        }
+
+        _previewedItem = null;
+    }
+
+    private int GetSellPrice(Item item)
+    {
+        if (item == null || item.Price <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Max(1, item.Price / 2);
     }
 
     private Label CreateInfoLabel(string text)

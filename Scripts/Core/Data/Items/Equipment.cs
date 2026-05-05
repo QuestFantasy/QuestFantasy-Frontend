@@ -113,5 +113,15 @@ namespace QuestFantasy.Core.Data.Items
             GD.Print($"[Equipment] {player.EntityName} equipped {Name} (+{atkBonus} ATK, +{defBonus} DEF)");
             base.Use(player);
         }
+
+        public override Item Clone()
+        {
+            var clone = (Equipment)base.Clone();
+            if (EquipmentAbilities != null)
+            {
+                clone.EquipmentAbilities = EquipmentAbilities.Clone();
+            }
+            return clone;
+        }
     }
 }

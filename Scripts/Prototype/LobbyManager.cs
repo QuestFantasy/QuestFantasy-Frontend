@@ -21,14 +21,27 @@ namespace QuestFantasy.Prototype
         public event Action<DifficultyLevel> DifficultySelected;
         public event Action<NPC> DialogueNpcInteractionRequested;
         public event Action<NPC> ShopNpcInteractionRequested;
+        public event Action ShopClosed;
+        public event Action SyncRequested;
 
         private Map _lobbyMap;
         private Player _player;
         private Teleporter _teleporter;
         private DifficultySelectionUI _difficultyUI;
         private NpcShopUI _shopUI;
+        private MarketplaceUI _marketplaceUI;
+        private AuthApiClient _apiClient;
+        private string _authToken;
         private readonly EquipmentManager _equipmentFactory = new EquipmentManager();
         private readonly List<NPC> _lobbyNpcs = new List<NPC>();
+        private Player _sharedPlayer;
+
+        public void Initialize(Player sharedPlayer, AuthApiClient apiClient = null, string authToken = null)
+        {
+            _sharedPlayer = sharedPlayer;
+            _apiClient = apiClient;
+            _authToken = authToken;
+        }
 
         public override void _Ready()
         {
@@ -37,6 +50,7 @@ namespace QuestFantasy.Prototype
             SetupTeleporter();
             SetupNpcCharacters();
             SetupShopUI();
+            SetupMarketplaceUI();
             SetupDifficultyUI();
         }
 
@@ -54,9 +68,26 @@ namespace QuestFantasy.Prototype
             Vector2 spawnPos = _lobbyMap.GetSpawnWorldPosition();
             GD.Print("[Lobby] Spawn position: " + spawnPos);
 
-            _player = new Player();
-            _player.Name = "Player";  // Set explicit name for Teleporter to find
-            AddChild(_player);
+            if (_sharedPlayer != null)
+            {
+                _player = _sharedPlayer;
+                _player.Name = "Player";
+                Node previousParent = _player.GetParent();
+                if (previousParent != null)
+                {
+                    previousParent.RemoveChild(_player);
+                }
+
+                AddChild(_player);
+            }
+            else
+            {
+                _player = new Player();
+                _player.Name = "Player";  // Set explicit name for Teleporter to find
+                AddChild(_player);
+            }
+
+            _player.Visible = true;
             _player.Position = spawnPos;
 
             GD.Print("[Lobby] Player spawned at: " + _player.Position);
@@ -126,9 +157,18 @@ namespace QuestFantasy.Prototype
                 true,
                 new Vector2(15, 23),
                 new Color(1f, 0.82f, 0.82f));
+
+            SpawnNpc(
+                "Trader",
+                "I can help you browse the player marketplace.",
+                NpcRole.Merchant,
+                true,
+                new Vector2(15, 11),
+                new Color(0.8f, 1f, 0.8f),
+                true);
         }
 
-        private void SpawnNpc(string entityName, string dialogue, NpcRole role, bool isShopkeeper, Vector2 tilePosition, Color tint)
+        private void SpawnNpc(string entityName, string dialogue, NpcRole role, bool isShopkeeper, Vector2 tilePosition, Color tint, bool isMarketplaceNpc = false)
         {
             NPC npc = new NPC();
             npc.Initialize(entityName, dialogue, role, isShopkeeper);
@@ -146,7 +186,7 @@ namespace QuestFantasy.Prototype
             }
             npc.InteractionStarted += OnNpcInteractionStarted;
             npc.DialogueRequested += OnNpcDialogueRequested;
-            npc.ShopRequested += OnNpcShopRequested;
+            npc.ShopRequested += isMarketplaceNpc ? (Action<NPC, Player>)OnTraderShopRequested : OnNpcShopRequested;
 
             _lobbyNpcs.Add(npc);
             GD.Print($"[Lobby] Spawned NPC {entityName} at {spawnPosition}");
@@ -160,6 +200,7 @@ namespace QuestFantasy.Prototype
             }
 
             GD.Print($"[Lobby] {npc.EntityName} interacted by {player.EntityName}");
+            SyncRequested?.Invoke();
         }
 
         private void OnNpcDialogueRequested(NPC npc, Player player)
@@ -181,7 +222,7 @@ namespace QuestFantasy.Prototype
             }
 
             ShopNpcInteractionRequested?.Invoke(npc);
-            _shopUI?.ShowShop(npc, _player);
+            _shopUI?.ShowShop(npc, player ?? _player);
             GD.Print($"[Lobby] Shop requested from {npc.EntityName}. Stock count: {npc.GetShopItems().Count}");
         }
 
@@ -215,9 +256,29 @@ namespace QuestFantasy.Prototype
             _shopUI.Closed += OnShopClosed;
         }
 
+        private void SetupMarketplaceUI()
+        {
+            _marketplaceUI = new MarketplaceUI();
+            AddChild(_marketplaceUI);
+            _marketplaceUI.Closed += OnShopClosed;
+        }
+
         private void OnShopClosed()
         {
             GD.Print("[Lobby] Shop closed");
+            ShopClosed?.Invoke();
+        }
+
+        private void OnTraderShopRequested(NPC npc, Player player)
+        {
+            if (npc == null || _marketplaceUI == null)
+            {
+                return;
+            }
+
+            _marketplaceUI.Initialize(player ?? _player, _apiClient, _authToken);
+            _marketplaceUI.Show();
+            GD.Print($"[Lobby] Marketplace requested from {npc.EntityName}");
         }
 
         private void SetupDifficultyUI()
