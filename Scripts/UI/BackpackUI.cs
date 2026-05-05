@@ -182,25 +182,25 @@ public class BackpackUI : CanvasLayer
             AnchorRight = 0.5f,
             AnchorTop = 0.5f,
             AnchorBottom = 0.5f,
-            MarginLeft = -540f,
+            MarginLeft = -390f,
             MarginTop = -280f,
-            MarginRight = 390f,
+            MarginRight = 540f,
             MarginBottom = 280f,
             Visible = false,
             MouseFilter = Control.MouseFilterEnum.Stop,
         };
         _root.AddChild(_panelRoot);
 
-        // Equipment panel background (left side)
+        // Equipment panel background (right side)
         var equipBg = new Panel
         {
-            AnchorLeft = 0f,
+            AnchorLeft = 1f,
             AnchorTop = 0f,
-            AnchorRight = 0f,
+            AnchorRight = 1f,
             AnchorBottom = 1f,
-            MarginLeft = 0f,
+            MarginLeft = -148f,
             MarginTop = 0f,
-            MarginRight = 148f,
+            MarginRight = 0f,
             MarginBottom = 0f,
             MouseFilter = Control.MouseFilterEnum.Stop,
         };
@@ -244,14 +244,15 @@ public class BackpackUI : CanvasLayer
         _equipSlotsContainer.AddChild(equipTitle);
         equipBg.AddChild(_equipSlotsContainer);
 
-        // Backpack background (right side, offset to make room for equip panel)
+        // Backpack background (left side, offset to make room for equip panel on the right)
         _panelBackground = new TextureRect
         {
             AnchorLeft = 0f,
             AnchorRight = 1f,
             AnchorTop = 0f,
             AnchorBottom = 1f,
-            MarginLeft = 150f,
+            MarginLeft = 0f,
+            MarginRight = -150f,
             Expand = true,
             StretchMode = TextureRect.StretchModeEnum.Scale,
             MouseFilter = Control.MouseFilterEnum.Ignore,
@@ -265,9 +266,9 @@ public class BackpackUI : CanvasLayer
             AnchorRight = 1f,
             AnchorTop = 0f,
             AnchorBottom = 1f,
-            MarginLeft = 210f,
+            MarginLeft = 60f,
             MarginTop = 66f,
-            MarginRight = -50f,
+            MarginRight = -200f,
             MarginBottom = -62f,
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
