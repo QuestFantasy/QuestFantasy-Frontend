@@ -10,7 +10,7 @@ namespace QuestFantasy.Characters.PlayerSystems
     /// <summary>
     /// Manages player equipment system:
     /// - Equipping and unequipping weapons
-    /// - Managing armor/equipment slots
+    /// - Managing armor/equipment slots (Head, Body, Arms, Legs, Shoes)
     /// - Calculating total attribute bonuses from equipment
     /// </summary>
     public class PlayerEquipmentSystem
@@ -70,6 +70,45 @@ namespace QuestFantasy.Characters.PlayerSystems
             GD.Print($"[PlayerEquipmentSystem] Unequipped weapon: {previousWeapon.Name}");
             OnWeaponUnequipped?.Invoke(previousWeapon);
             OnEquipmentChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Equip an armor piece to its appropriate slot. Returns the previously equipped item or null.
+        /// </summary>
+        public Equipment EquipArmor(Equipment equipment)
+        {
+            if (equipment == null)
+            {
+                GD.PrintErr("[PlayerEquipmentSystem] Cannot equip null equipment");
+                return null;
+            }
+
+            Equipment old = _equipped.Equipped(equipment);
+            GD.Print($"[PlayerEquipmentSystem] Equipped armor: {equipment.Name} in slot {equipment.EquipmentType}");
+            OnEquipmentChanged?.Invoke();
+            return old;
+        }
+
+        /// <summary>
+        /// Unequip an armor piece from a specific slot. Returns the removed item or null.
+        /// </summary>
+        public Equipment UnequipArmor(EquipmentType slot)
+        {
+            Equipment removed = _equipped.Unequip(slot);
+            if (removed != null)
+            {
+                GD.Print($"[PlayerEquipmentSystem] Unequipped armor: {removed.Name} from slot {slot}");
+                OnEquipmentChanged?.Invoke();
+            }
+            return removed;
+        }
+
+        /// <summary>
+        /// Get the equipment in a specific slot.
+        /// </summary>
+        public Equipment GetEquippedArmor(EquipmentType slot)
+        {
+            return _equipped.GetBySlot(slot);
         }
 
         /// <summary>

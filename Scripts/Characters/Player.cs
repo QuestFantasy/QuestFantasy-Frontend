@@ -443,6 +443,12 @@ namespace QuestFantasy.Characters
                     replaceDiscarded: snapshot.HasDiscardedItemsPayload);
             }
 
+            // Restore equipped items from snapshot
+            if (snapshot.HasEquippedItemsPayload && snapshot.EquippedItemsPayload != null)
+            {
+                RestoreEquippedItems(snapshot.EquippedItemsPayload);
+            }
+
             _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills));
 
             // Re-broadcast HP to refresh HUD after profile application.
@@ -464,6 +470,10 @@ namespace QuestFantasy.Characters
                 Skills = GetSkillSnapshots().ToList(),
                 InventoryItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Inventory?.Items),
                 DiscardedItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Discarded?.Items),
+                EquippedItemsPayload = BuildEquippedItemsPayload(),
+                HasInventoryItemsPayload = true,
+                HasDiscardedItemsPayload = true,
+                HasEquippedItemsPayload = true,
             };
 
             return snapshot;
@@ -642,6 +652,66 @@ namespace QuestFantasy.Characters
             GD.Print($"[ProgressSync] Entered room ({roomIndex.x}, {roomIndex.y}), reason={reason}.");
         }
 
+        private Godot.Collections.Dictionary BuildEquippedItemsPayload()
+        {
+            var dict = new Godot.Collections.Dictionary();
+
+            var slotNames = new[] { "head", "body", "arms", "legs", "shoes" };
+            var slotTypes = new[] { EquipmentType.Head, EquipmentType.Body, EquipmentType.Arms, EquipmentType.Legs, EquipmentType.Shoes };
+
+            for (int i = 0; i < slotNames.Length; i++)
+            {
+                Equipment eq = _equipmentSystem?.GetEquippedArmor(slotTypes[i]);
+                if (eq != null)
+                {
+                    dict[slotNames[i]] = PlayerItemSnapshotCodec.Encode(eq);
+                }
+            }
+
+            Weapon weapon = _equipmentSystem?.EquippedWeapon;
+            if (weapon != null)
+            {
+                dict["weapon"] = PlayerItemSnapshotCodec.Encode(weapon);
+            }
+
+            return dict;
+        }
+
+        private void RestoreEquippedItems(Godot.Collections.Dictionary data)
+        {
+            if (data == null || _equipmentSystem == null)
+            {
+                return;
+            }
+
+            var slotNames = new[] { "head", "body", "arms", "legs", "shoes" };
+            var slotTypes = new[] { EquipmentType.Head, EquipmentType.Body, EquipmentType.Arms, EquipmentType.Legs, EquipmentType.Shoes };
+
+            for (int i = 0; i < slotNames.Length; i++)
+            {
+                if (data.Contains(slotNames[i]) && data[slotNames[i]] is Godot.Collections.Dictionary slotDict)
+                {
+                    Item item = PlayerItemSnapshotCodec.Decode(slotDict);
+                    if (item is Equipment eq)
+                    {
+                        eq.EquipmentType = slotTypes[i];
+                        _equipmentSystem.EquipArmor(eq);
+                    }
+                }
+            }
+
+            if (data.Contains("weapon") && data["weapon"] is Godot.Collections.Dictionary weaponDict)
+            {
+                Item item = PlayerItemSnapshotCodec.Decode(weaponDict);
+                if (item is Weapon w)
+                {
+                    _equipmentSystem.EquipWeapon(w);
+                }
+            }
+
+            UpdateAttributes();
+        }
+
         // ==================== Helper Properties ====================
         /// <summary>
         /// Check if player is currently attacking
@@ -743,6 +813,34 @@ namespace QuestFantasy.Characters
         {
             _equipmentSystem?.UnequipWeapon();
             UpdateAttributes();
+        }
+
+        /// <summary>
+        /// Equip an armor piece to its slot. Returns the previously equipped item or null.
+        /// </summary>
+        public Equipment EquipArmor(Equipment equipment)
+        {
+            Equipment old = _equipmentSystem?.EquipArmor(equipment);
+            UpdateAttributes();
+            return old;
+        }
+
+        /// <summary>
+        /// Unequip armor from a specific slot. Returns the removed item or null.
+        /// </summary>
+        public Equipment UnequipArmor(EquipmentType slot)
+        {
+            Equipment removed = _equipmentSystem?.UnequipArmor(slot);
+            UpdateAttributes();
+            return removed;
+        }
+
+        /// <summary>
+        /// Get the equipment in a specific armor slot.
+        /// </summary>
+        public Equipment GetEquippedArmor(EquipmentType slot)
+        {
+            return _equipmentSystem?.GetEquippedArmor(slot);
         }
     }
 }

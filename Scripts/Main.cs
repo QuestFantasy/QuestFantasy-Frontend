@@ -453,6 +453,17 @@ public class Main : Node2D
             return;
 
         _gameLoadedAlready = true;
+
+        // Save current lobby player state before transitioning to game level
+        if (Godot.Object.IsInstanceValid(_player))
+        {
+            _pendingProfileSnapshot = _player.BuildProfileSnapshot();
+            GD.Print($"[Main] Saved lobby profile snapshot before entering game. Inventory: {_pendingProfileSnapshot.InventoryItems?.Count ?? 0}, HasEquip: {_pendingProfileSnapshot.HasEquippedItemsPayload}");
+
+            // Sync to backend
+            TransmitPlayerProfile("enter_dungeon");
+        }
+
         _lobbyManager?.QueueFree();
         _lobbyManager = null;
         LoadGameLevel(difficulty);
@@ -526,7 +537,13 @@ public class Main : Node2D
     private void ReturnToLobby()
     {
         GD.Print("[Main] Player reached exit - returning to lobby");
+
+        // Save the current player state BEFORE destroying the world
         _pendingProfileSnapshot = _player?.BuildProfileSnapshot();
+
+        // Sync to backend so the server has the latest state
+        TransmitPlayerProfile("return_to_lobby");
+
         DestroyPlayableWorld();
 
         // Rebuild the lobby for another session
@@ -560,6 +577,13 @@ public class Main : Node2D
     {
         if (_player == null || pickup == null || !Godot.Object.IsInstanceValid(pickup))
         {
+            return;
+        }
+
+        float distance = _player.GlobalPosition.DistanceTo(pickup.GlobalPosition);
+        if (distance > 80f)
+        {
+            GD.Print($"[Backpack] Pickup too far (distance: {distance:F1}). Move closer to pick it up.");
             return;
         }
 

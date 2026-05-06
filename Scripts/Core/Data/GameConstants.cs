@@ -75,6 +75,9 @@ public static class GameConstants
     /// <summary>Maximum detection distance (in tiles) for box interaction.</summary>
     public const float BOX_INTERACTION_MAX_DISTANCE_TILES = 1.15f;
 
+    /// <summary>Maximum pickup distance (in pixels) required to collect dropped items.</summary>
+    public const float PICKUP_INTERACTION_MAX_DISTANCE_PIXELS = 72f;
+
     // ==================== Lobby Configuration ====================
     /// <summary>Tile size for lobby map.</summary>
     public const int LOBBY_TILE_SIZE = 24;

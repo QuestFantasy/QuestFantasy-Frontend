@@ -330,8 +330,10 @@ public class PlayerProfileSnapshot
     public string IgnoreReason { get; set; } = string.Empty;
     public bool HasInventoryItemsPayload { get; set; } = false;
     public bool HasDiscardedItemsPayload { get; set; } = false;
+    public bool HasEquippedItemsPayload { get; set; } = false;
     public Godot.Collections.Array InventoryItems { get; set; } = new Godot.Collections.Array();
     public Godot.Collections.Array DiscardedItems { get; set; } = new Godot.Collections.Array();
+    public Godot.Collections.Dictionary EquippedItemsPayload { get; set; } = new Godot.Collections.Dictionary();
 
     public List<PlayerSkillSnapshot> Skills { get; set; } = new List<PlayerSkillSnapshot>();
 
@@ -361,6 +363,12 @@ public class PlayerProfileSnapshot
         {
             snapshot.HasDiscardedItemsPayload = true;
             snapshot.DiscardedItems = discarded;
+        }
+
+        if (data.Contains("equipped_items") && data["equipped_items"] is Godot.Collections.Dictionary equippedDict)
+        {
+            snapshot.HasEquippedItemsPayload = true;
+            snapshot.EquippedItemsPayload = equippedDict;
         }
 
         if (data.Contains("skills") && data["skills"] is Godot.Collections.Array rawSkills)
@@ -403,6 +411,7 @@ public class PlayerProfileSnapshot
             ["gold"] = Math.Max(0, Gold),
             ["inventory_items"] = InventoryItems ?? new Godot.Collections.Array(),
             ["discarded_items"] = DiscardedItems ?? new Godot.Collections.Array(),
+            ["equipped_items"] = EquippedItemsPayload ?? new Godot.Collections.Dictionary(),
         };
     }
 

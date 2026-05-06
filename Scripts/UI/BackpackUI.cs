@@ -6,6 +6,20 @@ using Godot;
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
 
+// Equipment slot definition
+public struct EquipSlotDef
+{
+    public string Label;
+    public EquipmentType SlotType;
+    public bool IsWeapon;
+    public EquipSlotDef(string label, EquipmentType slotType, bool isWeapon = false)
+    {
+        Label = label;
+        SlotType = slotType;
+        IsWeapon = isWeapon;
+    }
+}
+
 public class BackpackUI : CanvasLayer
 {
     private const int SlotsPerPage = 12;
@@ -36,6 +50,19 @@ public class BackpackUI : CanvasLayer
     private Button _prevButton;
     private Button _nextButton;
     private Button _dropButton;
+    private Button _equipButton;
+
+    // Equipment panel
+    private VBoxContainer _equipSlotsContainer;
+    private readonly EquipSlotDef[] _equipSlotDefs = new EquipSlotDef[]
+    {
+        new EquipSlotDef("頭部", EquipmentType.Head),
+        new EquipSlotDef("胸甲", EquipmentType.Body),
+        new EquipSlotDef("手套", EquipmentType.Arms),
+        new EquipSlotDef("腿部", EquipmentType.Legs),
+        new EquipSlotDef("鞋子", EquipmentType.Shoes),
+        new EquipSlotDef("武器", EquipmentType.None, true),
+    };
 
     private readonly List<Item> _cachedItems = new List<Item>();
     private int _currentPage = 0;
@@ -157,17 +184,75 @@ public class BackpackUI : CanvasLayer
             AnchorBottom = 0.5f,
             MarginLeft = -390f,
             MarginTop = -280f,
-            MarginRight = 390f,
+            MarginRight = 540f,
             MarginBottom = 280f,
             Visible = false,
             MouseFilter = Control.MouseFilterEnum.Stop,
         };
         _root.AddChild(_panelRoot);
 
-        _panelBackground = new TextureRect
+        // Equipment panel background (right side)
+        var equipBg = new Panel
         {
+            AnchorLeft = 1f,
+            AnchorTop = 0f,
             AnchorRight = 1f,
             AnchorBottom = 1f,
+            MarginLeft = -148f,
+            MarginTop = 0f,
+            MarginRight = 0f,
+            MarginBottom = 0f,
+            MouseFilter = Control.MouseFilterEnum.Stop,
+        };
+        var equipBgStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.08f, 0.09f, 0.14f, 0.92f),
+            BorderColor = new Color(0.35f, 0.30f, 0.50f, 0.8f),
+            BorderWidthTop = 2,
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            BorderWidthRight = 2,
+            CornerRadiusTopLeft = 10,
+            CornerRadiusTopRight = 10,
+            CornerRadiusBottomLeft = 10,
+            CornerRadiusBottomRight = 10,
+        };
+        equipBg.AddStyleboxOverride("panel", equipBgStyle);
+        _panelRoot.AddChild(equipBg);
+
+        // Equipment title
+        var equipTitle = new Label
+        {
+            Text = "⚔ 裝備",
+            Align = Label.AlignEnum.Center,
+            RectMinSize = new Vector2(128f, 28f),
+        };
+        equipTitle.AddColorOverride("font_color", new Color(0.85f, 0.78f, 1f));
+
+        _equipSlotsContainer = new VBoxContainer
+        {
+            AnchorLeft = 0f,
+            AnchorRight = 1f,
+            AnchorTop = 0f,
+            AnchorBottom = 1f,
+            MarginLeft = 8f,
+            MarginTop = 10f,
+            MarginRight = -8f,
+            MarginBottom = -10f,
+        };
+        _equipSlotsContainer.AddConstantOverride("separation", 4);
+        _equipSlotsContainer.AddChild(equipTitle);
+        equipBg.AddChild(_equipSlotsContainer);
+
+        // Backpack background (left side, offset to make room for equip panel on the right)
+        _panelBackground = new TextureRect
+        {
+            AnchorLeft = 0f,
+            AnchorRight = 1f,
+            AnchorTop = 0f,
+            AnchorBottom = 1f,
+            MarginLeft = 0f,
+            MarginRight = -150f,
             Expand = true,
             StretchMode = TextureRect.StretchModeEnum.Scale,
             MouseFilter = Control.MouseFilterEnum.Ignore,
@@ -181,9 +266,9 @@ public class BackpackUI : CanvasLayer
             AnchorRight = 1f,
             AnchorTop = 0f,
             AnchorBottom = 1f,
-            MarginLeft = 132f,
+            MarginLeft = 60f,
             MarginTop = 66f,
-            MarginRight = -108f,
+            MarginRight = -200f,
             MarginBottom = -62f,
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
@@ -264,10 +349,19 @@ public class BackpackUI : CanvasLayer
         _nextButton.Connect("pressed", this, nameof(OnNextPagePressed));
         footer.AddChild(_nextButton);
 
+        _equipButton = new Button
+        {
+            Text = "裝備 EQUIP",
+            RectMinSize = new Vector2(120f, 42f),
+        };
+        _equipButton.AddColorOverride("font_color", new Color(0.6f, 1f, 0.7f));
+        _equipButton.Connect("pressed", this, nameof(OnEquipButtonPressed));
+        footer.AddChild(_equipButton);
+
         _dropButton = new Button
         {
-            Text = "DROP 丟棄選取",
-            RectMinSize = new Vector2(148f, 42f),
+            Text = "丟棄 DROP",
+            RectMinSize = new Vector2(120f, 42f),
         };
         _dropButton.AddColorOverride("font_color", new Color(1f, 0.86f, 0.75f));
         _dropButton.Connect("pressed", this, nameof(OnDropButtonPressed));
@@ -333,6 +427,7 @@ public class BackpackUI : CanvasLayer
         {
             _moneyValueLabel.Text = "0";
             RebuildSlots(new List<Item>());
+            RebuildEquipSlots();
             return;
         }
 
@@ -354,6 +449,241 @@ public class BackpackUI : CanvasLayer
         _viewDirty = false;
 
         RebuildSlots(_cachedItems);
+        RebuildEquipSlots();
+    }
+
+    private void RebuildEquipSlots()
+    {
+        if (_equipSlotsContainer == null)
+        {
+            return;
+        }
+
+        // Remove all children except the title (first child)
+        var children = _equipSlotsContainer.GetChildren();
+        for (int i = children.Count - 1; i >= 1; i--)
+        {
+            ((Node)children[i]).QueueFree();
+        }
+
+        for (int i = 0; i < _equipSlotDefs.Length; i++)
+        {
+            var def = _equipSlotDefs[i];
+            Control slot = BuildEquipSlot(def, i);
+            _equipSlotsContainer.AddChild(slot);
+        }
+    }
+
+    private Control BuildEquipSlot(EquipSlotDef def, int slotIndex)
+    {
+        const float EqSlotH = 72f;
+
+        Item equipped = null;
+        if (def.IsWeapon)
+        {
+            equipped = _player?.EquippedWeapon;
+        }
+        else
+        {
+            equipped = _player?.GetEquippedArmor(def.SlotType);
+        }
+
+        bool hasItem = equipped != null;
+
+        var frame = new PanelContainer
+        {
+            RectMinSize = new Vector2(128f, EqSlotH),
+            MouseFilter = Control.MouseFilterEnum.Stop,
+        };
+
+        Color borderCol = hasItem
+            ? new Color(0.55f, 0.75f, 1f, 0.9f)
+            : new Color(0.25f, 0.25f, 0.35f, 0.7f);
+
+        var style = new StyleBoxFlat
+        {
+            BgColor = hasItem
+                ? new Color(0.12f, 0.15f, 0.25f, 0.9f)
+                : new Color(0.06f, 0.07f, 0.12f, 0.7f),
+            BorderColor = borderCol,
+            BorderWidthTop = 1,
+            BorderWidthBottom = 1,
+            BorderWidthLeft = 1,
+            BorderWidthRight = 1,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomLeft = 6,
+            CornerRadiusBottomRight = 6,
+            ContentMarginTop = 4,
+            ContentMarginBottom = 4,
+            ContentMarginLeft = 6,
+            ContentMarginRight = 6,
+        };
+        frame.AddStyleboxOverride("panel", style);
+
+        var hbox = new HBoxContainer();
+        hbox.AddConstantOverride("separation", 6);
+        hbox.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
+        hbox.SizeFlagsVertical = (int)Control.SizeFlags.ExpandFill;
+        hbox.Alignment = BoxContainer.AlignMode.Center;
+        frame.AddChild(hbox);
+
+        // Icon
+        var icon = new TextureRect
+        {
+            RectMinSize = new Vector2(40f, 40f),
+            Expand = true,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+
+        if (equipped is Equipment eq)
+        {
+            icon.Texture = eq.Sprite ?? LoadSpriteFromPath(eq.SpritePath);
+        }
+        else if (equipped is Weapon w)
+        {
+            icon.Texture = w.Sprite ?? LoadSpriteFromPath(w.SpritePath);
+        }
+
+        hbox.AddChild(icon);
+
+        // Slot label only (no item name — hover shows details)
+        var slotLabel = new Label
+        {
+            Text = def.Label,
+            Align = Label.AlignEnum.Center,
+            Valign = Label.VAlign.Center,
+            SizeFlagsVertical = (int)Control.SizeFlags.ShrinkCenter,
+        };
+        slotLabel.AddColorOverride("font_color", hasItem
+            ? new Color(0.75f, 0.8f, 0.9f)
+            : new Color(0.4f, 0.4f, 0.5f));
+        hbox.AddChild(slotLabel);
+
+        // Click to unequip
+        frame.Connect("gui_input", this, nameof(OnEquipSlotGuiInput), new Godot.Collections.Array { slotIndex });
+        frame.Connect("mouse_entered", this, nameof(OnEquipSlotMouseEntered), new Godot.Collections.Array { slotIndex });
+        frame.Connect("mouse_exited", this, nameof(OnSlotMouseExited));
+
+        return frame;
+    }
+
+    private void OnEquipSlotGuiInput(InputEvent @event, int slotIndex)
+    {
+        if (!(@event is InputEventMouseButton mb) || !mb.Pressed || mb.ButtonIndex != (int)ButtonList.Left)
+        {
+            return;
+        }
+
+        if (_player == null || slotIndex < 0 || slotIndex >= _equipSlotDefs.Length)
+        {
+            return;
+        }
+
+        var def = _equipSlotDefs[slotIndex];
+
+        if (def.IsWeapon)
+        {
+            if (_player.EquippedWeapon != null)
+            {
+                Weapon w = _player.EquippedWeapon;
+                _player.UnequipWeapon();
+                _player.AddItem(w);
+                GD.Print($"[BackpackUI] Unequipped weapon: {w.Name}");
+            }
+        }
+        else
+        {
+            Equipment current = _player.GetEquippedArmor(def.SlotType);
+            if (current != null)
+            {
+                _player.UnequipArmor(def.SlotType);
+                _player.AddItem(current);
+                GD.Print($"[BackpackUI] Unequipped armor: {current.Name} from {def.SlotType}");
+            }
+        }
+
+        _viewDirty = true;
+        RefreshView();
+    }
+
+    private void OnEquipSlotMouseEntered(int slotIndex)
+    {
+        if (_player == null || slotIndex < 0 || slotIndex >= _equipSlotDefs.Length)
+        {
+            return;
+        }
+
+        var def = _equipSlotDefs[slotIndex];
+        Item item = null;
+
+        if (def.IsWeapon)
+        {
+            item = _player.EquippedWeapon;
+        }
+        else
+        {
+            item = _player.GetEquippedArmor(def.SlotType);
+        }
+
+        if (item != null)
+        {
+            Vector2 mousePos = GetViewport().GetMousePosition();
+            EquipmentPreview.Instance?.ShowPreview(item, mousePos);
+        }
+    }
+
+    private void OnEquipButtonPressed()
+    {
+        if (_player == null || _selectedGlobalIndex < 0 || _selectedGlobalIndex >= _cachedItems.Count)
+        {
+            return;
+        }
+
+        Item item = _cachedItems[_selectedGlobalIndex];
+        if (item == null)
+        {
+            return;
+        }
+
+        if (item is Weapon weapon)
+        {
+            // If weapon already equipped, swap back to inventory
+            Weapon oldWeapon = _player.EquippedWeapon;
+            _player.RemoveItem(item);
+            _player.EquipWeapon(weapon);
+            if (oldWeapon != null)
+            {
+                _player.AddItem(oldWeapon);
+            }
+            GD.Print($"[BackpackUI] Equipped weapon: {weapon.Name}");
+        }
+        else if (item is Equipment eq)
+        {
+            if (eq.EquipmentType == EquipmentType.None || eq.EquipmentType == EquipmentType.Other)
+            {
+                GD.Print("[BackpackUI] Cannot equip item with no valid slot.");
+                return;
+            }
+
+            _player.RemoveItem(item);
+            Equipment oldArmor = _player.EquipArmor(eq);
+            if (oldArmor != null)
+            {
+                _player.AddItem(oldArmor);
+            }
+            GD.Print($"[BackpackUI] Equipped armor: {eq.Name} to {eq.EquipmentType}");
+        }
+        else
+        {
+            GD.Print("[BackpackUI] Selected item is not equippable.");
+            return;
+        }
+
+        _selectedGlobalIndex = -1;
+        _viewDirty = true;
+        RefreshView();
     }
 
     private void RebuildSlots(List<Item> allItems)
@@ -610,6 +940,23 @@ public class BackpackUI : CanvasLayer
             if (c.GetGlobalRect().HasPoint(mouse))
             {
                 return true;
+            }
+        }
+
+        // Also check equipment slots
+        if (_equipSlotsContainer != null)
+        {
+            foreach (Node child in _equipSlotsContainer.GetChildren())
+            {
+                if (!(child is Control c) || !c.Visible)
+                {
+                    continue;
+                }
+
+                if (c.GetGlobalRect().HasPoint(mouse))
+                {
+                    return true;
+                }
             }
         }
 
