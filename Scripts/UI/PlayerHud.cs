@@ -33,6 +33,8 @@ public class PlayerHud : CanvasLayer
     private Label _levelValue;
     private ProgressBar _hpBar;
     private Label _hpValue;
+    private ProgressBar _expBar;
+    private Label _expValue;
     private GridContainer _skillsContainer;
     private Control _rootControl;
     private PanelContainer _hudPanel;
@@ -82,6 +84,7 @@ public class PlayerHud : CanvasLayer
 
         _player.OnLevelChanged += HandleLevelChanged;
         _player.OnHpChanged += HandleHpChanged;
+        _player.OnExperienceChanged += HandleExpChanged;
     }
 
     public override void _ExitTree()
@@ -90,6 +93,7 @@ public class PlayerHud : CanvasLayer
         {
             _player.OnLevelChanged -= HandleLevelChanged;
             _player.OnHpChanged -= HandleHpChanged;
+            _player.OnExperienceChanged -= HandleExpChanged;
         }
     }
 
@@ -212,6 +216,64 @@ public class PlayerHud : CanvasLayer
         _hpValue.AddColorOverride("font_color", new Color(0.98f, 0.98f, 0.98f, 1f));
         hpBarRoot.AddChild(_hpValue);
 
+        var expBarRoot = new Control
+        {
+            RectMinSize = new Vector2(0f, 10f),
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+        };
+        vbox.AddChild(expBarRoot);
+
+        _expBar = new ProgressBar
+        {
+            AnchorRight = 1f,
+            AnchorBottom = 1f,
+            MinValue = 0,
+            MaxValue = 100,
+            Value = 0,
+            PercentVisible = false,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        expBarRoot.AddChild(_expBar);
+
+        var expFill = new StyleBoxFlat
+        {
+            BgColor = new Color(0.2f, 0.8f, 0.3f, 1f), // Green
+            CornerRadiusTopLeft = 3,
+            CornerRadiusTopRight = 3,
+            CornerRadiusBottomLeft = 3,
+            CornerRadiusBottomRight = 3,
+        };
+        var expBg = new StyleBoxFlat
+        {
+            BgColor = new Color(0.14f, 0.14f, 0.16f, 0.95f),
+            BorderColor = new Color(0.36f, 0.36f, 0.4f, 0.95f),
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            BorderWidthLeft = 1,
+            CornerRadiusTopLeft = 3,
+            CornerRadiusTopRight = 3,
+            CornerRadiusBottomLeft = 3,
+            CornerRadiusBottomRight = 3,
+        };
+        _expBar.AddStyleboxOverride("fg", expFill);
+        _expBar.AddStyleboxOverride("bg", expBg);
+
+        _expValue = new Label
+        {
+            AnchorRight = 1f,
+            AnchorBottom = 1f,
+            Text = "0/100",
+            Align = Label.AlignEnum.Center,
+            Valign = Label.VAlign.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        // Use a smaller font or just scale it
+        _expValue.RectScale = new Vector2(0.8f, 0.8f);
+        _expValue.RectPosition = new Vector2(HudWidth * 0.1f, 0); // rough center adjust
+        _expValue.AddColorOverride("font_color", new Color(0.98f, 0.98f, 0.98f, 1f));
+        expBarRoot.AddChild(_expValue);
+
         var skillsTitle = new Label { Text = "Skills" };
         vbox.AddChild(skillsTitle);
 
@@ -231,12 +293,14 @@ public class PlayerHud : CanvasLayer
         {
             _levelValue.Text = "Level: -";
             UpdateHp(0, 0);
+            UpdateExp(0, 1);
             RefreshSkills();
             return;
         }
 
         _levelValue.Text = $"Level: {_player.Level}";
         UpdateHp(_player.Attributes?.HP?.CurrentHP ?? 0, _player.Attributes?.HP?.MaxHP ?? 0);
+        UpdateExp(_player.Experience, _player.Level);
         RefreshSkills();
     }
 
@@ -422,11 +486,32 @@ public class PlayerHud : CanvasLayer
     private void HandleLevelChanged(int level)
     {
         _levelValue.Text = $"Level: {level}";
+        UpdateExp(_player.Experience, level);
     }
 
     private void HandleHpChanged(int current, int max)
     {
         UpdateHp(current, max);
+    }
+
+    private void HandleExpChanged(int exp)
+    {
+        UpdateExp(exp, _player.Level);
+    }
+
+    private void UpdateExp(int currentExp, long level)
+    {
+        if (_expBar == null || _expValue == null)
+        {
+            return;
+        }
+
+        int maxExp = 100 + 10 * (int)level * ((int)level - 1);
+        int clampedExp = Mathf.Clamp(currentExp, 0, maxExp);
+
+        _expBar.MaxValue = maxExp;
+        _expBar.Value = clampedExp;
+        _expValue.Text = $"EXP: {clampedExp}/{maxExp}";
     }
 
     private void UpdateHp(int current, int max)
