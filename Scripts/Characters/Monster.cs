@@ -638,6 +638,13 @@ namespace QuestFantasy.Characters
 
         private void TrySpawnDrops()
         {
+            var expPickup = new ExpPickup();
+            expPickup.SetPlayer(_player);
+            expPickup.Position = GlobalPosition;
+            Node parent = GetParent() ?? GetTree().Root;
+            parent.AddChild(expPickup);
+            GD.PrintS($"[Monster] Spawned EXP drop at {expPickup.Position}");
+
             // Find EquipmentManager in the scene
             var manager = FindEquipmentManager();
             if (manager == null)
@@ -681,7 +688,6 @@ namespace QuestFantasy.Characters
             }
 
             int take = Math.Min(drops, shuffled.Count);
-            Node parent = GetParent() ?? GetTree().Root;
             for (int i = 0; i < take; i++)
             {
                 var it = shuffled[i];

@@ -752,6 +752,33 @@ namespace QuestFantasy.Characters
         public void GainExperience(int amount)
         {
             _inventorySystem?.GainExperience(amount);
+            CheckLevelUp();
+        }
+
+        private void CheckLevelUp()
+        {
+            if (_inventorySystem == null) return;
+
+            while (Level < 100)
+            {
+                int requiredExp = 100 + 10 * (int)Level * ((int)Level - 1);
+                if (_inventorySystem.Experience >= requiredExp)
+                {
+                    _inventorySystem.SetSnapshot(_inventorySystem.Experience - requiredExp, _inventorySystem.Gold, true);
+                    SetLevel((int)Level + 1);
+
+                    if (Attributes?.HP != null)
+                    {
+                        Attributes.HP.SetMaxHPAndCurrentHP(Attributes.HP.MaxHP, Attributes.HP.MaxHP);
+                        OnHpChanged?.Invoke(Attributes.HP.CurrentHP, Attributes.HP.MaxHP);
+                    }
+                    GD.Print($"[Player] Leveled up to {Level}!");
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
 
         /// <summary>
