@@ -13,6 +13,9 @@ public class ExpPickup : Node2D
     private Vector2 _basePosition;
     private Player _player;
 
+    private bool _isMagnetic = false;
+    private float _magnetSpeed = 200f; // px/sec
+
     public void SetPlayer(Player player)
     {
         _player = player;
@@ -31,18 +34,45 @@ public class ExpPickup : Node2D
 
     public override void _Process(float delta)
     {
-        _bobTime += delta * _bobSpeed;
-        Position = _basePosition + new Vector2(0, Mathf.Sin(_bobTime) * _bobHeight);
-        Update();
-
         if (_player != null && IsInstanceValid(_player))
         {
-            if (GlobalPosition.DistanceTo(_player.GlobalPosition) < 24f) // 24px pickup radius
+            float dist = GlobalPosition.DistanceTo(_player.GlobalPosition);
+
+            // Radius for magnet ~ 80 pixels (about 1x character size)
+            if (dist < 80f)
             {
-                _player.GainExperience(ExpAmount);
-                QueueFree();
+                _isMagnetic = true;
+            }
+
+            if (_isMagnetic)
+            {
+                // Move towards player
+                var dir = GlobalPosition.DirectionTo(_player.GlobalPosition);
+                GlobalPosition += dir * _magnetSpeed * delta;
+                _magnetSpeed += 500f * delta; // Accelerate over time
+
+                if (dist < 15f) // Actual consume radius
+                {
+                    _player.GainExperience(ExpAmount);
+                    QueueFree();
+                    return;
+                }
+            }
+            else
+            {
+                // Normal bob
+                _bobTime += delta * _bobSpeed;
+                Position = _basePosition + new Vector2(0, Mathf.Sin(_bobTime) * _bobHeight);
             }
         }
+        else
+        {
+            // Normal bob if no player
+            _bobTime += delta * _bobSpeed;
+            Position = _basePosition + new Vector2(0, Mathf.Sin(_bobTime) * _bobHeight);
+        }
+
+        Update();
     }
 
     public override void _EnterTree()
