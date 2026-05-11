@@ -478,6 +478,7 @@ public class Main : Node2D
         _map.RoomTileSize = 100;
         _map.RoomsX = 2;
         _map.RoomsY = 2;
+        _map.Difficulty = difficulty;
         AddChild(_map);
         _map.RegenerateWithRandomSeed();
         // Connect map's BoxOpened directly to TreasureChest so Main doesn't need to forward.
