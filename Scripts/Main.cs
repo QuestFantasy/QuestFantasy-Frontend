@@ -356,6 +356,14 @@ public class Main : Node2D
 
     private void DestroyPlayableWorld()
     {
+        foreach (Node child in GetChildren())
+        {
+            if (child is ExpPickup || child is QuestFantasy.Items.CoinDrop || child is EquipmentPickup)
+            {
+                child.QueueFree();
+            }
+        }
+
         for (int i = 0; i < _spawnedMonsters.Count; i++)
         {
             if (Godot.Object.IsInstanceValid(_spawnedMonsters[i]))
