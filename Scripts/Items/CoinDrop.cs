@@ -1,5 +1,7 @@
 using System;
+
 using Godot;
+
 using QuestFantasy.Characters;
 
 namespace QuestFantasy.Items
@@ -14,6 +16,7 @@ namespace QuestFantasy.Items
         private Vector2 _basePosition;
         private bool _isMagnetic = false;
         private float _magnetSpeed = 200f; // px/sec
+        private float _spawnTimer = 0f;
 
         private Sprite _sprite;
         private Texture[] _frames;
@@ -21,9 +24,10 @@ namespace QuestFantasy.Items
         private const float FrameDuration = 0.05f;
         private int _currentFrame = 0;
 
-        public void Initialize(int playerLevel, DifficultyLevel difficulty, float entityMultiplier, Player player)
+        public void Initialize(int playerLevel, DifficultyLevel difficulty, float entityMultiplier, Player player, float spawnDelay = 0f)
         {
             _player = player;
+            _spawnTimer = spawnDelay;
             CalculateValue(playerLevel, difficulty, entityMultiplier);
         }
 
@@ -48,7 +52,7 @@ namespace QuestFantasy.Items
 
             _value = Mathf.RoundToInt(baseValue * entityMultiplier * difficultyMultiplier);
             if (_value < 1) _value = 1;
-            
+
             GD.Print($"[CoinDrop] Generated coin value: {_value} (Lv: {playerLevel}, Diff: {difficultyMultiplier}, Mult: {entityMultiplier})");
         }
 
@@ -82,12 +86,17 @@ namespace QuestFantasy.Items
                 _sprite.Texture = _frames[_currentFrame];
             }
 
+            if (_spawnTimer > 0f)
+            {
+                _spawnTimer -= delta;
+            }
+
             if (_player != null && IsInstanceValid(_player))
             {
                 float dist = GlobalPosition.DistanceTo(_player.GlobalPosition);
 
                 // Magnet radius
-                if (dist < 40f)
+                if (_spawnTimer <= 0f && dist < 40f)
                 {
                     _isMagnetic = true;
                 }

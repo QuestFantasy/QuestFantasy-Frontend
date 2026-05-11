@@ -547,6 +547,9 @@ public class Main : Node2D
     {
         GD.Print("[Main] Player reached exit - returning to lobby");
 
+        // Save map difficulty before destroying it
+        DifficultyLevel lastMapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
+
         // Save the current player state BEFORE destroying the world
         _pendingProfileSnapshot = _player?.BuildProfileSnapshot();
 
@@ -557,6 +560,24 @@ public class Main : Node2D
 
         // Rebuild the lobby for another session
         BuildLobby();
+
+        if (_player != null && Godot.Object.IsInstanceValid(_player))
+        {
+            var coinDrop = new QuestFantasy.Items.CoinDrop();
+            coinDrop.Initialize((int)_player.Level, lastMapDiff, 5.0f, _player, 0.5f);
+            var spawnPos = _lobbyManager != null ? _lobbyManager.GetLobbyMap().GetSpawnWorldPosition() : _player.Position;
+            coinDrop.Position = spawnPos;
+
+            if (_lobbyManager != null)
+            {
+                _lobbyManager.AddChild(coinDrop);
+            }
+            else
+            {
+                AddChild(coinDrop);
+            }
+            GD.PrintS($"[Main] Spawned Return-to-Lobby Coin drop at {coinDrop.Position}");
+        }
     }
 
     // Note: Map.BoxOpened is handled directly by TreasureChest.HandleMapBoxOpened now.
@@ -644,6 +665,4 @@ public class Main : Node2D
     {
         TransmitPlayerProfile("inventory_sync");
     }
-
-
 }
