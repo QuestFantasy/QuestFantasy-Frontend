@@ -46,9 +46,9 @@ namespace QuestFantasy.Prototype
         public override void _Ready()
         {
             SetupLobbyMap();
-            SetupPlayer();
             SetupTeleporter();
             SetupNpcCharacters();
+            SetupPlayer();
             SetupShopUI();
             SetupMarketplaceUI();
             SetupDifficultyUI();
