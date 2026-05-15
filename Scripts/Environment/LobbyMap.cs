@@ -9,7 +9,7 @@ namespace QuestFantasy.Environment
     public class LobbyMap : Map
     {
         private const int LOBBY_SIZE = 30;  // 30x30 tiles = 720x720 pixels (24px per tile)
-        private const int BORDER_THICKNESS = 3;  // 3-tile thick walls around the edge
+        private const int BORDER_THICKNESS = 1;  // 1-tile thick walls around the edge
 
         public override void _Ready()
         {
@@ -33,8 +33,8 @@ namespace QuestFantasy.Environment
             // Create tile data manually - 30x30 tiles
             var tileData = new MapTileData(TileSize, RoomTileSize, RoomsX, RoomsY);
 
-            // Set lobby scenario to Grassland (nice green floor)
-            tileData.RoomScenarios[0, 0] = MapScenarioType.Grassland;
+            // Set lobby scenario to Lobby
+            tileData.RoomScenarios[0, 0] = MapScenarioType.Lobby;
 
             // Fill entire map with floor tiles, then add walls at borders
             for (int x = 0; x < LOBBY_SIZE; x++)
@@ -55,30 +55,27 @@ namespace QuestFantasy.Environment
                 }
             }
 
-            // Add decorative elements with variety
-            // Corner pillars in muted gray (Portal tiles)
+            // Corner pillars in muted gray (Portal tiles) for the carpet background
             AddDecorativeColumn(tileData, 5, 5, 2, MapTileType.Portal);
             AddDecorativeColumn(tileData, LOBBY_SIZE - 6, 5, 2, MapTileType.Portal);
             AddDecorativeColumn(tileData, 5, LOBBY_SIZE - 6, 2, MapTileType.Portal);
             AddDecorativeColumn(tileData, LOBBY_SIZE - 6, LOBBY_SIZE - 6, 2, MapTileType.Portal);
 
-            // Decorative water features (blue tiles)
-            AddDecorativeWallSection(tileData, 8, 3, 4, 1, MapTileType.Water);
-            AddDecorativeWallSection(tileData, LOBBY_SIZE - 12, 3, 4, 1, MapTileType.Water);
-            AddDecorativeWallSection(tileData, 8, LOBBY_SIZE - 4, 4, 1, MapTileType.Water);
-            AddDecorativeWallSection(tileData, LOBBY_SIZE - 12, LOBBY_SIZE - 4, 4, 1, MapTileType.Water);
+            // NPC floors (3x3 blocks = radius 1)
+            AddDecorativeColumn(tileData, 7, 11, 1, MapTileType.NPCFloor);   // Previous Hero
+            AddDecorativeColumn(tileData, 15, 11, 1, MapTileType.NPCFloor);  // Trader
+            AddDecorativeColumn(tileData, 23, 11, 1, MapTileType.NPCFloor);  // Poet
+            AddDecorativeColumn(tileData, 15, 23, 1, MapTileType.NPCFloor);  // Blacksmith
 
-            // Decorative lava features (orange tiles) for variety
-            AddDecorativeWallSection(tileData, 15, 3, 2, 1, MapTileType.Lava);
-            AddDecorativeWallSection(tileData, LOBBY_SIZE - 17, 3, 2, 1, MapTileType.Lava);
-            AddDecorativeWallSection(tileData, 15, LOBBY_SIZE - 4, 2, 1, MapTileType.Lava);
-            AddDecorativeWallSection(tileData, LOBBY_SIZE - 17, LOBBY_SIZE - 4, 2, 1, MapTileType.Lava);
+            // Decorative box features (originally water)
+            AddDecorativeWallSection(tileData, 8, 3, 4, 1, MapTileType.Wall);
+            AddDecorativeWallSection(tileData, LOBBY_SIZE - 12, 3, 4, 1, MapTileType.Wall);
+            AddDecorativeWallSection(tileData, 8, LOBBY_SIZE - 4, 4, 1, MapTileType.Wall);
+            AddDecorativeWallSection(tileData, LOBBY_SIZE - 12, LOBBY_SIZE - 4, 4, 1, MapTileType.Wall);
 
-            // Add some mid-wall decorations
-            AddDecorativeColumn(tileData, 3, 15, 1, MapTileType.Water);
-            AddDecorativeColumn(tileData, LOBBY_SIZE - 4, 15, 1, MapTileType.Water);
-            AddDecorativeColumn(tileData, 15, 3, 1, MapTileType.Lava);
-            AddDecorativeColumn(tileData, 15, LOBBY_SIZE - 4, 1, MapTileType.Lava);
+            // Add some mid-wall box decorations
+            AddDecorativeColumn(tileData, 3, 15, 1, MapTileType.Wall);
+            AddDecorativeColumn(tileData, LOBBY_SIZE - 4, 15, 1, MapTileType.Wall);
 
             // Set spawn point at the center of the lobby
             Vector2 centerTile = new Vector2(LOBBY_SIZE / 2, LOBBY_SIZE / 2);
@@ -103,8 +100,66 @@ namespace QuestFantasy.Environment
                 }
             }
 
+            // Add single carpet sprites to fill the corner areas
+            AddCarpetSprites();
+
+            // Add desks and mark their tiles as solid
+            AddDeskSprites(tileData);
+
             GD.Print("[LobbyMap] Static lobby created: " + LOBBY_SIZE + "x" + LOBBY_SIZE + " tiles, spawn at " + centerTile);
             Update();  // Trigger redraw
+        }
+
+        private void AddCarpetSprites()
+        {
+            AddCarpetSprite(5, 5);
+            AddCarpetSprite(LOBBY_SIZE - 6, 5);
+            AddCarpetSprite(5, LOBBY_SIZE - 6);
+            AddCarpetSprite(LOBBY_SIZE - 6, LOBBY_SIZE - 6);
+        }
+
+        private void AddCarpetSprite(int tileX, int tileY)
+        {
+            var carpet = new Sprite
+            {
+                Texture = GD.Load<Texture>("res://Assets/Lobby/lobby-carpet.png")
+            };
+            // 5x5 tiles = 120x120 pixels. Texture is 256x256.
+            // Scale = 120 / 256 = 0.46875
+            carpet.Scale = new Vector2(0.46875f, 0.46875f);
+            carpet.Position = new Vector2(tileX * TileSize + TileSize / 2f, tileY * TileSize + TileSize / 2f);
+            AddChild(carpet);
+        }
+
+        private void AddDeskSprites(MapTileData tileData)
+        {
+            AddDeskSprite(tileData, 7, 18);
+            AddDeskSprite(tileData, 23, 18);
+        }
+
+        private void AddDeskSprite(MapTileData tileData, int tileX, int tileY)
+        {
+            var desk = new Sprite
+            {
+                Texture = GD.Load<Texture>("res://Assets/Lobby/lobby-desk.png")
+            };
+            // Desk texture might be 256x256, scale it appropriately.
+            // A 3x3 tile size is ~72px, so scale = 72 / 256 = 0.28125
+            desk.Scale = new Vector2(0.28f, 0.28f);
+            desk.Position = new Vector2(tileX * TileSize + TileSize / 2f, tileY * TileSize + TileSize / 2f);
+            AddChild(desk);
+
+            // Mark the bottom area under the desk as solid (half height collision)
+            for (int x = tileX - 1; x <= tileX + 1; x++)
+            {
+                for (int y = tileY; y <= tileY + 1; y++)
+                {
+                    if (x >= 0 && x < LOBBY_SIZE && y >= 0 && y < LOBBY_SIZE)
+                    {
+                        tileData.Tiles[x, y] = MapTileType.Solid;
+                    }
+                }
+            }
         }
 
         private void AddDecorativeColumn(MapTileData tileData, int centerX, int centerY, int radius, MapTileType tileType)

@@ -57,13 +57,11 @@ namespace QuestFantasy.Environment
                     if (inRange && !_playerInRange)
                     {
                         _playerInRange = true;
-                        Modulate = Colors.Yellow;
                         GD.Print("[Teleporter] *** Player ENTERED range ***");
                     }
                     else if (!inRange && _playerInRange)
                     {
                         _playerInRange = false;
-                        Modulate = Colors.White;
                         GD.Print("[Teleporter] Player LEFT range");
                     }
 

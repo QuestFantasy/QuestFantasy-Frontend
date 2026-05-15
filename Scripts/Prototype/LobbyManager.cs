@@ -16,7 +16,7 @@ namespace QuestFantasy.Prototype
     /// </summary>
     public class LobbyManager : Node2D
     {
-        [Export] public string TeleporterTexturePath = "res://Assets/Box/Box_Closed.png";
+        [Export] public string TeleporterTexturePath = "res://Assets/Lobby/lobby-teleporter.png";
 
         public event Action<DifficultyLevel> DifficultySelected;
         public event Action<NPC> DialogueNpcInteractionRequested;
@@ -111,16 +111,13 @@ namespace QuestFantasy.Prototype
 
         private void SetupTeleporter()
         {
-            // Place teleporter at the center of the lobby
-            Vector2 lobbyCenter = new Vector2(
-                _lobbyMap.WorldPixelWidth / 2f,
-                _lobbyMap.WorldPixelHeight / 2f
-            );
+            // Place teleporter exactly at the center of tile (15, 15) so it aligns perfectly with the 3x3 grid
+            Vector2 lobbyCenter = new Vector2(372f, 372f);
 
             _teleporter = new Teleporter
             {
                 Texture = ResourceLoader.Load<Texture>(TeleporterTexturePath),
-                Scale = new Vector2(0.05f, 0.05f)  // Very small, approximately 1 block size
+                Scale = new Vector2(0.28f, 0.28f)  // Scale 256x256 asset to approx 3x3 tiles (72x72 pixels)
             };
 
             _teleporter.Initialize("Portal to Adventure", "Get ready for your quest!");

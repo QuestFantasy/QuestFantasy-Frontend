@@ -7,5 +7,8 @@ public enum MapTileType
     Lava,
     Water,
     Start,
-    Exit
+    Exit,
+    NPCFloor,
+    Carpet,
+    Solid
 }
