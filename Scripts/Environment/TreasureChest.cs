@@ -179,6 +179,16 @@ public class TreasureChest : Node
             }
         }
 
+        // Spawn CoinDrop
+        var player = FindPlayerRecursive(parent);
+        var coinDrop = new QuestFantasy.Items.CoinDrop();
+        DifficultyLevel mapDiff = DifficultyLevel.Normal;
+        if (parent is Map parentMap) mapDiff = parentMap.Difficulty;
+        coinDrop.Initialize(playerLevel, mapDiff, 1.0f, player);
+        coinDrop.Position = centerPosition + new Vector2(rng.Randf() * 40f - 20f, rng.Randf() * 40f - 20f);
+        parent.AddChild(coinDrop);
+        GD.PrintS($"[TreasureChest] Spawned Coin drop at {coinDrop.Position}");
+
         return spawned;
     }
 }

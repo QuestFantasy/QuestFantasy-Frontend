@@ -645,6 +645,14 @@ namespace QuestFantasy.Characters
             parent.AddChild(expPickup);
             GD.PrintS($"[Monster] Spawned EXP drop at {expPickup.Position}");
 
+            var coinDrop = new QuestFantasy.Items.CoinDrop();
+            int pLevel = _player != null ? (int)_player.Level : (int)Level;
+            DifficultyLevel mapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
+            coinDrop.Initialize(pLevel, mapDiff, 0.1f, _player);
+            coinDrop.Position = GlobalPosition + new Vector2((float)_random.NextDouble() * 40f - 20f, (float)_random.NextDouble() * 40f - 20f);
+            parent.AddChild(coinDrop);
+            GD.PrintS($"[Monster] Spawned Coin drop at {coinDrop.Position}");
+
             // Find EquipmentManager in the scene
             var manager = FindEquipmentManager();
             if (manager == null)
