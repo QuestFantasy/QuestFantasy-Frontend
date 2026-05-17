@@ -34,6 +34,8 @@ public class MapCollisionSystem
         return tileType == MapTileType.Floor
             || tileType == MapTileType.Start
             || tileType == MapTileType.Exit
-            || tileType == MapTileType.Portal;
+            || tileType == MapTileType.Portal
+            || tileType == MapTileType.NPCFloor
+            || tileType == MapTileType.Carpet;
     }
 }

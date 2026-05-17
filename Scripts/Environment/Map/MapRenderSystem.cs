@@ -17,6 +17,17 @@ public class MapRenderSystem
     private string _cachedClosedPath;
     private string _cachedOpenPath;
 
+    private Texture _lobbyWallTopLeft;
+    private Texture _lobbyWallTop;
+    private Texture _lobbyWallTopRight;
+    private Texture _lobbyWallBottomLeft;
+    private Texture _lobbyWallBottom;
+    private Texture _lobbyWallBottomRight;
+
+    private Texture _npcFloorTexture;
+    private Texture _carpetTexture;
+    private Texture[] _lobbyFloorTextures;
+
     public void Rebuild(MapTileData data, string boxClosedTexturePath, string boxOpenTexturePath)
     {
         // Check if we can skip rebuild
@@ -205,6 +216,26 @@ public class MapRenderSystem
         _wallTextures[MapScenarioType.Lava] = GD.Load<Texture>("res://Assets/Floor/wall.png");
         _wallTextures[MapScenarioType.Sea] = GD.Load<Texture>("res://Assets/Floor/sea.png");
 
+        _lobbyFloorTextures = new Texture[4];
+        _lobbyFloorTextures[0] = GD.Load<Texture>("res://Assets/Lobby/lobby-floor-1.png");
+        _lobbyFloorTextures[1] = GD.Load<Texture>("res://Assets/Lobby/lobby-floor-2.png");
+        _lobbyFloorTextures[2] = GD.Load<Texture>("res://Assets/Lobby/lobby-floor-3.png");
+        _lobbyFloorTextures[3] = GD.Load<Texture>("res://Assets/Lobby/lobby-floor-4.png");
+
+        // Keep fallback texture just in case, though we intercept in DrawFloorTiles
+        _floorTextures[MapScenarioType.Lobby] = GD.Load<Texture>("res://Assets/Lobby/lobby-floor-1.png");
+        _wallTextures[MapScenarioType.Lobby] = GD.Load<Texture>("res://Assets/Lobby/lobby-box.png");
+
+        _lobbyWallTopLeft = GD.Load<Texture>("res://Assets/Lobby/lobby-wall-top-left.png");
+        _lobbyWallTop = GD.Load<Texture>("res://Assets/Lobby/lobby-wall-top.png");
+        _lobbyWallTopRight = GD.Load<Texture>("res://Assets/Lobby/lobby-wall-top-right.png");
+        _lobbyWallBottomLeft = GD.Load<Texture>("res://Assets/Lobby/lobby-wall-bottom-left.png");
+        _lobbyWallBottom = GD.Load<Texture>("res://Assets/Lobby/lobby-wall-bottom.png");
+        _lobbyWallBottomRight = GD.Load<Texture>("res://Assets/Lobby/lobby-wall-bottom-right.png");
+
+        _npcFloorTexture = GD.Load<Texture>("res://Assets/Lobby/lobby-NPCfloor.png");
+        _carpetTexture = GD.Load<Texture>("res://Assets/Lobby/lobby-carpet.png");
+
         // Log missing textures but continue (colors will be fallback)
         foreach (var kv in _floorTextures)
         {
@@ -232,7 +263,18 @@ public class MapRenderSystem
                     continue;
 
                 MapScenarioType scenario = GetScenarioByTile(data, x, y);
-                if (_wallTextures.TryGetValue(scenario, out Texture tex) && tex != null)
+                Texture tex = null;
+
+                if (scenario == MapScenarioType.Lobby)
+                {
+                    tex = GetLobbyWallTexture(x, y, data.WorldTileWidth, data.WorldTileHeight);
+                }
+                else
+                {
+                    _wallTextures.TryGetValue(scenario, out tex);
+                }
+
+                if (tex != null)
                 {
                     Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
                     Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
@@ -240,6 +282,30 @@ public class MapRenderSystem
                 }
             }
         }
+    }
+
+    private Texture GetLobbyWallTexture(int x, int y, int width, int height)
+    {
+        int border = 1; // LOBBY_SIZE uses 1 for BORDER_THICKNESS
+        bool isTop = y < border;
+        bool isBottom = y >= height - border;
+        bool isLeft = x < border;
+        bool isRight = x >= width - border;
+
+        if (isTop)
+        {
+            if (isLeft) return _lobbyWallTopLeft;
+            if (isRight) return _lobbyWallTopRight;
+            return _lobbyWallTop;
+        }
+        if (isBottom)
+        {
+            if (isLeft) return _lobbyWallBottomLeft;
+            if (isRight) return _lobbyWallBottomRight;
+            return _lobbyWallBottom;
+        }
+
+        return _wallTextures[MapScenarioType.Lobby];
     }
 
     private void DrawFloorTiles(Node2D node, MapTileData data)
@@ -271,11 +337,44 @@ public class MapRenderSystem
                     continue;
                 }
 
-                if (tileType != MapTileType.Floor)
+                if (tileType == MapTileType.NPCFloor)
+                {
+                    if (_npcFloorTexture != null)
+                    {
+                        Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                        Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                        node.DrawTextureRect(_npcFloorTexture, destRect, false);
+                    }
+                    continue;
+                }
+
+                if (tileType == MapTileType.Carpet)
+                {
+                    if (_carpetTexture != null)
+                    {
+                        Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                        Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                        node.DrawTextureRect(_carpetTexture, destRect, false);
+                    }
+                    continue;
+                }
+
+                if (tileType != MapTileType.Floor && tileType != MapTileType.Solid)
                     continue;
 
                 MapScenarioType scenario = GetScenarioByTile(data, x, y);
-                if (_floorTextures.TryGetValue(scenario, out Texture tex) && tex != null)
+                if (scenario == MapScenarioType.Lobby)
+                {
+                    int textureIndex = (x % 2) + (y % 2) * 2;
+                    Texture tex = _lobbyFloorTextures[textureIndex];
+                    if (tex != null)
+                    {
+                        Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
+                        Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
+                        node.DrawTextureRect(tex, destRect, false);
+                    }
+                }
+                else if (_floorTextures.TryGetValue(scenario, out Texture tex) && tex != null)
                 {
                     Vector2 worldPos = new Vector2(x * data.TileSize, y * data.TileSize);
                     Rect2 destRect = new Rect2(worldPos, new Vector2(data.TileSize, data.TileSize));
