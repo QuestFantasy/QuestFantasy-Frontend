@@ -391,8 +391,9 @@ namespace QuestFantasy.Core.Data.Skills
                 return;
             }
 
-            int attackerAtk = _owner.Attributes?.TotalAtk ?? 1;
-            int defenderDef = target.Attributes?.TotalDef ?? 0;
+            // Use effective stats so Burn (ATK debuff) and Bleed (DEF debuff) are reflected
+            int attackerAtk = _owner.Attributes?.EffectiveAtk ?? 1;
+            int defenderDef = target.Attributes?.EffectiveDef ?? 0;
             int rolled = Mathf.RoundToInt((float)GD.RandRange(_damageMin, _damageMax));
             int damage = Mathf.Max(1, attackerAtk + rolled - Mathf.FloorToInt(defenderDef * 0.4f));
 

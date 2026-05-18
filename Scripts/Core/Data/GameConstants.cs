@@ -86,6 +86,17 @@ public static class GameConstants
     /// <summary>Damage per second of the Burn applied by Fireball.</summary>
     public const float FIREBALL_BURN_DPS = 3.0f;
 
+    // ==================== Skill Status Effect Stat Debuffs ====================
+    /// <summary>
+    /// Attack multiplier applied while Burn is active (0.5 = 50% ATK reduction).
+    /// </summary>
+    public const float BURN_ATK_MODIFIER = 0.5f;
+
+    /// <summary>
+    /// Defense multiplier applied while Bleed is active (0.5 = 50% DEF reduction).
+    /// </summary>
+    public const float BLEED_DEF_MODIFIER = 0.5f;
+
     // ==================== Portal & Teleport ====================
     /// <summary>Cooldown duration (in seconds) after portal activation to prevent consecutive triggers.</summary>
     public const float PORTAL_TELEPORT_COOLDOWN = 0.5f;

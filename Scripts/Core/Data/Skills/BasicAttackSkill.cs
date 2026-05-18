@@ -57,9 +57,9 @@ namespace QuestFantasy.Core.Data.Skills
                 return;
             }
 
-            // Get attacker and defender stats
-            int attackerAtk = player.Attributes?.TotalAtk ?? 1;
-            int defenderDef = target.Attributes?.TotalDef ?? 0;
+            // Get attacker and defender stats (Effective* includes active debuffs like Burn/Bleed)
+            int attackerAtk = player.Attributes?.EffectiveAtk ?? 1;
+            int defenderDef = target.Attributes?.EffectiveDef ?? 0;
 
             // Calculate base damage: Defense reduces damage by 50% of its value
             int baseDamage = Mathf.Max(1, attackerAtk - Mathf.FloorToInt(defenderDef * DAMAGE_REDUCTION_FACTOR));

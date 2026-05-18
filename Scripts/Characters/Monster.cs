@@ -763,11 +763,13 @@ namespace QuestFantasy.Characters
 
         public override void Attack()
         {
-            GD.Print($"Monster {EntityName} attacks with {Attributes?.TotalAtk} ATK!");
+            GD.Print($"Monster {EntityName} attacks with {Attributes?.EffectiveAtk} ATK!");
             if (_player != null && _player.Attributes?.HP != null)
             {
-                _player.TakeDamage(Attributes?.TotalAtk ?? 1);
-                GD.Print($"[COMBAT] {EntityName} attacks Player for {Attributes?.TotalAtk ?? 1} damage! Player HP: {_player.Attributes.HP.CurrentHP}/{_player.Attributes.HP.MaxHP}");
+                // EffectiveAtk respects Burn debuff (ATK reduction while burning)
+                int damage = Attributes?.EffectiveAtk ?? 1;
+                _player.TakeDamage(damage);
+                GD.Print($"[COMBAT] {EntityName} attacks Player for {damage} damage! Player HP: {_player.Attributes.HP.CurrentHP}/{_player.Attributes.HP.MaxHP}");
             }
         }
     }

@@ -5,7 +5,9 @@ using QuestFantasy.Characters;
 namespace QuestFantasy.Core.Systems.StatusEffects
 {
     /// <summary>
-    /// Burn effect: deals periodic fire damage every second.
+    /// Burn effect: deals periodic fire damage every second AND reduces the target's ATK.
+    /// - Tick damage: configurable DPS (applied once per second)
+    /// - ATK debuff: multiplied by <see cref="GameConstants.BURN_ATK_MODIFIER"/> for the full duration
     /// Applied with an orange color overlay.
     /// </summary>
     public class BurnEffect : StatusEffect
@@ -27,7 +29,15 @@ namespace QuestFantasy.Core.Systems.StatusEffects
 
         public override void OnApply(Character target)
         {
-            GD.Print($"[StatusEffect] {target.EntityName} is burning! ({_damagePerSecond} dps for {Duration}s)");
+            // Apply ATK reduction for the burn duration
+            if (target.Attributes != null)
+            {
+                target.Attributes.AtkModifier = GameConstants.BURN_ATK_MODIFIER;
+            }
+
+            GD.Print($"[StatusEffect] {target.EntityName} is burning! " +
+                     $"ATK reduced to {GameConstants.BURN_ATK_MODIFIER * 100f:F0}%, " +
+                     $"{_damagePerSecond} dps for {Duration}s");
         }
 
         public override void OnTick(Character target, float delta)
@@ -43,7 +53,13 @@ namespace QuestFantasy.Core.Systems.StatusEffects
 
         public override void OnExpire(Character target)
         {
-            GD.Print($"[StatusEffect] {target.EntityName}'s burn faded.");
+            // Restore ATK modifier to normal
+            if (target.Attributes != null)
+            {
+                target.Attributes.AtkModifier = 1f;
+            }
+
+            GD.Print($"[StatusEffect] {target.EntityName}'s burn faded. ATK restored.");
         }
     }
 }

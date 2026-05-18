@@ -5,7 +5,9 @@ using QuestFantasy.Characters;
 namespace QuestFantasy.Core.Systems.StatusEffects
 {
     /// <summary>
-    /// Bleed effect: deals periodic physical damage every second.
+    /// Bleed effect: deals periodic physical damage every second AND reduces the target's DEF.
+    /// - Tick damage: configurable DPS (applied once per second)
+    /// - DEF debuff: multiplied by <see cref="GameConstants.BLEED_DEF_MODIFIER"/> for the full duration
     /// Applied with a deep red color overlay.
     /// </summary>
     public class BleedEffect : StatusEffect
@@ -27,7 +29,15 @@ namespace QuestFantasy.Core.Systems.StatusEffects
 
         public override void OnApply(Character target)
         {
-            GD.Print($"[StatusEffect] {target.EntityName} is bleeding! ({_damagePerSecond} dps for {Duration}s)");
+            // Apply DEF reduction for the bleed duration
+            if (target.Attributes != null)
+            {
+                target.Attributes.DefModifier = GameConstants.BLEED_DEF_MODIFIER;
+            }
+
+            GD.Print($"[StatusEffect] {target.EntityName} is bleeding! " +
+                     $"DEF reduced to {GameConstants.BLEED_DEF_MODIFIER * 100f:F0}%, " +
+                     $"{_damagePerSecond} dps for {Duration}s");
         }
 
         public override void OnTick(Character target, float delta)
@@ -43,7 +53,13 @@ namespace QuestFantasy.Core.Systems.StatusEffects
 
         public override void OnExpire(Character target)
         {
-            GD.Print($"[StatusEffect] {target.EntityName}'s bleed stopped.");
+            // Restore DEF modifier to normal
+            if (target.Attributes != null)
+            {
+                target.Attributes.DefModifier = 1f;
+            }
+
+            GD.Print($"[StatusEffect] {target.EntityName}'s bleed stopped. DEF restored.");
         }
     }
 }
