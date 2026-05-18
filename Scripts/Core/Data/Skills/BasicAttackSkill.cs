@@ -3,6 +3,7 @@ using Godot;
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Core.Data.Skills
 {
@@ -56,9 +57,9 @@ namespace QuestFantasy.Core.Data.Skills
                 return;
             }
 
-            // Get attacker and defender stats
-            int attackerAtk = player.Attributes?.TotalAtk ?? 1;
-            int defenderDef = target.Attributes?.TotalDef ?? 0;
+            // Get attacker and defender stats (Effective* includes active debuffs like Burn/Bleed)
+            int attackerAtk = player.Attributes?.EffectiveAtk ?? 1;
+            int defenderDef = target.Attributes?.EffectiveDef ?? 0;
 
             // Calculate base damage: Defense reduces damage by 50% of its value
             int baseDamage = Mathf.Max(1, attackerAtk - Mathf.FloorToInt(defenderDef * DAMAGE_REDUCTION_FACTOR));
@@ -72,6 +73,12 @@ namespace QuestFantasy.Core.Data.Skills
             {
                 target.TakeDamage(finalDamage);
                 GD.Print($"[COMBAT] {player.EntityName} attacks {target.EntityName} for {finalDamage} damage! Target HP: {target.Attributes.HP.CurrentHP}/{target.Attributes.HP.MaxHP}");
+
+                // 25% chance to stun the target — configurable via GameConstants
+                StatusEffectHelper.TryApplyWithChance(
+                    target,
+                    () => new StunEffect(GameConstants.BASIC_ATTACK_STUN_DURATION),
+                    GameConstants.BASIC_ATTACK_STUN_CHANCE);
 
                 // Check if target died
                 if (!target.Attributes.HP.IsAlive)

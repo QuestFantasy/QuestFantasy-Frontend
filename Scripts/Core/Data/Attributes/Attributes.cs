@@ -1,5 +1,7 @@
 using System;
 
+using Godot;
+
 namespace QuestFantasy.Core.Data.Attributes
 {
     public enum ElementsTypes { Normal, Earth, Water, Fire, Wind }
@@ -143,12 +145,39 @@ namespace QuestFantasy.Core.Data.Attributes
         public int TotalAtk { get; set; } // Attack: determines damage dealt to monsters and other players
         public int TotalDef { get; set; } // Defense: reduces incoming damage
         public int TotalSpd { get; set; } // Speed: determines walk speed and Skills cooldown
-        public int TotalVit { get; set; } // Vitality: determines max HP 
+        public int TotalVit { get; set; } // Vitality: determines max HP
         public Element Element { get; set; } = new Element { ElementType = ElementsTypes.Normal };
         public HP HP { get; private set; } = new HP();
 
+        // ==================== Stat Modifiers (managed by status effects) ====================
         /// <summary>
-        /// Update total attributes based on job, equipment, and buffs
+        /// Multiplicative ATK modifier. 1.0 = normal, 0.5 = 50% reduced.
+        /// Set by BurnEffect on apply, reset to 1f on expire.
+        /// </summary>
+        public float AtkModifier { get; set; } = 1f;
+
+        /// <summary>
+        /// Multiplicative DEF modifier. 1.0 = normal, 0.5 = 50% reduced.
+        /// Set by BleedEffect on apply, reset to 1f on expire.
+        /// </summary>
+        public float DefModifier { get; set; } = 1f;
+
+        // ==================== Effective Stats (use in all damage formulas) ====================
+        /// <summary>
+        /// ATK after applying AtkModifier. Always >= 0.
+        /// Use this in all damage formulas instead of TotalAtk.
+        /// </summary>
+        public int EffectiveAtk => Mathf.Max(0, Mathf.RoundToInt(TotalAtk * AtkModifier));
+
+        /// <summary>
+        /// DEF after applying DefModifier. Always >= 0.
+        /// Use this in all damage formulas instead of TotalDef.
+        /// </summary>
+        public int EffectiveDef => Mathf.Max(0, Mathf.RoundToInt(TotalDef * DefModifier));
+
+        /// <summary>
+        /// Update total attributes based on job, equipment, and buffs.
+        /// Modifiers (AtkModifier, DefModifier) are preserved across updates.
         /// </summary>
         public void Update(int newAtk, int newDef, int newSpd, int newVit)
         {
