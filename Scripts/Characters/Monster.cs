@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Characters
 {
@@ -240,6 +241,9 @@ namespace QuestFantasy.Characters
                 return;
             }
 
+            // Tick all active status effects (Burn, Bleed, Stun, etc.)
+            EffectManager?.Update(this, delta);
+
             if (Attributes != null && Attributes.HP != null && _healthBar != null)
             {
                 _healthBar.MaxValue = Attributes.HP.MaxHP;
@@ -249,6 +253,13 @@ namespace QuestFantasy.Characters
             if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)
             {
                 Die();
+                return;
+            }
+
+            // Stun: completely freeze the monster (no movement, attack, or animation)
+            if (IsStunned)
+            {
+                Modulate = EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
                 return;
             }
 
@@ -262,6 +273,9 @@ namespace QuestFantasy.Characters
                 else
                 {
                     Texture = _hitTexture;
+                    // Keep effect color even during hit flash
+                    if (EffectManager != null && EffectManager.HasAnyEffect)
+                        Modulate = EffectManager.GetModulateColor();
                     return;
                 }
             }
@@ -277,6 +291,8 @@ namespace QuestFantasy.Characters
                     _isWalkFrame = false;
                     Texture = _standTexture;
                 }
+                // Apply effect color even when idle (out of range)
+                Modulate = EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
                 return;
             }
 
@@ -294,6 +310,7 @@ namespace QuestFantasy.Characters
                 {
                     _isAttacking = false;
                 }
+                Modulate = EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
                 return; // Skip moving while attacking
             }
 
@@ -311,6 +328,9 @@ namespace QuestFantasy.Characters
             CheckPathflowAndStuck(delta);
             MoveProcess(delta, distanceToPlayer);
             UpdateAnimation(delta);
+
+            // Apply status effect color overlay (white = no effect)
+            Modulate = EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
         }
 
         private void PerformAttack()

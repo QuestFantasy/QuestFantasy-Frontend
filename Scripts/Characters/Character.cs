@@ -2,6 +2,7 @@ using Godot;
 
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Characters
 {
@@ -21,6 +22,27 @@ namespace QuestFantasy.Characters
 
         public Attributes Attributes { get; protected set; }
 
+        // ==================== Status Effect System ====================
+        /// <summary>
+        /// Manages all active status effects (Burn, Bleed, Stun, etc.) on this character.
+        /// Call <see cref="StatusEffectManager.Update"/> every physics frame.
+        /// </summary>
+        public StatusEffectManager EffectManager { get; private set; }
+
+        /// <summary>
+        /// When true the character is completely frozen (no movement, attacks, or animations).
+        /// Managed automatically by <see cref="StunEffect"/> and <see cref="FreezeEffect"/>.
+        /// </summary>
+        public bool IsStunned { get; set; }
+
+        /// <summary>
+        /// When true all incoming damage is blocked.
+        /// Managed automatically by <see cref="InvincibleEffect"/>.
+        /// Player respawn invincibility is handled separately via _respawnInvincibilityTimer.
+        /// </summary>
+        public bool IsInvincible { get; set; }
+
+        // ==================== Initialization ====================
         /// <summary>
         /// Initialize character with default attributes.
         /// Should be called in derived class _Ready() method.
@@ -39,9 +61,12 @@ namespace QuestFantasy.Characters
             if (CurrentStatus == null)
                 CurrentStatus = new Status { StatusType = StatusType.Normal };
 
+            EffectManager = new StatusEffectManager();
+
             Level = 1;
         }
 
+        // ==================== Combat ====================
         /// <summary>
         /// Execute attack action. Override in derived classes to implement specific attack behavior.
         /// </summary>
@@ -66,9 +91,13 @@ namespace QuestFantasy.Characters
 
         /// <summary>
         /// Apply damage to this character.
+        /// Blocked entirely when <see cref="IsInvincible"/> is true.
         /// </summary>
         public virtual void TakeDamage(int damage)
         {
+            // Invincibility guard — effect-based immunity
+            if (IsInvincible) return;
+
             if (Attributes?.HP == null)
             {
                 GD.PrintErr($"[Character] {EntityName}: Cannot take damage, HP not initialized");

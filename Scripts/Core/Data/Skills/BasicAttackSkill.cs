@@ -3,6 +3,7 @@ using Godot;
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
 using QuestFantasy.Core.Data.Attributes;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Core.Data.Skills
 {
@@ -72,6 +73,12 @@ namespace QuestFantasy.Core.Data.Skills
             {
                 target.TakeDamage(finalDamage);
                 GD.Print($"[COMBAT] {player.EntityName} attacks {target.EntityName} for {finalDamage} damage! Target HP: {target.Attributes.HP.CurrentHP}/{target.Attributes.HP.MaxHP}");
+
+                // 25% chance to stun the target — configurable via GameConstants
+                StatusEffectHelper.TryApplyWithChance(
+                    target,
+                    () => new StunEffect(GameConstants.BASIC_ATTACK_STUN_DURATION),
+                    GameConstants.BASIC_ATTACK_STUN_CHANCE);
 
                 // Check if target died
                 if (!target.Attributes.HP.IsAlive)

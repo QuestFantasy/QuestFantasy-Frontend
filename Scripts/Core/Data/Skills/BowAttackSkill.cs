@@ -1,11 +1,13 @@
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Core.Data.Skills
 {
     /// <summary>
     /// Basic ranged arrow attack for the adventurer.
+    /// Has a 50% chance to apply Bleed on hit (configurable via GameConstants).
     /// </summary>
     public class BowAttackSkill : Attributes.Skills
     {
@@ -26,7 +28,14 @@ namespace QuestFantasy.Core.Data.Skills
                 return;
             }
 
-            SkillProjectileSpawner.SpawnArrow(player, target, MaxRange);
+            SkillProjectileSpawner.SpawnArrow(
+                player,
+                target,
+                MaxRange,
+                onHitEffect: () => new BleedEffect(
+                    GameConstants.BOW_ATTACK_BLEED_DURATION,
+                    GameConstants.BOW_ATTACK_BLEED_DPS),
+                onHitChance: GameConstants.BOW_ATTACK_BLEED_CHANCE);
         }
     }
 }

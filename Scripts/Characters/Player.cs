@@ -10,6 +10,7 @@ using QuestFantasy.Core.Data.Assets;
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Core.Data.Skills;
+using QuestFantasy.Core.Systems.StatusEffects;
 using QuestFantasy.UI;
 
 namespace QuestFantasy.Characters
@@ -307,6 +308,9 @@ namespace QuestFantasy.Characters
                 _damageCooldownFrames--;
             }
 
+            // Tick all active status effects (Burn, Bleed, Stun, etc.)
+            EffectManager?.Update(this, delta);
+
             if (_respawnInvincibilityTimer > 0f)
             {
                 _respawnInvincibilityTimer -= delta;
@@ -325,6 +329,11 @@ namespace QuestFantasy.Characters
                     // Solid golden glow
                     Modulate = new Color(1f, 0.9f, 0.4f, 1f);
                 }
+            }
+            else
+            {
+                // Apply status effect color overlay when not in respawn invincibility
+                Modulate = EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
             }
 
             if (Attributes != null && Attributes.HP != null && !Attributes.HP.IsAlive)

@@ -1,24 +1,36 @@
+using System;
 using System.Collections.Generic;
 
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Core.Data.Skills
 {
     internal static class SkillProjectileSpawner
     {
-        public static void SpawnArrow(Player player, Character target, float maxRange)
+        public static void SpawnArrow(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
         {
             Vector2 direction = ResolveDirection(player, target);
-            var node = SkillProjectileNode.CreateArrow(player, direction, maxRange);
+            var node = SkillProjectileNode.CreateArrow(player, direction, maxRange, onHitEffect, onHitChance);
             AttachToScene(player, node);
         }
 
-        public static void SpawnFireball(Player player, Character target, float maxRange)
+        public static void SpawnFireball(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
         {
             Vector2 direction = ResolveDirection(player, target);
-            var node = SkillProjectileNode.CreateFireball(player, direction, maxRange);
+            var node = SkillProjectileNode.CreateFireball(player, direction, maxRange, onHitEffect, onHitChance);
             AttachToScene(player, node);
         }
 
@@ -91,6 +103,10 @@ namespace QuestFantasy.Core.Data.Skills
         private float _projectileScale = FireballProjectileScale;
         private float _impactScale = FireballImpactScale;
 
+        // Status effect applied on hit — factory keeps each target getting its own instance
+        private Func<StatusEffect> _onHitEffect;
+        private float _onHitChance;
+
         private Sprite _sprite;
         private bool _impacting;
         private float _impactTimer;
@@ -100,7 +116,12 @@ namespace QuestFantasy.Core.Data.Skills
         private float _flightFrameDuration = 0f;
         private float _impactFrameDuration = ArrowImpactFrameDuration;
 
-        public static SkillProjectileNode CreateArrow(Player owner, Vector2 direction, float maxRange)
+        public static SkillProjectileNode CreateArrow(
+            Player owner,
+            Vector2 direction,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
         {
             return new SkillProjectileNode
             {
@@ -114,6 +135,8 @@ namespace QuestFantasy.Core.Data.Skills
                 _damageMax = 4,
                 _isAoe = false,
                 _aoeRadius = 0f,
+                _onHitEffect = onHitEffect,
+                _onHitChance = onHitChance,
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
                 _projectileScale = ArrowProjectileScale,
                 _impactScale = ArrowImpactScale,
@@ -128,7 +151,12 @@ namespace QuestFantasy.Core.Data.Skills
             };
         }
 
-        public static SkillProjectileNode CreateFireball(Player owner, Vector2 direction, float maxRange)
+        public static SkillProjectileNode CreateFireball(
+            Player owner,
+            Vector2 direction,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
         {
             return new SkillProjectileNode
             {
@@ -142,6 +170,8 @@ namespace QuestFantasy.Core.Data.Skills
                 _damageMax = 6,
                 _isAoe = true,
                 _aoeRadius = 52f,
+                _onHitEffect = onHitEffect,
+                _onHitChance = onHitChance,
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/fireball.png"),
                 _projectileScale = FireballProjectileScale,
                 _impactScale = FireballImpactScale,
@@ -370,6 +400,12 @@ namespace QuestFantasy.Core.Data.Skills
             _damagedTargets.Add(target);
 
             GD.Print($"[COMBAT] {_owner.EntityName} hit {target.EntityName} with projectile for {damage}. HP={target.Attributes.HP.CurrentHP}/{target.Attributes.HP.MaxHP}");
+
+            // Apply on-hit status effect with configured probability
+            if (_onHitEffect != null)
+            {
+                StatusEffectHelper.TryApplyWithChance(target, _onHitEffect, _onHitChance);
+            }
         }
 
         private IEnumerable<Character> EnumerateEnemyCharacters()
