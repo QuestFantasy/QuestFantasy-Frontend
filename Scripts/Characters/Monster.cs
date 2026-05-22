@@ -29,7 +29,7 @@ namespace QuestFantasy.Characters
         public int ExperienceReward { get; set; }
         public int LootGoldReward { get; set; }
 
-        public Vector2 Velocity { get; private set; }
+        public Vector2 Velocity { get; protected set; }
 
         private Map _map;
         private Player _player;
@@ -53,10 +53,10 @@ namespace QuestFantasy.Characters
         private const int MaxPathsPerFrame = 2;
 
         // Animation logic
-        private Texture _standTexture;
-        private Texture _walkTexture;
-        private Texture _attackTexture1;
-        private Texture _attackTexture2;
+        protected Texture _standTexture;
+        protected Texture _walkTexture;
+        protected Texture _attackTexture1;
+        protected Texture _attackTexture2;
         private float _animationTimer = 0f;
         private const float AnimationInterval = 0.2f;
         private bool _isWalkFrame = false;
@@ -67,15 +67,16 @@ namespace QuestFantasy.Characters
         private float _attackCooldownTimer = 0f;
         private const float AttackDuration = 0.5f;
         private const float AttackCooldown = 1.5f;
-        private const float AttackRange = 40.0f;
+        protected const float BaseMoveSpeed = 100f;
+        protected const float AttackRange = 40.0f;
 
         // Death state
-        private Texture _deadTexture;
+        protected Texture _deadTexture;
         private bool _isDead = false;
         private float _deathTimer = 2.0f;
 
         // Hit state
-        private Texture _hitTexture;
+        protected Texture _hitTexture;
         private bool _isHit = false;
         private float _hitTimer = 0f;
 
@@ -83,6 +84,9 @@ namespace QuestFantasy.Characters
         private ProgressBar _healthBar;
 
         public Vector2 BodySizeInTiles = new Vector2(0.1f, 0.1f);
+
+        protected Map CurrentMap => _map;
+        protected Player TargetPlayer => _player;
 
         public void SetEnvironment(Map map, Player player)
         {
@@ -169,19 +173,8 @@ namespace QuestFantasy.Characters
                 _activeMonsters.Add(this);
             }
 
-            _standTexture = GD.Load<Texture>("res://Assets/Monster/slime_stand.png");
-            _walkTexture = GD.Load<Texture>("res://Assets/Monster/slime_walk.png");
-            _attackTexture1 = GD.Load<Texture>("res://Assets/Monster/slime_attack.png");
-            _attackTexture2 = GD.Load<Texture>("res://Assets/Monster/slime_attack1.png");
-            _deadTexture = GD.Load<Texture>("res://Assets/Monster/slime_knockdown.png");
-            _hitTexture = GD.Load<Texture>("res://Assets/Monster/slime_hit.png");
-            Texture = _standTexture;
-
-            if (Attributes != null)
-            {
-                Attributes.TotalAtk = 1;
-                Attributes.HP.SetMaxHPAndCurrentHP(5);
-            }
+            LoadTextures();
+            InitializeMonsterAttributes();
 
             // Add HP bar
             _healthBar = new ProgressBar
@@ -312,6 +305,11 @@ namespace QuestFantasy.Characters
                 }
                 Modulate = EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
                 return; // Skip moving while attacking
+            }
+
+            if (TryHandleSpecialBehavior(delta, distanceToPlayer))
+            {
+                return;
             }
 
             if (distanceToPlayer <= AttackRange && _attackCooldownTimer <= 0f)
@@ -459,7 +457,7 @@ namespace QuestFantasy.Characters
             float speedMultiplier = distanceToPlayer > 200f ? 1.5f : (distanceToPlayer > 80f ? 1.0f : 0.8f);
 
             // In case Player doesnt have MoveSpeed, hardcode fallback to 100f. Assuming it might have been refactored in main.
-            float speed = 100f * speedMultiplier;
+            float speed = BaseMoveSpeed * speedMultiplier;
 
             Vector2 direction = (nextWaypoint - GlobalPosition).Normalized();
             Velocity = direction * speed;
@@ -528,7 +526,37 @@ namespace QuestFantasy.Characters
             GlobalPosition = newPos;
         }
 
-        private Rect2 GetBodyRect(Vector2 centerPosition)
+        protected virtual void LoadTextures()
+        {
+            _standTexture = GD.Load<Texture>("res://Assets/Monster/slime_stand.png");
+            _walkTexture = GD.Load<Texture>("res://Assets/Monster/slime_walk.png");
+            _attackTexture1 = GD.Load<Texture>("res://Assets/Monster/slime_attack.png");
+            _attackTexture2 = GD.Load<Texture>("res://Assets/Monster/slime_attack1.png");
+            _deadTexture = GD.Load<Texture>("res://Assets/Monster/slime_knockdown.png");
+            _hitTexture = GD.Load<Texture>("res://Assets/Monster/slime_hit.png");
+            Texture = _standTexture;
+        }
+
+        protected virtual void InitializeMonsterAttributes()
+        {
+            if (Attributes != null)
+            {
+                Attributes.TotalAtk = 1;
+                Attributes.HP.SetMaxHPAndCurrentHP(50);
+            }
+        }
+
+        protected virtual bool TryHandleSpecialBehavior(float delta, float distanceToPlayer)
+        {
+            return false;
+        }
+
+        protected Color GetEffectModulate()
+        {
+            return EffectManager?.GetModulateColor() ?? new Color(1f, 1f, 1f, 1f);
+        }
+
+        protected Rect2 GetBodyRect(Vector2 centerPosition)
         {
             Vector2 bodySize = new Vector2(0.1f, 0.1f);
             return new Rect2(centerPosition - bodySize / 2f, bodySize);
