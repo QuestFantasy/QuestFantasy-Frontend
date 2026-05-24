@@ -38,6 +38,15 @@ public class Main : Node2D
     private bool _gameLoadedAlready = false;  // Guard against loading twice
     private const float ProfileFetchTimeoutSeconds = 12f;
 
+    private int _currentMusicIndex = 0;
+    private readonly string[] _musicFiles = {
+        "res://Assets/Music/QuestFantasy_Oath2.mp3",
+        "res://Assets/Music/QuestFantasy_Oath3.mp3",
+        "res://Assets/Music/QuestFantasy_Oath1.mp3",
+        "res://Assets/Music/QuestFantasy_Oath4.mp3"
+    };
+    private AudioStreamPlayer _musicPlayer;
+
 
     public override void _Ready()
     {
@@ -46,6 +55,7 @@ public class Main : Node2D
         GetTree().Connect("node_added", this, nameof(OnSceneNodeAdded));
         SetupMobileInputUI();
         SetupSidebarMenu();
+        SetupMusic();
         SetupProgressIndicator();
         SetupPlayerDataClient();
         SetupAuthFlowController();
@@ -121,6 +131,11 @@ public class Main : Node2D
         _sidebarMenu?.SetMenuVisible(true);
         // Build lobby instead of directly loading a game map
         BuildLobby();
+
+        if (_musicPlayer != null && !_musicPlayer.Playing)
+        {
+            PlayCurrentMusic();
+        }
     }
 
 
@@ -229,7 +244,37 @@ public class Main : Node2D
         _sidebarMenu = new SidebarMenu();
         AddChild(_sidebarMenu);
         _sidebarMenu.SetMenuVisible(false);
+        _sidebarMenu.AddMenuItem("change_music", "Change Music", OnChangeMusicPressed);
         _sidebarMenu.AddMenuItem("logout", "Logout", OnLogoutPressed);
+    }
+
+    private void SetupMusic()
+    {
+        _musicPlayer = new AudioStreamPlayer();
+        _musicPlayer.PauseMode = PauseModeEnum.Process; // Keep playing even if game pauses
+        AddChild(_musicPlayer);
+    }
+
+    private void PlayCurrentMusic()
+    {
+        if (_musicPlayer == null) return;
+
+        var stream = GD.Load<AudioStream>(_musicFiles[_currentMusicIndex]);
+        if (stream != null)
+        {
+            _musicPlayer.Stream = stream;
+            _musicPlayer.Play();
+        }
+        else
+        {
+            GD.PrintErr($"[Main] Failed to load audio stream: {_musicFiles[_currentMusicIndex]}");
+        }
+    }
+
+    private void OnChangeMusicPressed()
+    {
+        _currentMusicIndex = (_currentMusicIndex + 1) % _musicFiles.Length;
+        PlayCurrentMusic();
     }
 
     private void SetupMobileInputUI()
@@ -293,6 +338,7 @@ public class Main : Node2D
         _sidebarMenu?.SetMenuVisible(false);
         GetTree().Paused = true;
         _sidebarMenu?.SetMenuVisible(false);
+        _musicPlayer?.Stop();
 
         // Clean up any active gameplay/lobby scenes
         _lobbyManager?.QueueFree();

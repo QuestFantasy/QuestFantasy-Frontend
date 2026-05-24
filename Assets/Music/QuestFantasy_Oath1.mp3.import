@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/QuestFantasy_Oath1.mp3-8696f6fb3e7c5d67809b40598463177d.mp3str"
+
+[deps]
+
+source_file="res://Assets/Music/QuestFantasy_Oath1.mp3"
+dest_files=[ "res://.import/QuestFantasy_Oath1.mp3-8696f6fb3e7c5d67809b40598463177d.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0
