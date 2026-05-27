@@ -20,6 +20,12 @@ public struct EquipSlotDef
     }
 }
 
+public enum BackpackViewMode
+{
+    Gear,
+    Tools,
+}
+
 public class BackpackUI : CanvasLayer
 {
     private const int SlotsPerPage = 12;
@@ -32,6 +38,7 @@ public class BackpackUI : CanvasLayer
     [Export] public string MoneyIconTexturePath = "res://Assets/money/money-f1.png";
 
     public event Action<Item> DropRequested;
+    public event Action<Item> UseRequested;
     /// <summary>
     /// Fired when the backpack panel is opened. Subscribe in Main to trigger a backend sync
     /// so that all items receive their instance_id before the player can interact with them.
@@ -51,6 +58,7 @@ public class BackpackUI : CanvasLayer
     private Button _nextButton;
     private Button _dropButton;
     private Button _equipButton;
+    private Button _viewModeButton;
 
     // Equipment panel
     private VBoxContainer _equipSlotsContainer;
@@ -67,6 +75,7 @@ public class BackpackUI : CanvasLayer
     private readonly List<Item> _cachedItems = new List<Item>();
     private int _currentPage = 0;
     private int _selectedGlobalIndex = -1;
+    private BackpackViewMode _viewMode = BackpackViewMode.Gear;
     private bool _viewDirty = true;
     private int _lastItemCount = -1;
     private int _lastGold = -1;
@@ -322,11 +331,11 @@ public class BackpackUI : CanvasLayer
             Alignment = BoxContainer.AlignMode.Center,
             SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
         };
-        footer.AddConstantOverride("separation", 10);
+        footer.AddConstantOverride("separation", 6);
         _prevButton = new Button
         {
             Text = "< PREV",
-            RectMinSize = new Vector2(112f, 42f),
+            RectMinSize = new Vector2(84f, 42f),
         };
         _prevButton.Connect("pressed", this, nameof(OnPrevPagePressed));
         footer.AddChild(_prevButton);
@@ -334,7 +343,7 @@ public class BackpackUI : CanvasLayer
         _pageLabel = new Label
         {
             Text = "1 / 1",
-            RectMinSize = new Vector2(76f, 32f),
+            RectMinSize = new Vector2(56f, 32f),
             Align = Label.AlignEnum.Center,
             Valign = Label.VAlign.Center,
         };
@@ -344,15 +353,24 @@ public class BackpackUI : CanvasLayer
         _nextButton = new Button
         {
             Text = "NEXT >",
-            RectMinSize = new Vector2(112f, 42f),
+            RectMinSize = new Vector2(84f, 42f),
         };
         _nextButton.Connect("pressed", this, nameof(OnNextPagePressed));
         footer.AddChild(_nextButton);
 
+        _viewModeButton = new Button
+        {
+            Text = "道具 ITEMS",
+            RectMinSize = new Vector2(112f, 42f),
+        };
+        _viewModeButton.AddColorOverride("font_color", new Color(0.72f, 1f, 0.86f));
+        _viewModeButton.Connect("pressed", this, nameof(OnViewModeButtonPressed));
+        footer.AddChild(_viewModeButton);
+
         _equipButton = new Button
         {
             Text = "裝備 EQUIP",
-            RectMinSize = new Vector2(120f, 42f),
+            RectMinSize = new Vector2(96f, 42f),
         };
         _equipButton.AddColorOverride("font_color", new Color(0.6f, 1f, 0.7f));
         _equipButton.Connect("pressed", this, nameof(OnEquipButtonPressed));
@@ -361,7 +379,7 @@ public class BackpackUI : CanvasLayer
         _dropButton = new Button
         {
             Text = "丟棄 DROP",
-            RectMinSize = new Vector2(120f, 42f),
+            RectMinSize = new Vector2(96f, 42f),
         };
         _dropButton.AddColorOverride("font_color", new Color(1f, 0.86f, 0.75f));
         _dropButton.Connect("pressed", this, nameof(OnDropButtonPressed));
@@ -426,7 +444,8 @@ public class BackpackUI : CanvasLayer
         if (_player == null)
         {
             _moneyValueLabel.Text = "0";
-            RebuildSlots(new List<Item>());
+            _cachedItems.Clear();
+            RebuildSlots(_cachedItems);
             RebuildEquipSlots();
             return;
         }
@@ -436,7 +455,10 @@ public class BackpackUI : CanvasLayer
         _cachedItems.Clear();
         for (int i = 0; i < items.Count; i++)
         {
-            _cachedItems.Add(items[i]);
+            if (ShouldShowInCurrentMode(items[i]))
+            {
+                _cachedItems.Add(items[i]);
+            }
         }
 
         int totalPages = Math.Max(1, (_cachedItems.Count + SlotsPerPage - 1) / SlotsPerPage);
@@ -448,6 +470,7 @@ public class BackpackUI : CanvasLayer
         _lastGold = _player.Gold;
         _viewDirty = false;
 
+        UpdateModeControls();
         RebuildSlots(_cachedItems);
         RebuildEquipSlots();
     }
@@ -636,7 +659,7 @@ public class BackpackUI : CanvasLayer
 
     private void OnEquipButtonPressed()
     {
-        if (_player == null || _selectedGlobalIndex < 0 || _selectedGlobalIndex >= _cachedItems.Count)
+        if (_viewMode != BackpackViewMode.Gear || _player == null || _selectedGlobalIndex < 0 || _selectedGlobalIndex >= _cachedItems.Count)
         {
             return;
         }
@@ -753,31 +776,22 @@ public class BackpackUI : CanvasLayer
 
         if (item is Equipment eq)
         {
-            icon.Texture = eq.Sprite ?? LoadSpriteFromPath(eq.SpritePath);
+            icon.Texture = GetItemTexture(eq);
         }
         else if (item is Weapon w)
         {
-            icon.Texture = w.Sprite ?? LoadSpriteFromPath(w.SpritePath);
+            icon.Texture = GetItemTexture(w);
+        }
+        else
+        {
+            icon.Texture = GetItemTexture(item);
         }
 
         vbox.AddChild(icon);
 
         if (item != null)
         {
-            var idLabel = new Label
-            {
-                Text = string.IsNullOrEmpty(item.InstanceId) ? "ID: (pending sync)" : $"ID: {item.InstanceId.Substring(0, 8)}…",
-                Align = Label.AlignEnum.Center,
-                SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
-            };
-            idLabel.AddColorOverride("font_color", new Color(0.55f, 0.65f, 0.8f, 0.85f));
-            idLabel.RectMinSize = new Vector2(0f, 14f);
-            vbox.AddChild(idLabel);
-
-            // Full instance_id visible on hover via tooltip.
-            frame.HintTooltip = string.IsNullOrEmpty(item.InstanceId)
-                ? $"{item.Name}\nID: (尚未同步 — 請先儲存背包以取得 ID)"
-                : $"{item.Name}\nInstance ID: {item.InstanceId}";
+            frame.HintTooltip = BuildItemTooltip(item);
         }
 
         frame.Connect("gui_input", this, nameof(OnSlotGuiInput), new Godot.Collections.Array { globalIndex });
@@ -785,6 +799,55 @@ public class BackpackUI : CanvasLayer
         frame.Connect("mouse_exited", this, nameof(OnSlotMouseExited));
 
         return frame;
+    }
+
+    private Texture GetItemTexture(Item item)
+    {
+        if (item is Equipment eq)
+        {
+            return eq.Sprite ?? LoadSpriteFromPath(eq.SpritePath);
+        }
+
+        if (item is Weapon w)
+        {
+            return w.Sprite ?? LoadSpriteFromPath(w.SpritePath);
+        }
+
+        if (item is ConsumableItem consumable)
+        {
+            return consumable.Sprite ?? LoadSpriteFromPath(consumable.SpritePath);
+        }
+
+        if (item is TicketItem ticket)
+        {
+            return ticket.Sprite ?? LoadSpriteFromPath(ticket.SpritePath);
+        }
+
+        return null;
+    }
+
+    private string BuildItemTooltip(Item item)
+    {
+        if (item == null)
+        {
+            return string.Empty;
+        }
+
+        string idLine = string.IsNullOrEmpty(item.InstanceId)
+            ? "ID: (pending sync)"
+            : $"Instance ID: {item.InstanceId}";
+
+        if (item is ConsumableItem consumable)
+        {
+            return $"{consumable.Name}\nRestores {consumable.HealAmount} HP\n{idLine}";
+        }
+
+        if (item is TicketItem ticket)
+        {
+            return $"{ticket.Name}\n{ticket.Difficulty} entry ticket\n{idLine}";
+        }
+
+        return $"{item.Name}\n{idLine}";
     }
 
     private Texture LoadSpriteFromPath(string spritePath)
@@ -833,7 +896,63 @@ public class BackpackUI : CanvasLayer
             return tex;
         }
 
+        tex = GD.Load<Texture>("res://Assets/items/" + fileName);
+        if (tex != null)
+        {
+            return tex;
+        }
+
         return GD.Load<Texture>("res://Assets/" + fileName);
+    }
+
+    private bool ShouldShowInCurrentMode(Item item)
+    {
+        bool isTool = ItemCatalog.IsToolPanelItem(item);
+        return _viewMode == BackpackViewMode.Tools ? isTool : !isTool;
+    }
+
+    private void OnViewModeButtonPressed()
+    {
+        _viewMode = _viewMode == BackpackViewMode.Gear
+            ? BackpackViewMode.Tools
+            : BackpackViewMode.Gear;
+        _currentPage = 0;
+        _selectedGlobalIndex = -1;
+        _viewDirty = true;
+        RefreshView();
+    }
+
+    private void UpdateModeControls()
+    {
+        if (_viewModeButton != null)
+        {
+            _viewModeButton.Text = _viewMode == BackpackViewMode.Gear
+                ? "道具 ITEMS"
+                : "裝備 GEAR";
+        }
+
+        if (_equipButton != null)
+        {
+            _equipButton.Disabled = _viewMode != BackpackViewMode.Gear;
+        }
+    }
+
+    private void UseSelectedToolIfPossible(Item item)
+    {
+        if (_player == null || item == null || !ItemCatalog.IsUsableFromBackpack(item) || !item.CanUse(_player))
+        {
+            return;
+        }
+
+        item.Use(_player);
+        if (_player.RemoveItem(item))
+        {
+            UseRequested?.Invoke(item);
+        }
+
+        _selectedGlobalIndex = -1;
+        _viewDirty = true;
+        RefreshView();
     }
 
     private void OnSlotGuiInput(InputEvent @event, int globalIndex)
@@ -848,6 +967,13 @@ public class BackpackUI : CanvasLayer
             _selectedGlobalIndex = -1;
             _viewDirty = true;
             RefreshView();
+            return;
+        }
+
+        Item item = _cachedItems[globalIndex];
+        if (_viewMode == BackpackViewMode.Tools && ItemCatalog.IsUsableFromBackpack(item))
+        {
+            UseSelectedToolIfPossible(item);
             return;
         }
 

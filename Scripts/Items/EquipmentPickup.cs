@@ -41,6 +41,14 @@ public class EquipmentPickup : Area2D
         {
             _sprite.Texture = wd.Sprite;
         }
+        else if (ItemData is QuestFantasy.Core.Data.Items.ConsumableItem consumable)
+        {
+            _sprite.Texture = consumable.Sprite ?? LoadTextureOrNull(consumable.SpritePath);
+        }
+        else if (ItemData is QuestFantasy.Core.Data.Items.TicketItem ticket)
+        {
+            _sprite.Texture = ticket.Sprite ?? LoadTextureOrNull(ticket.SpritePath);
+        }
         _sprite.Centered = true;
         _sprite.Scale = new Vector2(SpriteScale, SpriteScale);
         AddChild(_sprite);
@@ -170,5 +178,27 @@ public class EquipmentPickup : Area2D
     private void RequestPickup()
     {
         EmitSignal(nameof(PickupRequested), this);
+    }
+
+    private Texture LoadTextureOrNull(string spritePath)
+    {
+        if (string.IsNullOrWhiteSpace(spritePath))
+        {
+            return null;
+        }
+
+        string path = spritePath.Trim().Replace('\\', '/');
+        if (path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            path = "res://" + path;
+        }
+        else if (!path.StartsWith("res://", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path.StartsWith("/")
+                ? "res://" + path.TrimStart('/')
+                : "res://" + path;
+        }
+
+        return GD.Load<Texture>(path);
     }
 }

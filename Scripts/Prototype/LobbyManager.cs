@@ -282,6 +282,7 @@ namespace QuestFantasy.Prototype
         {
             _difficultyUI = new DifficultySelectionUI();
             AddChild(_difficultyUI);
+            _difficultyUI.Initialize(_player);
             _difficultyUI.DifficultySelected += OnDifficultySelected;
         }
 

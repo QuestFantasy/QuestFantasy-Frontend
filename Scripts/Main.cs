@@ -442,6 +442,7 @@ public class Main : Node2D
         if (Godot.Object.IsInstanceValid(_backpackUi))
         {
             _backpackUi.DropRequested -= OnBackpackDropRequested;
+            _backpackUi.UseRequested -= OnBackpackUseRequested;
             _backpackUi.SyncRequested -= OnInventorySyncRequested;
             _backpackUi.QueueFree();
         }
@@ -494,6 +495,7 @@ public class Main : Node2D
             _backpackUi = new BackpackUI();
             AddChild(_backpackUi);
             _backpackUi.DropRequested += OnBackpackDropRequested;
+            _backpackUi.UseRequested += OnBackpackUseRequested;
             _backpackUi.SyncRequested += OnInventorySyncRequested;
         }
 
@@ -505,6 +507,12 @@ public class Main : Node2D
     {
         if (_gameLoadedAlready)
             return;
+
+        if (!TryConsumeEntryTicket(difficulty))
+        {
+            GD.Print($"[Main] Difficulty {difficulty} is locked. Missing entry ticket.");
+            return;
+        }
 
         _gameLoadedAlready = true;
 
@@ -568,6 +576,7 @@ public class Main : Node2D
         _backpackUi.Initialize(_player);
         _backpackUi.SetGameplayVisible(true);
         _backpackUi.DropRequested += OnBackpackDropRequested;
+        _backpackUi.UseRequested += OnBackpackUseRequested;
 
         // Show D-pad only during actual gameplay
         _mobileInputUI?.ShowDPad();
@@ -708,18 +717,48 @@ public class Main : Node2D
             return;
         }
 
-        var droppedPickup = new EquipmentPickup
-        {
-            ItemData = item,
-            SpriteScale = _equipManagerRef?.PickupSpriteScale ?? 0.5f,
-        };
-
         var rng = new RandomNumberGenerator();
         rng.Randomize();
-        droppedPickup.Position = _player.Position + new Vector2(rng.RandfRange(-36f, 36f), rng.RandfRange(-24f, 24f));
-        AddChild(droppedPickup);
+        Vector2 dropPosition = _player.Position + new Vector2(rng.RandfRange(-36f, 36f), rng.RandfRange(-24f, 24f));
+        LootItemFactory.SpawnPickup(this, item, dropPosition, _equipManagerRef?.PickupSpriteScale ?? 0.5f, "backpack_drop");
 
         TransmitPlayerProfile("discard_item");
+    }
+
+    private void OnBackpackUseRequested(Item item)
+    {
+        TransmitPlayerProfile("use_item");
+    }
+
+    private bool TryConsumeEntryTicket(DifficultyLevel difficulty)
+    {
+        if (difficulty == DifficultyLevel.Easy)
+        {
+            return true;
+        }
+
+        if (_player == null)
+        {
+            return false;
+        }
+
+        foreach (Item item in _player.InventoryItems)
+        {
+            if (!ItemCatalog.IsTicketForDifficulty(item, difficulty))
+            {
+                continue;
+            }
+
+            bool removed = _player.RemoveItem(item);
+            if (removed)
+            {
+                GD.Print($"[Main] Consumed {item.Name} to enter {difficulty}.");
+                TransmitPlayerProfile($"consume_{ItemCatalog.GetTicketItemId(difficulty)}");
+            }
+            return removed;
+        }
+
+        return false;
     }
 
     private void OnInventorySyncRequested()

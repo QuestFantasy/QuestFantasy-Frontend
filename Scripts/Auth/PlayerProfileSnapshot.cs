@@ -101,6 +101,22 @@ public static class PlayerItemSnapshotCodec
             return baseDict;
         }
 
+        if (item is ConsumableItem consumable)
+        {
+            baseDict["item_id"] = consumable.ItemId ?? string.Empty;
+            baseDict["sprite_path"] = NormalizeSpritePathForStorage(consumable.SpritePath, consumable.Sprite);
+            baseDict["heal_amount"] = Math.Max(0, consumable.HealAmount);
+            return baseDict;
+        }
+
+        if (item is TicketItem ticket)
+        {
+            baseDict["item_id"] = ticket.ItemId ?? string.Empty;
+            baseDict["sprite_path"] = NormalizeSpritePathForStorage(ticket.SpritePath, ticket.Sprite);
+            baseDict["difficulty"] = ticket.Difficulty.ToString();
+            return baseDict;
+        }
+
         return baseDict;
     }
 
@@ -150,6 +166,37 @@ public static class PlayerItemSnapshotCodec
             };
             weapon.Sprite = LoadTextureOrNull(weapon.SpritePath);
             return weapon;
+        }
+
+        if (string.Equals(itemType, "potion", StringComparison.OrdinalIgnoreCase))
+        {
+            string itemId = ReadString(data, "item_id", ItemCatalog.HpPotionS);
+            var consumable = ItemCatalog.CreatePotion(itemId);
+            consumable.InstanceId = ReadString(data, "instance_id", string.Empty);
+            consumable.Name = ReadString(data, "name", consumable.Name);
+            consumable.Description = ReadString(data, "description", consumable.Description);
+            consumable.Quantity = ReadInt(data, "quantity", 1, 1);
+            consumable.Price = ReadInt(data, "price", consumable.Price, 0);
+            consumable.SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", consumable.SpritePath));
+            consumable.HealAmount = ReadInt(data, "heal_amount", consumable.HealAmount, 0);
+            consumable.Sprite = LoadTextureOrNull(consumable.SpritePath);
+            return consumable;
+        }
+
+        string itemIdValue = ReadString(data, "item_id", string.Empty);
+        if (itemIdValue.StartsWith("ticket_", StringComparison.OrdinalIgnoreCase))
+        {
+            DifficultyLevel difficulty = ReadEnum(ReadString(data, "difficulty", "Normal"), DifficultyLevel.Normal);
+            var ticket = ItemCatalog.CreateTicket(difficulty);
+            ticket.InstanceId = ReadString(data, "instance_id", string.Empty);
+            ticket.ItemId = itemIdValue;
+            ticket.Name = ReadString(data, "name", ticket.Name);
+            ticket.Description = ReadString(data, "description", ticket.Description);
+            ticket.Quantity = ReadInt(data, "quantity", 1, 1);
+            ticket.Price = ReadInt(data, "price", ticket.Price, 0);
+            ticket.SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", ticket.SpritePath));
+            ticket.Sprite = LoadTextureOrNull(ticket.SpritePath);
+            return ticket;
         }
 
         var generic = new Item
@@ -212,6 +259,12 @@ public static class PlayerItemSnapshotCodec
         }
 
         Texture fallback = GD.Load<Texture>("res://Assets/Equipments/" + fileName);
+        if (fallback != null)
+        {
+            return fallback;
+        }
+
+        fallback = GD.Load<Texture>("res://Assets/items/" + fileName);
         if (fallback != null)
         {
             return fallback;

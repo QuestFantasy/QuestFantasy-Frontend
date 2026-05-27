@@ -701,6 +701,25 @@ namespace QuestFantasy.Characters
             parent.AddChild(coinDrop);
             GD.PrintS($"[Monster] Spawned Coin drop at {coinDrop.Position}");
 
+            var rng = new RandomNumberGenerator();
+            rng.Randomize();
+
+            Item potionDrop = LootItemFactory.RollPotion(rng, 0.08f);
+            if (potionDrop != null)
+            {
+                var potionPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
+                LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, 0.5f, "monster_potion");
+                GD.PrintS($"[Monster] Spawned potion drop: {potionDrop.Name} at {potionPos}");
+            }
+
+            Item ticketDrop = LootItemFactory.RollTicket(rng, mapDiff, 1f);
+            if (ticketDrop != null)
+            {
+                var ticketPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
+                LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, 0.5f, "monster_ticket");
+                GD.PrintS($"[Monster] Spawned ticket drop: {ticketDrop.Name} at {ticketPos}");
+            }
+
             // Find EquipmentManager in the scene
             var manager = FindEquipmentManager();
             if (manager == null)
@@ -709,8 +728,6 @@ namespace QuestFantasy.Characters
                 return;
             }
 
-            var rng = new RandomNumberGenerator();
-            rng.Randomize();
             int minD = Math.Max(0, MinDrops);
             int maxD = Math.Max(minD, MaxDrops);
             int drops = rng.RandiRange(minD, maxD);

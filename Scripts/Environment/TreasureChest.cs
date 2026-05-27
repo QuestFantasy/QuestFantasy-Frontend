@@ -3,6 +3,7 @@ using System;
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Core.Data.Items;
 
 public class TreasureChest : Node
 {
@@ -179,11 +180,28 @@ public class TreasureChest : Node
             }
         }
 
+        DifficultyLevel mapDiff = DifficultyLevel.Normal;
+        if (parent is Map parentMap) mapDiff = parentMap.Difficulty;
+
+        Item potionDrop = LootItemFactory.RollPotion(rng, 0.18f);
+        if (potionDrop != null)
+        {
+            var potionPos = centerPosition + new Vector2(rng.Randf() * 180f - 90f, rng.Randf() * 180f - 90f);
+            LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, manager.PickupSpriteScale, "chest_potion");
+            GD.PrintS($"[TreasureChest] Spawned potion drop: {potionDrop.Name} at {potionPos}");
+        }
+
+        Item ticketDrop = LootItemFactory.RollTicket(rng, mapDiff, 2f);
+        if (ticketDrop != null)
+        {
+            var ticketPos = centerPosition + new Vector2(rng.Randf() * 180f - 90f, rng.Randf() * 180f - 90f);
+            LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, manager.PickupSpriteScale, "chest_ticket");
+            GD.PrintS($"[TreasureChest] Spawned ticket drop: {ticketDrop.Name} at {ticketPos}");
+        }
+
         // Spawn CoinDrop
         var player = FindPlayerRecursive(parent);
         var coinDrop = new QuestFantasy.Items.CoinDrop();
-        DifficultyLevel mapDiff = DifficultyLevel.Normal;
-        if (parent is Map parentMap) mapDiff = parentMap.Difficulty;
         coinDrop.Initialize(playerLevel, mapDiff, 1.0f, player);
         coinDrop.Position = centerPosition + new Vector2(rng.Randf() * 40f - 20f, rng.Randf() * 40f - 20f);
         parent.AddChild(coinDrop);
