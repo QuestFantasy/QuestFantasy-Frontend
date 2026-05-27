@@ -28,6 +28,7 @@ namespace QuestFantasy.Characters
         private Vector2 _dashDirection = Vector2.Zero;
         private Vector2 _dashTargetPosition = Vector2.Zero;
         private bool _hasHitPlayerThisDash;
+        private Texture _amassTexture;
 
         protected override void LoadTextures()
         {
@@ -37,6 +38,7 @@ namespace QuestFantasy.Characters
             _attackTexture2 = GD.Load<Texture>("res://Assets/SpeedMonster/speed_slime_attack1.png");
             _deadTexture = GD.Load<Texture>("res://Assets/SpeedMonster/speed_slime_knockdown.png");
             _hitTexture = GD.Load<Texture>("res://Assets/SpeedMonster/speed_slime_hit.png");
+            _amassTexture = GD.Load<Texture>("res://Assets/Monster/speed_slime_amass.png");
             Texture = _standTexture;
         }
 
@@ -96,8 +98,8 @@ namespace QuestFantasy.Characters
             }
 
             bool flash = Mathf.FloorToInt(_blinkTimer / BlinkInterval) % 2 == 0;
-            Texture = flash ? (_attackTexture1 ?? _standTexture) : _standTexture;
-            Modulate = flash ? new Color(0.2f, 0.9f, 1f, 1f) : GetEffectModulate();
+            Texture = flash ? (_amassTexture ?? _attackTexture1 ?? _standTexture) : _standTexture;
+            Modulate = GetEffectModulate();
 
             if (_stateTimer <= 0f)
             {
