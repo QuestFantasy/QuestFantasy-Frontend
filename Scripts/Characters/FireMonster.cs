@@ -9,7 +9,7 @@ namespace QuestFantasy.Characters
     /// </summary>
     public class FireMonster : Monster
     {
-        private const float BurnDurationSeconds = 3f;
+        private const float BurnDurationSeconds = 15f;
         private const float BurnDamageMultiplier = 0.5f;
 
         protected override void LoadTextures()
