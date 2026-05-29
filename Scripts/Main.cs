@@ -29,6 +29,8 @@ public class Main : Node2D
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
     private readonly string _syncSessionId = Guid.NewGuid().ToString("N");
     private int _syncSequence = 0;
+    private int _localMutationVersion = 0;
+    private int _activeSyncMutationVersion = 0;
     private float _checkpointElapsed = 0f;
     private Timer _profileFetchTimeoutTimer;
     private bool _isProfileFetchPending = false;
@@ -367,6 +369,7 @@ public class Main : Node2D
 
         _syncSequence += 1;
         PlayerProfileSnapshot snapshot = _player.BuildProfileSnapshot();
+        _activeSyncMutationVersion = _localMutationVersion;
         var payload = snapshot.ToUpdatePayload(_syncSessionId, _syncSequence);
         payload["reason"] = reason;
         GD.Print($"[ProgressSync] Sending profile. reason={reason}, seq={_syncSequence}, level={snapshot.Level}, hp={snapshot.HpCurrent}/{snapshot.HpMax}, exp={snapshot.Experience}, gold={snapshot.Gold}.");
@@ -392,6 +395,13 @@ public class Main : Node2D
         PlayerProfileSnapshot snapshot = PlayerProfileSnapshot.FromDictionary(result.Data);
         if (!snapshot.Ignored)
         {
+            if (_activeSyncMutationVersion < _localMutationVersion)
+            {
+                GD.Print($"[ProgressSync] Ignored stale sync response. syncMutation={_activeSyncMutationVersion}, localMutation={_localMutationVersion}.");
+                TransmitPlayerProfile("resync_after_local_change");
+                return;
+            }
+
             GD.Print($"[ProgressSync] Sync applied. Level={snapshot.Level}, HP={snapshot.HpCurrent}/{snapshot.HpMax}, EXP={snapshot.Experience}, Gold={snapshot.Gold}.");
             _player.ApplyProfile(snapshot);
             return;
@@ -680,14 +690,20 @@ public class Main : Node2D
             return;
         }
 
-        float distance = _player.GlobalPosition.DistanceTo(pickup.GlobalPosition);
+        EquipmentPickup targetPickup = ResolvePickupTarget(pickup);
+        if (targetPickup == null || !Godot.Object.IsInstanceValid(targetPickup))
+        {
+            return;
+        }
+
+        float distance = _player.GlobalPosition.DistanceTo(targetPickup.GlobalPosition);
         if (distance > 80f)
         {
             GD.Print($"[Backpack] Pickup too far (distance: {distance:F1}). Move closer to pick it up.");
             return;
         }
 
-        if (!(pickup.ItemData is Item item))
+        if (!(targetPickup.ItemData is Item item))
         {
             GD.Print("[Backpack] Pickup ignored: item data missing or invalid.");
             return;
@@ -699,9 +715,66 @@ public class Main : Node2D
             return;
         }
 
+        MarkLocalMutation();
         EquipmentPreview.Instance?.HidePreview();
-        pickup.QueueFree();
+        targetPickup.QueueFree();
         TransmitPlayerProfile("pickup_item");
+    }
+
+    private EquipmentPickup ResolvePickupTarget(EquipmentPickup requested)
+    {
+        if (requested == null || !Godot.Object.IsInstanceValid(requested))
+        {
+            return null;
+        }
+
+        EquipmentPickup best = requested;
+        int bestPriority = GetPickupPriority(requested);
+        float bestDistance = 0f;
+
+        foreach (Node node in GetTree().GetNodesInGroup("pickup_items"))
+        {
+            if (!(node is EquipmentPickup candidate) || !Godot.Object.IsInstanceValid(candidate))
+            {
+                continue;
+            }
+
+            float distance = requested.GlobalPosition.DistanceTo(candidate.GlobalPosition);
+            if (distance > 36f)
+            {
+                continue;
+            }
+
+            int priority = GetPickupPriority(candidate);
+            if (priority > bestPriority || (priority == bestPriority && distance < bestDistance))
+            {
+                best = candidate;
+                bestPriority = priority;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
+    }
+
+    private int GetPickupPriority(EquipmentPickup pickup)
+    {
+        if (pickup?.ItemData is ConsumableItem consumable)
+        {
+            if (consumable.HealAmount > 0)
+            {
+                return 30;
+            }
+
+            return 25;
+        }
+
+        if (pickup?.ItemData is TicketItem)
+        {
+            return 20;
+        }
+
+        return 10;
     }
 
     private void OnBackpackDropRequested(Item item)
@@ -717,6 +790,7 @@ public class Main : Node2D
             return;
         }
 
+        MarkLocalMutation();
         var rng = new RandomNumberGenerator();
         rng.Randomize();
         Vector2 dropPosition = _player.Position + new Vector2(rng.RandfRange(-36f, 36f), rng.RandfRange(-24f, 24f));
@@ -727,7 +801,13 @@ public class Main : Node2D
 
     private void OnBackpackUseRequested(Item item)
     {
+        MarkLocalMutation();
         TransmitPlayerProfile("use_item");
+    }
+
+    private void MarkLocalMutation()
+    {
+        _localMutationVersion += 1;
     }
 
     private bool TryConsumeEntryTicket(DifficultyLevel difficulty)
@@ -752,6 +832,7 @@ public class Main : Node2D
             bool removed = _player.RemoveItem(item);
             if (removed)
             {
+                MarkLocalMutation();
                 GD.Print($"[Main] Consumed {item.Name} to enter {difficulty}.");
                 TransmitPlayerProfile($"consume_{ItemCatalog.GetTicketItemId(difficulty)}");
             }

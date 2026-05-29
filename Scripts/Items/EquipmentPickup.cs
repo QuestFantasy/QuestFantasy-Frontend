@@ -31,6 +31,8 @@ public class EquipmentPickup : Area2D
 
     public override void _Ready()
     {
+        AddToGroup("pickup_items");
+
         // Sprite
         _sprite = new Sprite();
         if (ItemData is QuestFantasy.Core.Data.Items.Equipment ed && ed.Sprite != null)

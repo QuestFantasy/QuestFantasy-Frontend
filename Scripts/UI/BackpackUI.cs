@@ -364,6 +364,7 @@ public class BackpackUI : CanvasLayer
             RectMinSize = new Vector2(112f, 42f),
         };
         _viewModeButton.AddColorOverride("font_color", new Color(0.72f, 1f, 0.86f));
+        ApplyViewModeButtonStyle();
         _viewModeButton.Connect("pressed", this, nameof(OnViewModeButtonPressed));
         footer.AddChild(_viewModeButton);
 
@@ -941,12 +942,64 @@ public class BackpackUI : CanvasLayer
             _viewModeButton.Text = _viewMode == BackpackViewMode.Gear
                 ? "道具 ITEMS"
                 : "裝備 GEAR";
+            ApplyViewModeButtonStyle();
         }
 
         if (_equipButton != null)
         {
             _equipButton.Disabled = _viewMode != BackpackViewMode.Gear;
         }
+    }
+
+    private void ApplyViewModeButtonStyle()
+    {
+        if (_viewModeButton == null)
+        {
+            return;
+        }
+
+        Color bg = _viewMode == BackpackViewMode.Gear
+            ? new Color(0.06f, 0.35f, 0.25f, 0.98f)
+            : new Color(0.28f, 0.18f, 0.48f, 0.98f);
+        Color border = _viewMode == BackpackViewMode.Gear
+            ? new Color(0.34f, 1f, 0.72f, 1f)
+            : new Color(0.86f, 0.70f, 1f, 1f);
+        Color text = _viewMode == BackpackViewMode.Gear
+            ? new Color(0.76f, 1f, 0.88f)
+            : new Color(0.95f, 0.86f, 1f);
+
+        var normal = BuildButtonStyle(bg, border);
+        var hover = BuildButtonStyle(bg.Lightened(0.12f), border.Lightened(0.08f));
+        var pressed = BuildButtonStyle(bg.Darkened(0.10f), border);
+
+        _viewModeButton.AddStyleboxOverride("normal", normal);
+        _viewModeButton.AddStyleboxOverride("hover", hover);
+        _viewModeButton.AddStyleboxOverride("pressed", pressed);
+        _viewModeButton.AddStyleboxOverride("focus", hover);
+        _viewModeButton.AddColorOverride("font_color", text);
+        _viewModeButton.AddColorOverride("font_color_hover", text.Lightened(0.08f));
+        _viewModeButton.AddColorOverride("font_color_pressed", text);
+    }
+
+    private StyleBoxFlat BuildButtonStyle(Color bg, Color border)
+    {
+        return new StyleBoxFlat
+        {
+            BgColor = bg,
+            BorderColor = border,
+            BorderWidthTop = 2,
+            BorderWidthRight = 2,
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomLeft = 6,
+            CornerRadiusBottomRight = 6,
+            ContentMarginLeft = 8,
+            ContentMarginRight = 8,
+            ContentMarginTop = 4,
+            ContentMarginBottom = 4,
+        };
     }
 
     private void UseSelectedToolIfPossible(Item item)

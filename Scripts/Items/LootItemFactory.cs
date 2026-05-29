@@ -127,7 +127,17 @@ public static class LootItemFactory
 
     private static float ResolvePickupScale(Item item, float baseScale)
     {
-        if (item is ConsumableItem || item is TicketItem)
+        if (item is ConsumableItem consumable)
+        {
+            if (string.Equals(consumable.ItemId, ItemCatalog.HpPotionL, StringComparison.OrdinalIgnoreCase))
+            {
+                return Mathf.Max(0.18f, baseScale * 0.40f);
+            }
+
+            return Mathf.Max(0.14f, baseScale * 0.32f);
+        }
+
+        if (item is TicketItem)
         {
             return Mathf.Max(0.18f, baseScale * 0.45f);
         }
