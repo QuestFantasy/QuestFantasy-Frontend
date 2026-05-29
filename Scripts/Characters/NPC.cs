@@ -418,6 +418,11 @@ namespace QuestFantasy.Characters
                 case NpcRole.Blacksmith:
                     return "res://Assets/NPC/NPC-blacksmith.png";
                 case NpcRole.Merchant:
+                    // Use a sales portrait for in-person trader NPCs named "Trader"
+                    if (!string.IsNullOrWhiteSpace(entityName) && entityName.Trim().Equals("Trader", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "res://Assets/NPC/NPC-sales.png";
+                    }
                     return "res://Assets/NPC/NPC-poet.png";
                 case NpcRole.Guide:
                 default:

@@ -140,7 +140,7 @@ namespace QuestFantasy.Prototype
                 new Color(0.85f, 0.95f, 1f));
 
             SpawnNpc(
-                "Poet",
+                "Trader",
                 "I speak in verses, but I still know the roads and the winds.",
                 NpcRole.Merchant,
                 true,
@@ -156,7 +156,7 @@ namespace QuestFantasy.Prototype
                 new Color(1f, 0.82f, 0.82f));
 
             SpawnNpc(
-                "Trader",
+                "Poet(online shop)",
                 "I can help you browse the player marketplace.",
                 NpcRole.Merchant,
                 true,
@@ -183,7 +183,8 @@ namespace QuestFantasy.Prototype
                 {
                     npc.SetShopInventory(CreateBlacksmithStock());
                 }
-                else if (string.Equals(entityName, "Poet", StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(entityName, "Poet", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(entityName, "Trader", StringComparison.OrdinalIgnoreCase))
                 {
                     npc.SetShopInventory(CreatePoetStock());
                 }
