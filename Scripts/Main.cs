@@ -531,9 +531,24 @@ public class Main : Node2D
         // Spawn monsters based on difficulty
         int numMonstersToSpawn = ((int)difficulty + 1) * 100;
         var monsterScene = (PackedScene)GD.Load("res://Scenes/Entities/monster.tscn");
+        var speedMonsterScene = (PackedScene)GD.Load("res://Scenes/Entities/speed_monster.tscn");
+        var fireMonsterScene = (PackedScene)GD.Load("res://Scenes/Entities/fire_monster.tscn");
+        var monsterSpawnRandom = new RandomNumberGenerator();
+        monsterSpawnRandom.Randomize();
         for (int i = 0; i < numMonstersToSpawn; i++)
         {
-            var monster = (Monster)monsterScene.Instance();
+            int monsterRoll = monsterSpawnRandom.RandiRange(1, 10);
+            var selectedMonsterScene = monsterScene;
+            if (monsterRoll == 1 && speedMonsterScene != null)
+            {
+                selectedMonsterScene = speedMonsterScene;
+            }
+            else if ((monsterRoll == 2 || monsterRoll == 3) && fireMonsterScene != null)
+            {
+                selectedMonsterScene = fireMonsterScene;
+            }
+
+            var monster = (Monster)selectedMonsterScene.Instance();
             monster.SetEnvironment(_map, _player);
             AddChild(monster);
             _spawnedMonsters.Add(monster);
