@@ -15,14 +15,19 @@ public static class LootItemFactory
         }
 
         float roll = rng.Randf();
-        if (roll < 0.62f)
+        if (roll < 0.52f)
         {
             return ItemCatalog.CreatePotion(ItemCatalog.HpPotionS);
         }
 
-        if (roll < 0.90f)
+        if (roll < 0.76f)
         {
             return ItemCatalog.CreatePotion(ItemCatalog.HpPotionM);
+        }
+
+        if (roll < 0.90f)
+        {
+            return ItemCatalog.CreatePotion(ItemCatalog.BurnPotion);
         }
 
         return ItemCatalog.CreatePotion(ItemCatalog.HpPotionL);

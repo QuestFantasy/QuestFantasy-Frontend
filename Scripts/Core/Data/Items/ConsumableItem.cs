@@ -3,6 +3,7 @@ using System;
 using Godot;
 
 using QuestFantasy.Characters;
+using QuestFantasy.Core.Systems.StatusEffects;
 
 namespace QuestFantasy.Core.Data.Items
 {
@@ -12,6 +13,7 @@ namespace QuestFantasy.Core.Data.Items
         public string SpritePath { get; set; } = string.Empty;
         public Texture Sprite { get; set; }
         public int HealAmount { get; set; } = 0;
+        public bool RemovesBurn { get; set; } = false;
 
         public ConsumableItem()
         {
@@ -20,7 +22,17 @@ namespace QuestFantasy.Core.Data.Items
 
         public override bool CanUse(Player player)
         {
-            return base.CanUse(player) && HealAmount > 0 && player.Attributes?.HP != null && player.Attributes.HP.IsAlive;
+            if (!base.CanUse(player) || player.Attributes?.HP == null || !player.Attributes.HP.IsAlive)
+            {
+                return false;
+            }
+
+            if (HealAmount > 0)
+            {
+                return true;
+            }
+
+            return RemovesBurn && player.EffectManager?.HasEffect(StatusEffectType.Burn) == true;
         }
 
         public override void Use(Player player)
@@ -31,10 +43,20 @@ namespace QuestFantasy.Core.Data.Items
                 return;
             }
 
-            int before = player.Attributes.HP.CurrentHP;
-            player.Attributes.HP.Heal(HealAmount);
-            int healed = player.Attributes.HP.CurrentHP - before;
-            GD.Print($"[ConsumableItem] {Name} healed {healed} HP ({player.Attributes.HP.CurrentHP}/{player.Attributes.HP.MaxHP}).");
+            if (HealAmount > 0)
+            {
+                int before = player.Attributes.HP.CurrentHP;
+                player.Attributes.HP.Heal(HealAmount);
+                int healed = player.Attributes.HP.CurrentHP - before;
+                GD.Print($"[ConsumableItem] {Name} healed {healed} HP ({player.Attributes.HP.CurrentHP}/{player.Attributes.HP.MaxHP}).");
+            }
+
+            if (RemovesBurn)
+            {
+                player.EffectManager?.RemoveEffect(StatusEffectType.Burn, player);
+                GD.Print($"[ConsumableItem] {Name} cured burn on {player.EntityName}.");
+            }
+
             base.Use(player);
         }
     }
@@ -57,6 +79,7 @@ namespace QuestFantasy.Core.Data.Items
         public const string HpPotionS = "hp_potion_s";
         public const string HpPotionM = "hp_potion_m";
         public const string HpPotionL = "hp_potion_l";
+        public const string BurnPotion = "burn_potion";
         public const string TicketNormal = "ticket_normal";
         public const string TicketHard = "ticket_hard";
         public const string TicketNightmare = "ticket_nightmare";
@@ -65,6 +88,8 @@ namespace QuestFantasy.Core.Data.Items
         {
             switch ((itemId ?? string.Empty).Trim().ToLowerInvariant())
             {
+                case BurnPotion:
+                    return CreatePotion(BurnPotion, "Burn Remedy", "Immediately cures Burn.", "res://Assets/items/burn_potion.png", 0, removesBurn: true);
                 case HpPotionL:
                     return CreatePotion(HpPotionL, "Large HP Potion", "Restores 20 HP.", "res://Assets/items/hp_potion_L.png", 20);
                 case HpPotionM:
@@ -147,7 +172,7 @@ namespace QuestFantasy.Core.Data.Items
             return string.Empty;
         }
 
-        private static ConsumableItem CreatePotion(string itemId, string name, string description, string spritePath, int healAmount)
+        private static ConsumableItem CreatePotion(string itemId, string name, string description, string spritePath, int healAmount, bool removesBurn = false)
         {
             var item = new ConsumableItem
             {
@@ -156,6 +181,7 @@ namespace QuestFantasy.Core.Data.Items
                 Description = description,
                 SpritePath = spritePath,
                 HealAmount = healAmount,
+                RemovesBurn = removesBurn,
                 Price = healAmount * 2,
             };
             item.Sprite = GD.Load<Texture>(spritePath);

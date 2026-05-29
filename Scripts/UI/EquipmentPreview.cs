@@ -186,7 +186,14 @@ public class EquipmentPreview : CanvasLayer
         else if (item is QuestFantasy.Core.Data.Items.ConsumableItem consumable)
         {
             titleText = consumable.Name ?? "Potion";
-            metaText = $"Potion • Heal {consumable.HealAmount} HP";
+            if (consumable.RemovesBurn)
+            {
+                metaText = "Potion • Cures Burn";
+            }
+            else
+            {
+                metaText = $"Potion • Heal {consumable.HealAmount} HP";
+            }
             rarityColor = new Color(0.65f, 1f, 0.78f);
             if (!string.IsNullOrEmpty(consumable.SpritePath))
             {

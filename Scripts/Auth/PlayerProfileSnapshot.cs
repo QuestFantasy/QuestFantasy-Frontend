@@ -106,6 +106,7 @@ public static class PlayerItemSnapshotCodec
             baseDict["item_id"] = consumable.ItemId ?? string.Empty;
             baseDict["sprite_path"] = NormalizeSpritePathForStorage(consumable.SpritePath, consumable.Sprite);
             baseDict["heal_amount"] = Math.Max(0, consumable.HealAmount);
+            baseDict["removes_burn"] = consumable.RemovesBurn;
             return baseDict;
         }
 
@@ -179,6 +180,7 @@ public static class PlayerItemSnapshotCodec
             consumable.Price = ReadInt(data, "price", consumable.Price, 0);
             consumable.SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", consumable.SpritePath));
             consumable.HealAmount = ReadInt(data, "heal_amount", consumable.HealAmount, 0);
+            consumable.RemovesBurn = ReadBool(data, "removes_burn", consumable.RemovesBurn);
             consumable.Sprite = LoadTextureOrNull(consumable.SpritePath);
             return consumable;
         }
@@ -354,6 +356,26 @@ public static class PlayerItemSnapshotCodec
         }
 
         return Math.Max(min, value);
+    }
+
+    private static bool ReadBool(Godot.Collections.Dictionary data, string key, bool fallback)
+    {
+        if (data == null || !data.Contains(key) || data[key] == null)
+        {
+            return fallback;
+        }
+
+        if (data[key] is bool boolValue)
+        {
+            return boolValue;
+        }
+
+        if (bool.TryParse(data[key].ToString(), out bool parsed))
+        {
+            return parsed;
+        }
+
+        return fallback;
     }
 
     private static TEnum ReadEnum<TEnum>(string value, TEnum fallback) where TEnum : struct

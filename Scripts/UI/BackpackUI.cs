@@ -839,7 +839,19 @@ public class BackpackUI : CanvasLayer
 
         if (item is ConsumableItem consumable)
         {
-            return $"{consumable.Name}\nRestores {consumable.HealAmount} HP\n{idLine}";
+            var effects = new List<string>();
+            if (consumable.HealAmount > 0)
+            {
+                effects.Add($"Restores {consumable.HealAmount} HP");
+            }
+
+            if (consumable.RemovesBurn)
+            {
+                effects.Add("Cures Burn immediately");
+            }
+
+            string effectText = effects.Count > 0 ? string.Join("\n", effects) : (consumable.Description ?? "Consumable");
+            return $"{consumable.Name}\n{effectText}\n{idLine}";
         }
 
         if (item is TicketItem ticket)
