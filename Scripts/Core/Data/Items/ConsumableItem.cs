@@ -89,7 +89,7 @@ namespace QuestFantasy.Core.Data.Items
             switch ((itemId ?? string.Empty).Trim().ToLowerInvariant())
             {
                 case BurnPotion:
-                    return CreatePotion(BurnPotion, "Burn Remedy", "Immediately cures Burn.", "res://Assets/items/burn_potion.png", 0, removesBurn: true);
+                    return CreatePotion(BurnPotion, "Burn Remedy", "Immediately cures Burn.", "res://Assets/items/burn_potion.png", 0, removesBurn: true, price: 30);
                 case HpPotionL:
                     return CreatePotion(HpPotionL, "Large HP Potion", "Restores 20 HP.", "res://Assets/items/hp_potion_L.png", 20);
                 case HpPotionM:
@@ -172,7 +172,7 @@ namespace QuestFantasy.Core.Data.Items
             return string.Empty;
         }
 
-        private static ConsumableItem CreatePotion(string itemId, string name, string description, string spritePath, int healAmount, bool removesBurn = false)
+        private static ConsumableItem CreatePotion(string itemId, string name, string description, string spritePath, int healAmount, bool removesBurn = false, int price = -1)
         {
             var item = new ConsumableItem
             {
@@ -182,7 +182,7 @@ namespace QuestFantasy.Core.Data.Items
                 SpritePath = spritePath,
                 HealAmount = healAmount,
                 RemovesBurn = removesBurn,
-                Price = healAmount * 2,
+                Price = price >= 0 ? price : healAmount * 2,
             };
             item.Sprite = GD.Load<Texture>(spritePath);
             return item;

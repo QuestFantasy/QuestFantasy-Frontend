@@ -308,6 +308,39 @@ namespace QuestFantasy.Characters
                 };
             }
 
+            // Handle consumables (potions)
+            if (item is QuestFantasy.Core.Data.Items.ConsumableItem consumable)
+            {
+                return new QuestFantasy.Core.Data.Items.ConsumableItem
+                {
+                    ItemId = consumable.ItemId,
+                    Name = consumable.Name,
+                    Description = consumable.Description,
+                    SpritePath = consumable.SpritePath,
+                    Sprite = consumable.Sprite,
+                    HealAmount = consumable.HealAmount,
+                    RemovesBurn = consumable.RemovesBurn,
+                    Price = consumable.Price,
+                    Quantity = consumable.Quantity
+                };
+            }
+
+            // Handle tickets
+            if (item is QuestFantasy.Core.Data.Items.TicketItem ticket)
+            {
+                return new QuestFantasy.Core.Data.Items.TicketItem
+                {
+                    ItemId = ticket.ItemId,
+                    Name = ticket.Name,
+                    Description = ticket.Description,
+                    SpritePath = ticket.SpritePath,
+                    Sprite = ticket.Sprite,
+                    Difficulty = ticket.Difficulty,
+                    Price = ticket.Price,
+                    Quantity = ticket.Quantity
+                };
+            }
+
             return new Item
             {
                 Name = item.Name,
