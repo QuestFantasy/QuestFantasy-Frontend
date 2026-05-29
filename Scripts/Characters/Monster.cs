@@ -704,11 +704,15 @@ namespace QuestFantasy.Characters
             var rng = new RandomNumberGenerator();
             rng.Randomize();
 
+            // Find EquipmentManager early so consumable/ticket drops can match equipment scale
+            var manager = FindEquipmentManager();
+
             Item potionDrop = LootItemFactory.RollPotion(rng, 0.08f);
             if (potionDrop != null)
             {
                 var potionPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
-                LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, 0.5f, "monster_potion");
+                float scale = manager != null ? manager.PickupSpriteScale : 0.5f;
+                LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, scale, "monster_potion");
                 GD.PrintS($"[Monster] Spawned potion drop: {potionDrop.Name} at {potionPos}");
             }
 
@@ -716,15 +720,13 @@ namespace QuestFantasy.Characters
             if (ticketDrop != null)
             {
                 var ticketPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
-                LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, 0.5f, "monster_ticket");
+                float tscale = manager != null ? manager.PickupSpriteScale : 0.5f;
+                LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, tscale, "monster_ticket");
                 GD.PrintS($"[Monster] Spawned ticket drop: {ticketDrop.Name} at {ticketPos}");
             }
-
-            // Find EquipmentManager in the scene
-            var manager = FindEquipmentManager();
             if (manager == null)
             {
-                GD.PrintS("[Monster] No EquipmentManager found; skipping drops.");
+                GD.PrintS("[Monster] No EquipmentManager found; skipping equipment drops.");
                 return;
             }
 

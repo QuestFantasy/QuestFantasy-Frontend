@@ -7,9 +7,19 @@ using QuestFantasy.Core.Data.Items;
 
 public static class LootItemFactory
 {
+    // Global multiplier for drop rates used during testing. Set to 5 for 5x drops.
+    public static float DropRateMultiplier = 5f;
+
     public static Item RollPotion(RandomNumberGenerator rng, float chance)
     {
-        if (rng == null || rng.Randf() >= chance)
+        if (rng == null)
+        {
+            return null;
+        }
+
+        // Apply global multiplier (clamped to 1.0 to avoid weird comparisons)
+        float effectiveChance = Mathf.Min(1f, chance * Mathf.Max(0f, DropRateMultiplier));
+        if (rng.Randf() >= effectiveChance)
         {
             return null;
         }
@@ -53,7 +63,9 @@ public static class LootItemFactory
             total += entry.Item2;
         }
 
-        if (rng.Randf() >= total * Mathf.Max(0f, chanceScale))
+        // Apply global drop multiplier to the overall ticket chance scale
+        float effectiveThreshold = Mathf.Min(1f, total * Mathf.Max(0f, chanceScale * DropRateMultiplier));
+        if (rng.Randf() >= effectiveThreshold)
         {
             return null;
         }
@@ -127,19 +139,11 @@ public static class LootItemFactory
 
     private static float ResolvePickupScale(Item item, float baseScale)
     {
-        if (item is ConsumableItem consumable)
+        // Make consumables (potions) and tickets use the same visual scale as equipment
+        // so pickups on the map appear consistent in size.
+        if (item is ConsumableItem || item is TicketItem)
         {
-            if (string.Equals(consumable.ItemId, ItemCatalog.HpPotionL, StringComparison.OrdinalIgnoreCase))
-            {
-                return Mathf.Max(0.18f, baseScale * 0.40f);
-            }
-
-            return Mathf.Max(0.14f, baseScale * 0.32f);
-        }
-
-        if (item is TicketItem)
-        {
-            return Mathf.Max(0.18f, baseScale * 0.45f);
+            return baseScale;
         }
 
         return baseScale;

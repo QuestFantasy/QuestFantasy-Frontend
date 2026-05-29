@@ -187,7 +187,8 @@ public class TreasureChest : Node
         if (potionDrop != null)
         {
             var potionPos = centerPosition + new Vector2(rng.Randf() * 180f - 90f, rng.Randf() * 180f - 90f);
-            LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, manager.PickupSpriteScale, "chest_potion");
+            float pscale = manager != null ? manager.PickupSpriteScale : 0.5f;
+            LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, pscale, "chest_potion");
             GD.PrintS($"[TreasureChest] Spawned potion drop: {potionDrop.Name} at {potionPos}");
         }
 
@@ -195,7 +196,8 @@ public class TreasureChest : Node
         if (ticketDrop != null)
         {
             var ticketPos = centerPosition + new Vector2(rng.Randf() * 180f - 90f, rng.Randf() * 180f - 90f);
-            LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, manager.PickupSpriteScale, "chest_ticket");
+            float tscale = manager != null ? manager.PickupSpriteScale : 0.5f;
+            LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, tscale, "chest_ticket");
             GD.PrintS($"[TreasureChest] Spawned ticket drop: {ticketDrop.Name} at {ticketPos}");
         }
 
