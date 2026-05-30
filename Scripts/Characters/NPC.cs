@@ -15,7 +15,8 @@ namespace QuestFantasy.Characters
     {
         Guide,
         Merchant,
-        Blacksmith
+        Blacksmith,
+        ClassSelector
     }
 
     /// <summary>
@@ -41,6 +42,7 @@ namespace QuestFantasy.Characters
         public event Action<NPC, Player> InteractionStarted;
         public event Action<NPC, Player> DialogueRequested;
         public event Action<NPC, Player> ShopRequested;
+        public event Action<NPC, Player> ClassChangeRequested;
 
         public override void _Ready()
         {
@@ -96,6 +98,11 @@ namespace QuestFantasy.Characters
 
         private string GetInteractionPromptText()
         {
+            if (Role == NpcRole.ClassSelector)
+            {
+                return "Press F to change class";
+            }
+
             return IsShopkeeper ? "Press F to talk / trade" : "Press F to talk";
         }
 
@@ -142,6 +149,13 @@ namespace QuestFantasy.Characters
 
             GD.Print($"[NPC] {EntityName} says: {Dialogue}");
             InteractionStarted?.Invoke(this, player);
+
+            if (Role == NpcRole.ClassSelector)
+            {
+                ClassChangeRequested?.Invoke(this, player);
+                return;
+            }
+
             DialogueRequested?.Invoke(this, player);
 
             if (IsShopkeeper)
@@ -386,6 +400,7 @@ namespace QuestFantasy.Characters
                     return "res://Assets/NPC/NPC-blacksmith.png";
                 case NpcRole.Merchant:
                     return "res://Assets/NPC/NPC-poet.png";
+                case NpcRole.ClassSelector:
                 case NpcRole.Guide:
                 default:
                     return "res://Assets/NPC/NPC-previous-hero.png";

@@ -30,18 +30,24 @@ namespace QuestFantasy.Characters
         [Export] public float SpeedMultiplier = GameConstants.PLAYER_SPEED_TO_PIXELS_MULTIPLIER;
 
         // ==================== Animation Configuration ====================
-        [Export] public string StandFrame1Path = "res://Assets/Characters/stand.png";
-        [Export] public string StandFrame2Path = "res://Assets/Characters/stand2.png";
+        [Export] public string StandFrame1Path = "res://Assets/Characters/adventurer/stand.png";
+        [Export] public string StandFrame2Path = "res://Assets/Characters/adventurer/stand2.png";
         [Export] public float WalkAnimationFps = GameConstants.PLAYER_WALK_ANIMATION_FPS;
-        [Export] public string WalkFrame1Path = "res://Assets/Characters/walk.png";
-        [Export] public string WalkFrame2Path = "res://Assets/Characters/walk1.png";
+        [Export] public string WalkFrame1Path = "res://Assets/Characters/adventurer/walk.png";
+        [Export] public string WalkFrame2Path = "res://Assets/Characters/adventurer/walk1.png";
         [Export] public float AttackAnimationFps = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
-        [Export] public string AttackFrame1Path = "res://Assets/Characters/slash.png";
-        [Export] public string AttackFrame2Path = "res://Assets/Characters/slash1.png";
-        [Export] public string AttackFrame3Path = "res://Assets/Characters/slash2.png";
+        [Export] public string AttackFrame1Path = "res://Assets/Characters/adventurer/slash.png";
+        [Export] public string AttackFrame2Path = "res://Assets/Characters/adventurer/slash1.png";
+        [Export] public string AttackFrame3Path = "res://Assets/Characters/adventurer/slash2.png";
 
         // ==================== Character Systems ====================
         public Jobs CurrentJob { get; private set; }
+
+        /// <summary>The player's currently active class. Defaults to Adventurer.</summary>
+        public PlayerClass PlayerClass { get; private set; } = PlayerClass.Adventurer;
+
+        /// <summary>Fired whenever the class changes, e.g. so the HUD can update skill slots.</summary>
+        public event Action<PlayerClass> OnClassChanged;
 
         // Subsystems
         private PlayerCombatSystem _combatSystem;
@@ -204,8 +210,8 @@ namespace QuestFantasy.Characters
                 _animationConfig.AttackFrame1Path, _animationConfig.AttackFrame2Path, _animationConfig.AttackFrame3Path,
                 GetBodySizePixels());
 
-            _deadTexture = GD.Load<Texture>("res://Assets/Characters/down.png");
-            _hitTexture = GD.Load<Texture>("res://Assets/Characters/hit.png");
+            _deadTexture = GD.Load<Texture>("res://Assets/Characters/adventurer/down.png");
+            _hitTexture = GD.Load<Texture>("res://Assets/Characters/adventurer/hit.png");
 
             // Set stats according to requirements
             if (Attributes != null)
@@ -458,7 +464,11 @@ namespace QuestFantasy.Characters
                 RestoreEquippedItems(snapshot.EquippedItemsPayload);
             }
 
-            _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills));
+            // Apply class BEFORE restoring skills so restrictions are already set
+            PlayerClass restoredClass = PlayerClassData.Deserialize(snapshot.ClassName);
+            SetClass(restoredClass, rebuildSkills: false);
+
+            _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills, restoredClass));
 
             // Re-broadcast HP to refresh HUD after profile application.
             if (Attributes?.HP != null)
@@ -483,6 +493,7 @@ namespace QuestFantasy.Characters
                 HasInventoryItemsPayload = true,
                 HasDiscardedItemsPayload = true,
                 HasEquippedItemsPayload = true,
+                ClassName = PlayerClassData.Serialize(PlayerClass),
             };
 
             return snapshot;
@@ -518,7 +529,7 @@ namespace QuestFantasy.Characters
             return result;
         }
 
-        private List<Skills> BuildSkillsFromSnapshot(IReadOnlyList<PlayerSkillSnapshot> snapshots)
+        private List<Skills> BuildSkillsFromSnapshot(IReadOnlyList<PlayerSkillSnapshot> snapshots, PlayerClass cls = PlayerClass.Adventurer)
         {
             var skills = new List<Skills>();
             if (snapshots == null)
@@ -526,10 +537,18 @@ namespace QuestFantasy.Characters
                 snapshots = new List<PlayerSkillSnapshot>();
             }
 
+            var allowed = PlayerClassData.GetAllowedSkillIds(cls);
+
             for (int i = 0; i < snapshots.Count; i++)
             {
                 var snapshot = snapshots[i];
                 if (snapshot == null)
+                {
+                    continue;
+                }
+
+                // Skip skills the class is not permitted to use
+                if (!allowed.Contains(snapshot.SkillId?.ToLowerInvariant() ?? string.Empty))
                 {
                     continue;
                 }
@@ -563,7 +582,7 @@ namespace QuestFantasy.Characters
                 skills.Add(remoteSkill);
             }
 
-            EnsureAdventurerCoreSkills(skills);
+            EnsureClassCoreSkills(skills, cls);
 
             return skills;
         }
@@ -653,6 +672,146 @@ namespace QuestFantasy.Characters
                 skills.Add(new FireballSkill());
             }
         }
+
+        /// <summary>
+        /// Ensures the skills list contains exactly the skills the given class is allowed to use.
+        /// Adds any missing class-allowed skills, strips any disallowed ones.
+        /// </summary>
+        private static void EnsureClassCoreSkills(List<Skills> skills, PlayerClass cls)
+        {
+            if (cls == PlayerClass.Adventurer)
+            {
+                EnsureAdventurerCoreSkills(skills);
+                return;
+            }
+
+            var allowed = PlayerClassData.GetAllowedSkillIds(cls);
+
+            // Remove skills that are not allowed for this class
+            skills.RemoveAll(s => !allowed.Contains(ResolveSkillId(s)));
+
+            // Ensure the class's primary skill exists
+            bool hasSword = skills.Any(s => s is BasicAttackSkill);
+            bool hasBow = skills.Any(s => s is BowAttackSkill);
+            bool hasFireball = skills.Any(s => s is FireballSkill);
+
+            if (allowed.Contains(PlayerClassData.SkillIdSword) && !hasSword)
+            {
+                var basicAttack = new BasicAttackSkill
+                {
+                    EffectRenderer = new BasicAttackEffectRenderer(),
+                };
+                skills.Insert(0, basicAttack);
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdBow) && !hasBow)
+            {
+                skills.Add(new BowAttackSkill());
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdFireball) && !hasFireball)
+            {
+                skills.Add(new FireballSkill());
+            }
+        }
+
+        // ── Class system ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Applies the chosen class: updates sprites and skill restrictions.
+        /// </summary>
+        public void SetClass(PlayerClass cls, bool rebuildSkills = true)
+        {
+            PlayerClass = cls;
+            GD.Print($"[Player] Class changed to {PlayerClassData.GetDisplayName(cls)}");
+
+            ApplyClassSprites(cls);
+
+            if (rebuildSkills)
+            {
+                ApplyClassSkills(cls);
+            }
+
+            OnClassChanged?.Invoke(cls);
+            Update();
+        }
+
+        /// <summary>
+        /// Rebuilds the combat skill list to match the allowed skills for <paramref name="cls"/>.
+        /// </summary>
+        private void ApplyClassSkills(PlayerClass cls)
+        {
+            if (_combatSystem == null)
+            {
+                return;
+            }
+
+            var current = _combatSystem.CurrentSkills.ToList();
+            EnsureClassCoreSkills(current, cls);
+            _combatSystem.SetSkills(current);
+            GD.Print($"[Player] Skills rebuilt for class {cls}: {string.Join(", ", current.Select(ResolveSkillId))}");
+        }
+
+        /// <summary>
+        /// Reloads animation frame textures from class-specific asset paths.
+        /// Falls back to the shared (Adventurer) paths when a file cannot be loaded.
+        /// </summary>
+        private void ApplyClassSprites(PlayerClass cls)
+        {
+            if (_animationSystem == null)
+            {
+                return;
+            }
+
+            ClassSpritePaths paths = PlayerClassData.GetSpritePaths(cls);
+            ClassSpritePaths fallback = PlayerClassData.GetSharedSpritePaths();
+
+            // Resolve: use the class-specific path if the file actually exists, otherwise fall back.
+            string Resolve(string primary, string fb) =>
+                !string.IsNullOrEmpty(primary) && GD.Load<Texture>(primary) != null ? primary : fb;
+
+            string stand1 = Resolve(paths.StandFrame1, fallback.StandFrame1);
+            string stand2 = Resolve(paths.StandFrame2, fallback.StandFrame2);
+            string walk1 = Resolve(paths.WalkFrame1, fallback.WalkFrame1);
+            string walk2 = Resolve(paths.WalkFrame2, fallback.WalkFrame2);
+            string attack1 = Resolve(paths.AttackFrame1, fallback.AttackFrame1);
+            string attack2 = Resolve(paths.AttackFrame2, fallback.AttackFrame2);
+            string attack3 = Resolve(paths.AttackFrame3, fallback.AttackFrame3);
+
+            Vector2 bodySize = _map != null
+                ? BodySizeInTiles * _map.TileSize
+                : BodySizeInTiles * 24f;
+
+            // Apply the per-class visual scale (does not affect the physics body).
+            bodySize *= paths.ScaleMultiplier;
+
+            // Re-initialize the animation system (reuses the existing Sprite node).
+            _animationSystem.Initialize(
+                this,
+                stand1, stand2,
+                walk1, walk2,
+                attack1, attack2, attack3,
+                bodySize);
+
+
+            // Update per-skill-style attack frames in the animation controller so the
+            // correct art plays when the player uses bow/sword/fireball skills.
+            _animationController?.UpdateClassFrames(
+                paths.SwordAttackPaths,
+                paths.BowAttackPaths,
+                paths.FireballAttackPaths);
+
+            // Reload class-specific hit / dead textures (with shared fallback).
+            string hitPath = Resolve(paths.HitFrame, fallback.HitFrame);
+            string deadPath = Resolve(paths.DeadFrame, fallback.DeadFrame);
+
+            _hitTexture = GD.Load<Texture>(hitPath);
+            _deadTexture = GD.Load<Texture>(deadPath);
+
+            string bowFrame = paths.BowAttackPaths != null ? paths.BowAttackPaths[0] : "default";
+            GD.Print($"[Player] Sprites updated for class {cls}. Stand={stand1}, Attack={attack1}, Bow={bowFrame}, Hit={hitPath}, Dead={deadPath}");
+        }
+
 
         private void HandleRoomChangedFromPhysics(Vector2 roomIndex, string reason)
         {

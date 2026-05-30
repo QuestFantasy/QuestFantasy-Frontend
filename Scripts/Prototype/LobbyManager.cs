@@ -7,6 +7,7 @@ using QuestFantasy.Characters;
 using QuestFantasy.Core.Data;
 using QuestFantasy.Core.Data.Items;
 using QuestFantasy.Environment;
+using QuestFantasy.UI;
 
 namespace QuestFantasy.Prototype
 {
@@ -21,6 +22,7 @@ namespace QuestFantasy.Prototype
         public event Action<DifficultyLevel> DifficultySelected;
         public event Action<NPC> DialogueNpcInteractionRequested;
         public event Action<NPC> ShopNpcInteractionRequested;
+        public event Action<PlayerClass> ClassChangeRequested;
         public event Action ShopClosed;
         public event Action SyncRequested;
 
@@ -30,6 +32,7 @@ namespace QuestFantasy.Prototype
         private DifficultySelectionUI _difficultyUI;
         private NpcShopUI _shopUI;
         private MarketplaceUI _marketplaceUI;
+        private ClassSelectUI _classSelectUI;
         private AuthApiClient _apiClient;
         private string _authToken;
         private readonly EquipmentManager _equipmentFactory = new EquipmentManager();
@@ -51,6 +54,7 @@ namespace QuestFantasy.Prototype
             SetupPlayer();
             SetupShopUI();
             SetupMarketplaceUI();
+            SetupClassSelectUI();
             SetupDifficultyUI();
         }
 
@@ -133,8 +137,8 @@ namespace QuestFantasy.Prototype
         {
             SpawnNpc(
                 "Previous Hero",
-                "I used to walk these lands. I can point you to the teleporter and explain the lobby.",
-                NpcRole.Guide,
+                "I once walked these lands, and I know the power that lies within each path.",
+                NpcRole.ClassSelector,
                 false,
                 new Vector2(7, 11),
                 new Color(0.85f, 0.95f, 1f));
@@ -184,6 +188,11 @@ namespace QuestFantasy.Prototype
             npc.InteractionStarted += OnNpcInteractionStarted;
             npc.DialogueRequested += OnNpcDialogueRequested;
             npc.ShopRequested += isMarketplaceNpc ? (Action<NPC, Player>)OnTraderShopRequested : OnNpcShopRequested;
+
+            if (role == NpcRole.ClassSelector)
+            {
+                npc.ClassChangeRequested += OnNpcClassChangeRequested;
+            }
 
             _lobbyNpcs.Add(npc);
             GD.Print($"[Lobby] Spawned NPC {entityName} at {spawnPosition}");
@@ -258,6 +267,39 @@ namespace QuestFantasy.Prototype
             _marketplaceUI = new MarketplaceUI();
             AddChild(_marketplaceUI);
             _marketplaceUI.Closed += OnShopClosed;
+        }
+
+        private void SetupClassSelectUI()
+        {
+            _classSelectUI = new ClassSelectUI();
+            AddChild(_classSelectUI);
+            _classSelectUI.ClassSelected += OnClassSelected;
+        }
+
+        private void OnNpcClassChangeRequested(NPC npc, Player player)
+        {
+            if (npc == null || _classSelectUI == null)
+            {
+                return;
+            }
+
+            Player target = player ?? _player;
+            PlayerClass current = target?.PlayerClass ?? PlayerClass.Adventurer;
+            _classSelectUI.Show(current);
+            GD.Print($"[Lobby] Class selector opened by {npc.EntityName}. Current class: {current}");
+        }
+
+        private void OnClassSelected(PlayerClass newClass)
+        {
+            Player target = _player;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.SetClass(newClass);
+            GD.Print($"[Lobby] Player class set to {newClass}");
+            ClassChangeRequested?.Invoke(newClass);
         }
 
         private void OnShopClosed()

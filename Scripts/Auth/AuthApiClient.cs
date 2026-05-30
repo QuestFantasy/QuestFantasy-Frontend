@@ -579,6 +579,7 @@ public class AuthApiClient : Node
                 result.Data["gold"] = 100;
                 result.Data["hp_max"] = 100;
                 result.Data["hp_current"] = 100;
+                result.Data["class_name"] = "adventurer";
                 result.Data["inventory_items"] = new Godot.Collections.Array();
                 result.Data["skills"] = new Godot.Collections.Array {
                     new Godot.Collections.Dictionary {

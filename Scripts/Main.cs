@@ -472,6 +472,13 @@ public class Main : Node2D
         _mobileInputUI?.ShowDPad();
         _mobileInputUI?.ShowMapButton(false);
         _lobbyManager.SyncRequested += OnInventorySyncRequested;
+        _lobbyManager.ClassChangeRequested += OnClassChangeRequested;
+    }
+
+    private void OnClassChangeRequested(QuestFantasy.Core.Data.PlayerClass newClass)
+    {
+        GD.Print($"[Main] Player changed class to {newClass}. Syncing profile to backend.");
+        TransmitPlayerProfile("class_change");
     }
 
     private void EnsureLobbyBackpackContext()

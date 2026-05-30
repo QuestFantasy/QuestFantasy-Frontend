@@ -48,9 +48,20 @@ namespace QuestFantasy.Characters.PlayerSystems
                                string attackFrame1Path, string attackFrame2Path, string attackFrame3Path,
                                Vector2 bodySize)
         {
-            _sprite = new Sprite();
-            _sprite.Centered = true;
-            owner.AddChild(_sprite);
+            // Reuse the existing sprite node if we already have one (class switch).
+            // Creating a new child every time would leave ghost sprites in the scene tree.
+            if (_sprite == null || !Godot.Object.IsInstanceValid(_sprite))
+            {
+                _sprite = new Sprite();
+                _sprite.Centered = true;
+                owner.AddChild(_sprite);
+            }
+
+            // Reset animation state so no stale frame stays on screen.
+            _currentState = AnimationState.Idle;
+            _frameIndex = 0;
+            _animationTimer = 0f;
+            _hitTimer = 0f;
 
             // Load stand frames
             Texture standFrame1 = GD.Load<Texture>(standFrame1Path);

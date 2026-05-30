@@ -335,6 +335,9 @@ public class PlayerProfileSnapshot
     public Godot.Collections.Array DiscardedItems { get; set; } = new Godot.Collections.Array();
     public Godot.Collections.Dictionary EquippedItemsPayload { get; set; } = new Godot.Collections.Dictionary();
 
+    /// <summary>Serialised class name, e.g. "adventurer", "mage", "archer", "warrior".</summary>
+    public string ClassName { get; set; } = "adventurer";
+
     public List<PlayerSkillSnapshot> Skills { get; set; } = new List<PlayerSkillSnapshot>();
 
     public static PlayerProfileSnapshot FromDictionary(Godot.Collections.Dictionary data)
@@ -352,6 +355,7 @@ public class PlayerProfileSnapshot
         snapshot.Gold = ReadInt(data, "gold", 0, min: 0);
         snapshot.Ignored = ReadBool(data, "ignored", false);
         snapshot.IgnoreReason = ReadString(data, "reason", string.Empty);
+        snapshot.ClassName = ReadString(data, "class_name", "adventurer");
 
         if (data.Contains("inventory_items") && data["inventory_items"] is Godot.Collections.Array inventory)
         {
@@ -409,6 +413,7 @@ public class PlayerProfileSnapshot
             ["hp_max"] = Math.Max(1, HpMax),
             ["hp_current"] = Math.Max(0, Math.Min(HpCurrent, HpMax)),
             ["gold"] = Math.Max(0, Gold),
+            ["class_name"] = string.IsNullOrWhiteSpace(ClassName) ? "adventurer" : ClassName,
             ["inventory_items"] = InventoryItems ?? new Godot.Collections.Array(),
             ["discarded_items"] = DiscardedItems ?? new Godot.Collections.Array(),
             ["equipped_items"] = EquippedItemsPayload ?? new Godot.Collections.Dictionary(),
