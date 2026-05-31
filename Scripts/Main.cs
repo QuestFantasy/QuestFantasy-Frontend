@@ -618,6 +618,14 @@ public class Main : Node2D
         // Save map difficulty before destroying it
         DifficultyLevel lastMapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
 
+        // Restore HP to max before snapshotting so a dead player never carries
+        // 0 HP into the lobby or the next dungeon run.
+        if (_player != null)
+        {
+            int maxHp = _player.Attributes?.HP?.MaxHP ?? 100;
+            _player.Attributes?.HP?.SetMaxHPAndCurrentHP(maxHp, maxHp);
+        }
+
         // Save the current player state BEFORE destroying the world
         _pendingProfileSnapshot = _player?.BuildProfileSnapshot();
 
