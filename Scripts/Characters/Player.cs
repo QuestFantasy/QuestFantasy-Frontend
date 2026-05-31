@@ -250,7 +250,8 @@ namespace QuestFantasy.Characters
         public void SetMap(Map map)
         {
             _map = map;
-            _animationSystem.RefreshScale(GetBodySizePixels());
+            float multiplier = PlayerClassData.GetSpritePaths(PlayerClass).ScaleMultiplier;
+            _animationSystem.RefreshScale(GetBodySizePixels() * multiplier);
             Update();
 
             if (_map != null)
@@ -443,6 +444,12 @@ namespace QuestFantasy.Characters
             SetLevel(snapshot.Level);
             Attributes?.HP?.SetMaxHPAndCurrentHP(snapshot.HpMax, snapshot.HpCurrent);
             _inventorySystem?.SetSnapshot(snapshot.Experience, snapshot.Gold);
+
+            if (snapshot.HpCurrent > 0)
+            {
+                _isDead = false;
+                _animationController?.Revive();
+            }
 
             if (snapshot.HasInventoryItemsPayload || snapshot.HasDiscardedItemsPayload)
             {
