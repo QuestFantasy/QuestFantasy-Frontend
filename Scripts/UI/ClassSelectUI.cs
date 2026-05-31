@@ -377,7 +377,7 @@ namespace QuestFantasy.UI
                 PlayerClass cls = AllClasses[i];
                 bool isSelected = cls == _selectedClass;
                 bool isCurrent = cls == _currentClass;
-                
+
                 // Adventurer is always unlocked. Advanced classes are locked if level requirement is not met.
                 bool isLocked = levelLocked && cls != PlayerClass.Adventurer;
 
