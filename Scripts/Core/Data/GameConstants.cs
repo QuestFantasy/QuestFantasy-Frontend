@@ -115,6 +115,9 @@ public static class GameConstants
     public const float PICKUP_INTERACTION_MAX_DISTANCE_PIXELS = 72f;
 
     // ==================== Lobby Configuration ====================
+    /// <summary>Minimum level required to change player class.</summary>
+    public const int CLASS_CHANGE_MIN_LEVEL = 10;
+
     /// <summary>Tile size for lobby map.</summary>
     public const int LOBBY_TILE_SIZE = 24;
 

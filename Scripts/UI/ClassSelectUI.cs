@@ -44,12 +44,14 @@ namespace QuestFantasy.UI
         // ── State ─────────────────────────────────────────────────────────
         private PlayerClass _currentClass = PlayerClass.Adventurer;
         private PlayerClass _selectedClass = PlayerClass.Adventurer;
+        private int _playerLevel = 1;
 
         // Per-card panel references kept for highlight refresh (no node-path lookup needed)
         private Panel[] _cardPanels;
 
         // Root container — shown/hidden as a whole
         private Control _root;
+        private Label _subtitleLabel;
 
         public event Action<PlayerClass> ClassSelected;
 
@@ -95,10 +97,15 @@ namespace QuestFantasy.UI
         }
 
         /// <summary>Opens the panel, pre-selecting the player's current class.</summary>
-        public void Show(PlayerClass currentClass)
+        public void Show(PlayerClass currentClass, int playerLevel)
         {
             _currentClass = currentClass;
             _selectedClass = currentClass;
+            _playerLevel = playerLevel;
+            if (_subtitleLabel != null)
+            {
+                _subtitleLabel.Text = $"Different classes unlock different skills.  You can change class again any time. (Level Requirement: Lv.{playerLevel}/{GameConstants.CLASS_CHANGE_MIN_LEVEL})";
+            }
             RefreshCardHighlights();
             _root.Visible = true;
         }
@@ -160,16 +167,16 @@ namespace QuestFantasy.UI
             title.AddColorOverride("font_color", HeaderColor);
             header.AddChild(title);
 
-            var subtitle = new Label
+            _subtitleLabel = new Label
             {
-                Text = "Different classes unlock different skills.  You can change class again any time.",
+                Text = $"Different classes unlock different skills.  You can change class again any time. (Level Requirement: Lv.1/{GameConstants.CLASS_CHANGE_MIN_LEVEL})",
                 Align = Label.AlignEnum.Center,
                 Autowrap = true,
                 RectMinSize = new Vector2(0f, 22f),
                 MouseFilter = Control.MouseFilterEnum.Ignore,
             };
-            subtitle.AddColorOverride("font_color", SubHeaderColor);
-            header.AddChild(subtitle);
+            _subtitleLabel.AddColorOverride("font_color", SubHeaderColor);
+            header.AddChild(_subtitleLabel);
 
             // ── Cards row ───────────────────────────────────────────────
             float totalCardsW = AllClasses.Length * CardWidth + (AllClasses.Length - 1) * CardSpacing;
@@ -332,7 +339,14 @@ namespace QuestFantasy.UI
         {
             if (index >= 0 && index < AllClasses.Length)
             {
-                _selectedClass = AllClasses[index];
+                PlayerClass targetClass = AllClasses[index];
+                if (targetClass != PlayerClass.Adventurer && _playerLevel < GameConstants.CLASS_CHANGE_MIN_LEVEL)
+                {
+                    // Block selection of locked advanced classes (only Adventurer is selectable)
+                    return;
+                }
+
+                _selectedClass = targetClass;
                 RefreshCardHighlights();
             }
         }
@@ -354,6 +368,8 @@ namespace QuestFantasy.UI
         {
             if (_cardPanels == null) return;
 
+            bool levelLocked = _playerLevel < GameConstants.CLASS_CHANGE_MIN_LEVEL;
+
             for (int i = 0; i < AllClasses.Length; i++)
             {
                 if (_cardPanels[i] == null) continue;
@@ -361,17 +377,31 @@ namespace QuestFantasy.UI
                 PlayerClass cls = AllClasses[i];
                 bool isSelected = cls == _selectedClass;
                 bool isCurrent = cls == _currentClass;
-                Color accent = GetClassAccent(cls);
+                
+                // Adventurer is always unlocked. Advanced classes are locked if level requirement is not met.
+                bool isLocked = levelLocked && cls != PlayerClass.Adventurer;
 
-                Color border = isSelected ? CardBorderSelect
-                             : isCurrent ? accent.Blend(CardBorderNormal)
-                             : CardBorderNormal;
+                if (isLocked)
+                {
+                    // Gray out and make semi-transparent
+                    _cardPanels[i].Modulate = new Color(0.4f, 0.4f, 0.4f, 0.7f);
+                    _cardPanels[i].AddStyleboxOverride("panel", MakeCardStyle(CardBgNormal, CardBorderNormal));
+                }
+                else
+                {
+                    _cardPanels[i].Modulate = new Color(1f, 1f, 1f, 1f);
 
-                _cardPanels[i].AddStyleboxOverride("panel",
-                    MakeCardStyle(
-                        isSelected ? CardBgSelected : CardBgNormal,
-                        border,
-                        isSelected ? 3 : 2));
+                    Color accent = GetClassAccent(cls);
+                    Color border = isSelected ? CardBorderSelect
+                                 : isCurrent ? accent.Blend(CardBorderNormal)
+                                 : CardBorderNormal;
+
+                    _cardPanels[i].AddStyleboxOverride("panel",
+                        MakeCardStyle(
+                            isSelected ? CardBgSelected : CardBgNormal,
+                            border,
+                            isSelected ? 3 : 2));
+                }
             }
         }
     }

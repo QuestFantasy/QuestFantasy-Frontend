@@ -137,7 +137,7 @@ namespace QuestFantasy.Prototype
         {
             SpawnNpc(
                 "Previous Hero",
-                "I once walked these lands, and I know the power that lies within each path.",
+                $"I once walked these lands, and I know the power that lies within each path. (Requires Level {GameConstants.CLASS_CHANGE_MIN_LEVEL} to change class)",
                 NpcRole.ClassSelector,
                 false,
                 new Vector2(7, 11),
@@ -285,8 +285,10 @@ namespace QuestFantasy.Prototype
 
             Player target = player ?? _player;
             PlayerClass current = target?.PlayerClass ?? PlayerClass.Adventurer;
-            _classSelectUI.Show(current);
-            GD.Print($"[Lobby] Class selector opened by {npc.EntityName}. Current class: {current}");
+            int level = (int)(target?.Level ?? 1);
+
+            _classSelectUI.Show(current, level);
+            GD.Print($"[Lobby] Class selector opened by {npc.EntityName}. Current class: {current}, Player Level: {level}");
         }
 
         private void OnClassSelected(PlayerClass newClass)
