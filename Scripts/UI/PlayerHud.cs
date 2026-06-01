@@ -17,11 +17,11 @@ public class PlayerHud : CanvasLayer
     {
         ["basic_attack"] = "res://Assets/SkillAnimation/slash-icon.png",
         ["bow_attack"] = "res://Assets/SkillAnimation/arrow.png",
-        ["triple_arrow"] = "res://Assets/SkillAnimation/arrow.png",
-        ["ricochet_arrow"] = "res://Assets/SkillAnimation/arrow.png",
+        ["triple_arrow"] = "res://Assets/SkillAnimation/arrow_multi.png",
+        ["ricochet_arrow"] = "res://Assets/SkillAnimation/arrow_ricochet.png",
         ["fireball"] = "res://Assets/SkillAnimation/fireball.png",
-        ["triple_fireball"] = "res://Assets/SkillAnimation/fireball.png",
-        ["giant_fireball"] = "res://Assets/SkillAnimation/fireball.png",
+        ["triple_fireball"] = "res://Assets/SkillAnimation/fireball_multi.png",
+        ["giant_fireball"] = "res://Assets/SkillAnimation/fireball3.png",
         ["flying_sword"] = "res://Assets/SkillAnimation/fly_sword.png",
         ["defense_stance"] = "res://Assets/Characters/warrior/defense.png",
     };

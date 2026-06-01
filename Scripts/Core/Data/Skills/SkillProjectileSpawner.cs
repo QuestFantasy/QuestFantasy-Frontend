@@ -214,6 +214,10 @@ namespace QuestFantasy.Core.Data.Skills
             Func<StatusEffect> onHitEffect = null,
             float onHitChance = 0f)
         {
+            string arrowTexturePath = bounces > 0
+                ? "res://Assets/SkillAnimation/arrow_ricochet.png"
+                : "res://Assets/SkillAnimation/arrow.png";
+
             return new SkillProjectileNode
             {
                 _owner = owner,
@@ -229,16 +233,16 @@ namespace QuestFantasy.Core.Data.Skills
                 _bouncesRemaining = bounces,
                 _onHitEffect = onHitEffect,
                 _onHitChance = onHitChance,
-                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
+                _projectileTexture = GD.Load<Texture>(arrowTexturePath),
                 _projectileScale = ArrowProjectileScale,
                 _impactScale = ArrowImpactScale,
                 _flightFrames = new[]
                 {
-                    GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
+                    GD.Load<Texture>(arrowTexturePath),
                 },
                 _impactFrames = new[]
                 {
-                    GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
+                    GD.Load<Texture>(arrowTexturePath),
                 }
             };
         }
