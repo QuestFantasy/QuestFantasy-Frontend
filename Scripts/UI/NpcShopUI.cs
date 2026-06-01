@@ -705,6 +705,33 @@ public class NpcShopUI : CanvasLayer
             }
         }
 
+        // Support consumables (potions) and tickets
+        else if (item is QuestFantasy.Core.Data.Items.ConsumableItem consumable)
+        {
+            if (consumable.Sprite != null)
+            {
+                return consumable.Sprite;
+            }
+
+            if (!string.IsNullOrEmpty(consumable.SpritePath))
+            {
+                return GD.Load<Texture>(consumable.SpritePath);
+            }
+        }
+
+        else if (item is QuestFantasy.Core.Data.Items.TicketItem ticket)
+        {
+            if (ticket.Sprite != null)
+            {
+                return ticket.Sprite;
+            }
+
+            if (!string.IsNullOrEmpty(ticket.SpritePath))
+            {
+                return GD.Load<Texture>(ticket.SpritePath);
+            }
+        }
+
         return null;
     }
 

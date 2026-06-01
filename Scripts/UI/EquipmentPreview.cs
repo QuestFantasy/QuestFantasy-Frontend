@@ -183,6 +183,33 @@ public class EquipmentPreview : CanvasLayer
 
             AddAttributeGrid(w.WeaponAbilities?.Atk ?? 0, w.WeaponAbilities?.Def ?? 0, w.WeaponAbilities?.Spd ?? 0, w.WeaponAbilities?.Vit ?? 0, w.LevelRequirement, w.Price);
         }
+        else if (item is QuestFantasy.Core.Data.Items.ConsumableItem consumable)
+        {
+            titleText = consumable.Name ?? "Potion";
+            if (consumable.RemovesBurn)
+            {
+                metaText = "Potion • Cures Burn";
+            }
+            else
+            {
+                metaText = $"Potion • Heal {consumable.HealAmount} HP";
+            }
+            rarityColor = new Color(0.65f, 1f, 0.78f);
+            if (!string.IsNullOrEmpty(consumable.SpritePath))
+            {
+                iconTex = (Texture)GD.Load(consumable.SpritePath);
+            }
+        }
+        else if (item is QuestFantasy.Core.Data.Items.TicketItem ticket)
+        {
+            titleText = ticket.Name ?? "Ticket";
+            metaText = $"{ticket.Difficulty} Entry Ticket";
+            rarityColor = new Color(1f, 0.82f, 0.36f);
+            if (!string.IsNullOrEmpty(ticket.SpritePath))
+            {
+                iconTex = (Texture)GD.Load(ticket.SpritePath);
+            }
+        }
 
         // Icon
         var iconRect = new TextureRect();

@@ -140,10 +140,10 @@ namespace QuestFantasy.Prototype
                 new Color(0.85f, 0.95f, 1f));
 
             SpawnNpc(
-                "Poet",
+                "Trader",
                 "I speak in verses, but I still know the roads and the winds.",
                 NpcRole.Merchant,
-                false,
+                true,
                 new Vector2(23, 11),
                 new Color(1f, 0.92f, 0.75f));
 
@@ -156,7 +156,7 @@ namespace QuestFantasy.Prototype
                 new Color(1f, 0.82f, 0.82f));
 
             SpawnNpc(
-                "Trader",
+                "Poet(online shop)",
                 "I can help you browse the player marketplace.",
                 NpcRole.Merchant,
                 true,
@@ -177,9 +177,17 @@ namespace QuestFantasy.Prototype
 
             npc.Position = spawnPosition;
             npc.SetBaseTint(tint);
-            if (isShopkeeper && role == NpcRole.Blacksmith)
+            if (isShopkeeper)
             {
-                npc.SetShopInventory(CreateBlacksmithStock());
+                if (role == NpcRole.Blacksmith)
+                {
+                    npc.SetShopInventory(CreateBlacksmithStock());
+                }
+                else if (string.Equals(entityName, "Poet", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(entityName, "Trader", StringComparison.OrdinalIgnoreCase))
+                {
+                    npc.SetShopInventory(CreatePoetStock());
+                }
             }
             npc.InteractionStarted += OnNpcInteractionStarted;
             npc.DialogueRequested += OnNpcDialogueRequested;
@@ -236,6 +244,37 @@ namespace QuestFantasy.Prototype
             return stock;
         }
 
+        private IEnumerable<Item> CreatePoetStock()
+        {
+            var stock = new List<Item>();
+
+            // Add a variety of potions
+            var small = ItemCatalog.CreatePotion(ItemCatalog.HpPotionS);
+            var medium = ItemCatalog.CreatePotion(ItemCatalog.HpPotionM);
+            var large = ItemCatalog.CreatePotion(ItemCatalog.HpPotionL);
+            var burn = ItemCatalog.CreatePotion(ItemCatalog.BurnPotion);
+
+            AddIfNotNull(stock, small);
+            AddIfNotNull(stock, medium);
+            AddIfNotNull(stock, large);
+            AddIfNotNull(stock, burn);
+
+            // Add tickets for different difficulties and set prices
+            var normalTicket = ItemCatalog.CreateTicket(DifficultyLevel.Normal);
+            var hardTicket = ItemCatalog.CreateTicket(DifficultyLevel.Hard);
+            var nightmareTicket = ItemCatalog.CreateTicket(DifficultyLevel.Nightmare);
+
+            if (normalTicket != null) normalTicket.Price = 100;
+            if (hardTicket != null) hardTicket.Price = 250;
+            if (nightmareTicket != null) nightmareTicket.Price = 600;
+
+            AddIfNotNull(stock, normalTicket);
+            AddIfNotNull(stock, hardTicket);
+            AddIfNotNull(stock, nightmareTicket);
+
+            return stock;
+        }
+
         private void AddIfNotNull(List<Item> stock, Item item)
         {
             if (stock == null || item == null)
@@ -282,6 +321,7 @@ namespace QuestFantasy.Prototype
         {
             _difficultyUI = new DifficultySelectionUI();
             AddChild(_difficultyUI);
+            _difficultyUI.Initialize(_player);
             _difficultyUI.DifficultySelected += OnDifficultySelected;
         }
 

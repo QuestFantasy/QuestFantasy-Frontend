@@ -1,6 +1,10 @@
 using System;
+using System.Collections.Generic;
 
 using Godot;
+
+using QuestFantasy.Characters;
+using QuestFantasy.Core.Data.Items;
 
 /// <summary>
 /// UI for difficulty selection when entering a game level from the lobby.
@@ -13,6 +17,8 @@ public class DifficultySelectionUI : CanvasLayer
     private Control _uiContainer;
     private VBoxContainer _buttonContainer;
     private bool _isVisible;
+    private Player _player;
+    private readonly Dictionary<DifficultyLevel, Button> _difficultyButtons = new Dictionary<DifficultyLevel, Button>();
 
     public override void _Ready()
     {
@@ -95,6 +101,12 @@ public class DifficultySelectionUI : CanvasLayer
         _uiContainer = screenMargin;
     }
 
+    public void Initialize(Player player)
+    {
+        _player = player;
+        RefreshLocks();
+    }
+
     private void AddDifficultyButton(string label, DifficultyLevel difficulty)
     {
         var button = new Button();
@@ -104,6 +116,7 @@ public class DifficultySelectionUI : CanvasLayer
         binds.Add(difficulty);
         button.Connect("pressed", this, nameof(OnDifficultyButtonPressed), binds);
         _buttonContainer.AddChild(button);
+        _difficultyButtons[difficulty] = button;
     }
 
     private void OnDifficultyButtonPressed(DifficultyLevel difficulty)
@@ -119,6 +132,7 @@ public class DifficultySelectionUI : CanvasLayer
 
     public void ShowDifficultyMenu()
     {
+        RefreshLocks();
         _uiContainer.Visible = true;
         _isVisible = true;
         GetTree().Paused = true;
@@ -132,4 +146,35 @@ public class DifficultySelectionUI : CanvasLayer
     }
 
     public bool IsMenuVisible => _isVisible;
+
+    private void RefreshLocks()
+    {
+        foreach (var entry in _difficultyButtons)
+        {
+            DifficultyLevel difficulty = entry.Key;
+            Button button = entry.Value;
+            bool unlocked = difficulty == DifficultyLevel.Easy || HasTicket(difficulty);
+            button.Disabled = !unlocked;
+            string label = difficulty.ToString();
+            button.Text = unlocked ? label : $"{label}  Locked";
+        }
+    }
+
+    private bool HasTicket(DifficultyLevel difficulty)
+    {
+        if (_player == null)
+        {
+            return false;
+        }
+
+        foreach (Item item in _player.InventoryItems)
+        {
+            if (ItemCatalog.IsTicketForDifficulty(item, difficulty))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

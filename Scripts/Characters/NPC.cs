@@ -308,6 +308,39 @@ namespace QuestFantasy.Characters
                 };
             }
 
+            // Handle consumables (potions)
+            if (item is QuestFantasy.Core.Data.Items.ConsumableItem consumable)
+            {
+                return new QuestFantasy.Core.Data.Items.ConsumableItem
+                {
+                    ItemId = consumable.ItemId,
+                    Name = consumable.Name,
+                    Description = consumable.Description,
+                    SpritePath = consumable.SpritePath,
+                    Sprite = consumable.Sprite,
+                    HealAmount = consumable.HealAmount,
+                    RemovesBurn = consumable.RemovesBurn,
+                    Price = consumable.Price,
+                    Quantity = consumable.Quantity
+                };
+            }
+
+            // Handle tickets
+            if (item is QuestFantasy.Core.Data.Items.TicketItem ticket)
+            {
+                return new QuestFantasy.Core.Data.Items.TicketItem
+                {
+                    ItemId = ticket.ItemId,
+                    Name = ticket.Name,
+                    Description = ticket.Description,
+                    SpritePath = ticket.SpritePath,
+                    Sprite = ticket.Sprite,
+                    Difficulty = ticket.Difficulty,
+                    Price = ticket.Price,
+                    Quantity = ticket.Quantity
+                };
+            }
+
             return new Item
             {
                 Name = item.Name,
@@ -385,6 +418,11 @@ namespace QuestFantasy.Characters
                 case NpcRole.Blacksmith:
                     return "res://Assets/NPC/NPC-blacksmith.png";
                 case NpcRole.Merchant:
+                    // Use a sales portrait for in-person trader NPCs named "Trader"
+                    if (!string.IsNullOrWhiteSpace(entityName) && entityName.Trim().Equals("Trader", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "res://Assets/NPC/NPC-sales.png";
+                    }
                     return "res://Assets/NPC/NPC-poet.png";
                 case NpcRole.Guide:
                 default:
