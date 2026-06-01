@@ -582,6 +582,30 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
+                if (string.Equals(snapshot.SkillId, "triple_fireball", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new TripleFireballSkill());
+                    continue;
+                }
+
+                if (string.Equals(snapshot.SkillId, "giant_fireball", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new GiantFireballSkill());
+                    continue;
+                }
+
+                if (string.Equals(snapshot.SkillId, "triple_arrow", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new TripleArrowSkill());
+                    continue;
+                }
+
+                if (string.Equals(snapshot.SkillId, "ricochet_arrow", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new RicochetArrowSkill());
+                    continue;
+                }
+
                 var remoteSkill = new RemoteSkill(
                     snapshot.SkillId,
                     snapshot.Name,
@@ -625,6 +649,26 @@ namespace QuestFantasy.Characters
             if (skill is FireballSkill)
             {
                 return "fireball";
+            }
+
+            if (skill is TripleFireballSkill)
+            {
+                return "triple_fireball";
+            }
+
+            if (skill is GiantFireballSkill)
+            {
+                return "giant_fireball";
+            }
+
+            if (skill is TripleArrowSkill)
+            {
+                return "triple_arrow";
+            }
+
+            if (skill is RicochetArrowSkill)
+            {
+                return "ricochet_arrow";
             }
 
             if (skill is RemoteSkill remoteSkill)
@@ -700,7 +744,11 @@ namespace QuestFantasy.Characters
             // Ensure the class's primary skill exists
             bool hasSword = skills.Any(s => s is BasicAttackSkill);
             bool hasBow = skills.Any(s => s is BowAttackSkill);
+            bool hasTripleArrow = skills.Any(s => s is TripleArrowSkill);
+            bool hasRicochetArrow = skills.Any(s => s is RicochetArrowSkill);
             bool hasFireball = skills.Any(s => s is FireballSkill);
+            bool hasTripleFireball = skills.Any(s => s is TripleFireballSkill);
+            bool hasGiantFireball = skills.Any(s => s is GiantFireballSkill);
 
             if (allowed.Contains(PlayerClassData.SkillIdSword) && !hasSword)
             {
@@ -716,9 +764,29 @@ namespace QuestFantasy.Characters
                 skills.Add(new BowAttackSkill());
             }
 
+            if (allowed.Contains(PlayerClassData.SkillIdTripleArrow) && !hasTripleArrow)
+            {
+                skills.Add(new TripleArrowSkill());
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdRicochetArrow) && !hasRicochetArrow)
+            {
+                skills.Add(new RicochetArrowSkill());
+            }
+
             if (allowed.Contains(PlayerClassData.SkillIdFireball) && !hasFireball)
             {
                 skills.Add(new FireballSkill());
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdTripleFireball) && !hasTripleFireball)
+            {
+                skills.Add(new TripleFireballSkill());
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdGiantFireball) && !hasGiantFireball)
+            {
+                skills.Add(new GiantFireballSkill());
             }
         }
 
@@ -918,6 +986,87 @@ namespace QuestFantasy.Characters
         public void LearnSkill(Skills skill)
         {
             _combatSystem?.LearnSkill(skill);
+        }
+
+        /// <summary>
+        /// Replace the player's equipped skill list with the given ordered list of skill IDs,
+        /// enforcing class restrictions. Called from the skill-equip UI after the player
+        /// saves their loadout. Invalid / disallowed IDs are silently skipped.
+        /// </summary>
+        public void SetEquippedSkills(System.Collections.Generic.List<string> orderedSkillIds)
+        {
+            if (_combatSystem == null) return;
+
+            var builtSkills = BuildSkillsFromIds(orderedSkillIds, PlayerClass);
+            _combatSystem.SetSkills(builtSkills);
+            GD.Print($"[Player] Skill loadout updated: {string.Join(", ", orderedSkillIds)}");
+        }
+
+        /// <summary>
+        /// Returns the ordered list of skill IDs currently equipped by the player.
+        /// </summary>
+        public System.Collections.Generic.List<string> GetEquippedSkillIds()
+        {
+            var ids = new System.Collections.Generic.List<string>();
+            var skills = _combatSystem?.CurrentSkills;
+            if (skills == null) return ids;
+            foreach (var s in skills)
+            {
+                if (s != null) ids.Add(ResolveSkillId(s));
+            }
+            return ids;
+        }
+
+        /// <summary>
+        /// Translates an ordered list of skill IDs into live skill instances,
+        /// filtering out any IDs not allowed for the given class.
+        /// </summary>
+        private static System.Collections.Generic.List<Skills> BuildSkillsFromIds(
+            System.Collections.Generic.List<string> orderedIds,
+            PlayerClass cls)
+        {
+            var allowed = PlayerClassData.GetAllowedSkillIds(cls);
+            var skills  = new System.Collections.Generic.List<Skills>();
+
+            if (orderedIds != null)
+            {
+                foreach (var id in orderedIds)
+                {
+                    string key = (id ?? string.Empty).ToLowerInvariant();
+                    if (!allowed.Contains(key)) continue;
+
+                    if (key == "basic_attack")
+                    {
+                        skills.Add(new BasicAttackSkill { EffectRenderer = new BasicAttackEffectRenderer() });
+                    }
+                    else if (key == "bow_attack")
+                    {
+                        skills.Add(new BowAttackSkill());
+                    }
+                    else if (key == "triple_arrow")
+                    {
+                        skills.Add(new TripleArrowSkill());
+                    }
+                    else if (key == "ricochet_arrow")
+                    {
+                        skills.Add(new RicochetArrowSkill());
+                    }
+                    else if (key == "fireball")
+                    {
+                        skills.Add(new FireballSkill());
+                    }
+                    else if (key == "triple_fireball")
+                    {
+                        skills.Add(new TripleFireballSkill());
+                    }
+                    else if (key == "giant_fireball")
+                    {
+                        skills.Add(new GiantFireballSkill());
+                    }
+                }
+            }
+
+            return skills;
         }
 
         // ==================== Inventory System ====================

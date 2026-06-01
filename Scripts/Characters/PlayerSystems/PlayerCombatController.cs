@@ -125,12 +125,12 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         private static AttackAnimationStyle GetAttackAnimationStyle(Skills skill)
         {
-            if (skill is BowAttackSkill)
+            if (skill is BowAttackSkill || skill is TripleArrowSkill || skill is RicochetArrowSkill)
             {
                 return AttackAnimationStyle.Bow;
             }
 
-            if (skill is FireballSkill)
+            if (skill is FireballSkill || skill is TripleFireballSkill || skill is GiantFireballSkill)
             {
                 return AttackAnimationStyle.Fireball;
             }

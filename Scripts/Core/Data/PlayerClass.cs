@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace QuestFantasy.Core.Data
 {
@@ -55,6 +56,19 @@ namespace QuestFantasy.Core.Data
     }
 
     /// <summary>
+    /// Immutable descriptor for a single learnable skill.
+    /// Used by the skill-equip UI to build cards without coupling to concrete skill classes.
+    /// </summary>
+    public class SkillDefinition
+    {
+        public string Id          { get; set; }
+        public string DisplayName { get; set; }
+        public string Description { get; set; }
+        public string Emoji       { get; set; }
+        public float  CooldownSec { get; set; }
+    }
+
+    /// <summary>
     /// Static registry of per-class data:
     ///  - Which skill IDs are allowed
     ///  - Which sprite asset paths to use (with shared-asset fallbacks)
@@ -86,6 +100,10 @@ namespace QuestFantasy.Core.Data
         public const string SkillIdSword = "basic_attack";
         public const string SkillIdBow = "bow_attack";
         public const string SkillIdFireball = "fireball";
+        public const string SkillIdTripleFireball = "triple_fireball";
+        public const string SkillIdGiantFireball = "giant_fireball";
+        public const string SkillIdTripleArrow = "triple_arrow";
+        public const string SkillIdRicochetArrow = "ricochet_arrow";
 
         // ── Allowed skills per class ───────────────────────────────────────
 
@@ -96,12 +114,12 @@ namespace QuestFantasy.Core.Data
 
         private static readonly HashSet<string> MageSkills = new HashSet<string>
         {
-            SkillIdFireball
+            SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball
         };
 
         private static readonly HashSet<string> ArcherSkills = new HashSet<string>
         {
-            SkillIdBow
+            SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow
         };
 
         private static readonly HashSet<string> WarriorSkills = new HashSet<string>
@@ -160,6 +178,105 @@ namespace QuestFantasy.Core.Data
                 case PlayerClass.Archer: return "Arrow Shot";
                 case PlayerClass.Warrior: return "Sword Slash";
                 default: return "Sword Slash, Arrow Shot, Fireball";
+            }
+        }
+
+        // ── Skill definition catalogue ─────────────────────────────────────
+
+        private static readonly SkillDefinition DefSword = new SkillDefinition
+        {
+            Id = SkillIdSword,
+            DisplayName = "Sword Slash",
+            Description = "A powerful melee strike that hits nearby enemies.",
+            Emoji = "⚔️",
+            CooldownSec = 0.3f,
+        };
+
+        private static readonly SkillDefinition DefBow = new SkillDefinition
+        {
+            Id = SkillIdBow,
+            DisplayName = "Arrow Shot",
+            Description = "Fire an arrow that pierces enemies at range.",
+            Emoji = "🏹",
+            CooldownSec = 0.8f,
+        };
+
+        private static readonly SkillDefinition DefTripleArrow = new SkillDefinition
+        {
+            Id = SkillIdTripleArrow,
+            DisplayName = "Triple Arrow",
+            Description = "Fire 3 parallel arrows at once that pierce enemies.",
+            Emoji = "🏹",
+            CooldownSec = 1.5f,
+        };
+
+        private static readonly SkillDefinition DefRicochetArrow = new SkillDefinition
+        {
+            Id = SkillIdRicochetArrow,
+            DisplayName = "Ricochet Arrow",
+            Description = "Fire an arrow that bounces between enemies and walls.",
+            Emoji = "↪️",
+            CooldownSec = 2.5f,
+        };
+
+        private static readonly SkillDefinition DefFireball = new SkillDefinition
+        {
+            Id = SkillIdFireball,
+            DisplayName = "Fireball",
+            Description = "Launch a fireball that explodes on impact and may Burn.",
+            Emoji = "🔥",
+            CooldownSec = 1.2f,
+        };
+
+        private static readonly SkillDefinition DefTripleFireball = new SkillDefinition
+        {
+            Id = SkillIdTripleFireball,
+            DisplayName = "Triple Fireball",
+            Description = "Launch 3 fireballs in a spread that explode on impact.",
+            Emoji = "☄️",
+            CooldownSec = 2.0f,
+        };
+
+        private static readonly SkillDefinition DefGiantFireball = new SkillDefinition
+        {
+            Id = SkillIdGiantFireball,
+            DisplayName = "Giant Fireball",
+            Description = "Launch a massive fireball that explodes on impact.",
+            Emoji = "🔥",
+            CooldownSec = 3.0f,
+        };
+
+        /// <summary>
+        /// Returns the ordered list of all <see cref="SkillDefinition"/>s that
+        /// the given class is permitted to equip. Used to build the skill-equip UI.
+        /// </summary>
+        public static ReadOnlyCollection<SkillDefinition> GetAllSkillDefinitions(PlayerClass cls)
+        {
+            switch (cls)
+            {
+                case PlayerClass.Mage:
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefFireball, DefTripleFireball, DefGiantFireball });
+                case PlayerClass.Archer:
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefBow, DefTripleArrow, DefRicochetArrow });
+                case PlayerClass.Warrior:
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword });
+                default: // Adventurer
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefBow, DefFireball });
+            }
+        }
+
+        /// <summary>
+        /// Returns the default ordered skill-ID loadout for <paramref name="cls"/>.
+        /// Used to reset the loadout when the player changes class.
+        /// </summary>
+        public static ReadOnlyCollection<string> GetDefaultSkillLoadout(PlayerClass cls)
+        {
+            switch (cls)
+            {
+                case PlayerClass.Mage:    return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball });
+                case PlayerClass.Archer:  return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow });
+                case PlayerClass.Warrior: return new ReadOnlyCollection<string>(new[] { SkillIdSword });
+                default:                  return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdBow, SkillIdFireball });
             }
         }
 

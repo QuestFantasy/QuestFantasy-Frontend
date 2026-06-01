@@ -18,8 +18,33 @@ namespace QuestFantasy.Core.Data.Skills
             float onHitChance = 0f)
         {
             Vector2 direction = ResolveDirection(player, target);
-            var node = SkillProjectileNode.CreateArrow(player, direction, maxRange, onHitEffect, onHitChance);
+            var node = SkillProjectileNode.CreateArrow(player, direction, maxRange, 0, onHitEffect, onHitChance);
             AttachToScene(player, node);
+        }
+
+        public static void SpawnTripleArrow(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            
+            // Calculate a perpendicular offset vector (10 pixels wide) to separate the arrows
+            Vector2 perpOffset = new Vector2(-direction.y, direction.x) * 12f;
+
+            var nodeCenter = SkillProjectileNode.CreateArrow(player, direction, maxRange, 0, onHitEffect, onHitChance);
+            var nodeLeft = SkillProjectileNode.CreateArrow(player, direction, maxRange, 0, onHitEffect, onHitChance);
+            var nodeRight = SkillProjectileNode.CreateArrow(player, direction, maxRange, 0, onHitEffect, onHitChance);
+
+            AttachToScene(player, nodeCenter);
+            AttachToScene(player, nodeLeft);
+            AttachToScene(player, nodeRight);
+            
+            // Apply the visual offsets
+            nodeLeft.GlobalPosition += perpOffset;
+            nodeRight.GlobalPosition -= perpOffset;
         }
 
         public static void SpawnFireball(
@@ -31,6 +56,54 @@ namespace QuestFantasy.Core.Data.Skills
         {
             Vector2 direction = ResolveDirection(player, target);
             var node = SkillProjectileNode.CreateFireball(player, direction, maxRange, onHitEffect, onHitChance);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnTripleFireball(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            
+            // Calculate spread directions (±15 degrees = ±0.261799 radians)
+            float spreadAngle = 15f * Mathf.Pi / 180f;
+            Vector2 dirLeft = direction.Rotated(-spreadAngle);
+            Vector2 dirRight = direction.Rotated(spreadAngle);
+
+            var nodeCenter = SkillProjectileNode.CreateFireball(player, direction, maxRange, onHitEffect, onHitChance);
+            var nodeLeft = SkillProjectileNode.CreateFireball(player, dirLeft, maxRange, onHitEffect, onHitChance);
+            var nodeRight = SkillProjectileNode.CreateFireball(player, dirRight, maxRange, onHitEffect, onHitChance);
+
+            AttachToScene(player, nodeCenter);
+            AttachToScene(player, nodeLeft);
+            AttachToScene(player, nodeRight);
+        }
+
+        public static void SpawnGiantFireball(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateGiantFireball(player, direction, maxRange, onHitEffect, onHitChance);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnRicochetArrow(
+            Player player,
+            Character target,
+            float maxRange,
+            int bounces,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateArrow(player, direction, maxRange, bounces, onHitEffect, onHitChance);
             AttachToScene(player, node);
         }
 
@@ -115,11 +188,14 @@ namespace QuestFantasy.Core.Data.Skills
         private int _flightFrameIndex = -1;
         private float _flightFrameDuration = 0f;
         private float _impactFrameDuration = ArrowImpactFrameDuration;
+        private int _bouncesRemaining = 0;
+        private float _bounceRange = 150f;
 
         public static SkillProjectileNode CreateArrow(
             Player owner,
             Vector2 direction,
             float maxRange,
+            int bounces = 0,
             Func<StatusEffect> onHitEffect = null,
             float onHitChance = 0f)
         {
@@ -135,6 +211,7 @@ namespace QuestFantasy.Core.Data.Skills
                 _damageMax = 4,
                 _isAoe = false,
                 _aoeRadius = 0f,
+                _bouncesRemaining = bounces,
                 _onHitEffect = onHitEffect,
                 _onHitChance = onHitChance,
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/arrow.png"),
@@ -175,6 +252,48 @@ namespace QuestFantasy.Core.Data.Skills
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/fireball.png"),
                 _projectileScale = FireballProjectileScale,
                 _impactScale = FireballImpactScale,
+                _flightFrameDuration = FireballFlightFrameDuration,
+                _impactFrameDuration = FireballImpactFrameDuration,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball1.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball2.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball3.png"),
+                },
+                _impactFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball_hit.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball_hit1.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball_hit2.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fireball_hit3.png"),
+                }
+            };
+        }
+
+        public static SkillProjectileNode CreateGiantFireball(
+            Player owner,
+            Vector2 direction,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            return new SkillProjectileNode
+            {
+                _owner = owner,
+                _map = FindMap(owner),
+                _direction = direction,
+                _speed = FireballSpeed * 0.8f, // Slightly slower because it's massive
+                _maxDistance = Mathf.Max(10f, maxRange),
+                _hitRadius = 24f,
+                _damageMin = 10,
+                _damageMax = 18,
+                _isAoe = true,
+                _aoeRadius = 80f,
+                _onHitEffect = onHitEffect,
+                _onHitChance = onHitChance,
+                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/fireball.png"),
+                _projectileScale = FireballProjectileScale * 2f,
+                _impactScale = FireballImpactScale * 2f,
                 _flightFrameDuration = FireballFlightFrameDuration,
                 _impactFrameDuration = FireballImpactFrameDuration,
                 _flightFrames = new[]
@@ -239,15 +358,59 @@ namespace QuestFantasy.Core.Data.Skills
 
             if (IsBlockedByWall(nextPosition))
             {
-                BeginImpact(nextPosition, null);
-                return;
+                if (_bouncesRemaining > 0)
+                {
+                    _bouncesRemaining--;
+                    
+                    // Simple reflection based on axis
+                    bool xBlocked = IsBlockedByWall(GlobalPosition + new Vector2(step.x, 0));
+                    bool yBlocked = IsBlockedByWall(GlobalPosition + new Vector2(0, step.y));
+                    
+                    if (xBlocked) _direction.x *= -1;
+                    if (yBlocked) _direction.y *= -1;
+                    
+                    // Corner case: if both or neither (diagonal corner), just flip both
+                    if (!xBlocked && !yBlocked) { _direction = -_direction; }
+                    
+                    _direction = _direction.Normalized();
+                    Rotation = _direction.Angle();
+                    return; // continue next frame
+                }
+                else
+                {
+                    BeginImpact(nextPosition, null);
+                    return;
+                }
             }
 
             Character hitTarget = FindHitTarget(nextPosition);
             if (hitTarget != null)
             {
-                BeginImpact(hitTarget.GlobalPosition, hitTarget);
-                return;
+                if (_bouncesRemaining > 0)
+                {
+                    ApplyDamage(hitTarget);
+                    _bouncesRemaining--;
+                    
+                    // Find next target
+                    Character nextTarget = FindNextBounceTarget(hitTarget.GlobalPosition);
+                    if (nextTarget != null)
+                    {
+                        _direction = (nextTarget.GlobalPosition - GlobalPosition).Normalized();
+                        Rotation = _direction.Angle();
+                        return; // continue next frame
+                    }
+                    else 
+                    {
+                        // No target to bounce to, just impact
+                        BeginImpact(hitTarget.GlobalPosition, hitTarget);
+                        return;
+                    }
+                }
+                else
+                {
+                    BeginImpact(hitTarget.GlobalPosition, hitTarget);
+                    return;
+                }
             }
 
             GlobalPosition = nextPosition;
@@ -283,6 +446,11 @@ namespace QuestFantasy.Core.Data.Skills
                     continue;
                 }
 
+                if (_damagedTargets.Contains(enemy))
+                {
+                    continue;
+                }
+
                 if (enemy.GlobalPosition.DistanceTo(position) <= _hitRadius)
                 {
                     return enemy;
@@ -290,6 +458,40 @@ namespace QuestFantasy.Core.Data.Skills
             }
 
             return null;
+        }
+
+        private Character FindNextBounceTarget(Vector2 currentPosition)
+        {
+            if (!IsOwnerAlive())
+            {
+                return null;
+            }
+
+            Character bestTarget = null;
+            float closestDistSq = _bounceRange * _bounceRange;
+
+            foreach (Character enemy in EnumerateEnemyCharacters())
+            {
+                if (enemy?.Attributes?.HP == null || !enemy.Attributes.HP.IsAlive)
+                {
+                    continue;
+                }
+                
+                // Do not bounce back to already hit targets
+                if (_damagedTargets.Contains(enemy))
+                {
+                    continue;
+                }
+
+                float distSq = enemy.GlobalPosition.DistanceSquaredTo(currentPosition);
+                if (distSq <= closestDistSq)
+                {
+                    closestDistSq = distSq;
+                    bestTarget = enemy;
+                }
+            }
+
+            return bestTarget;
         }
 
         private void BeginImpact(Vector2 impactPosition, Character directHitTarget)
