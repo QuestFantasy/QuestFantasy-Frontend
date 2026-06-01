@@ -119,6 +119,74 @@ namespace QuestFantasy.Core.Data.Skills
             AttachToScene(player, node);
         }
 
+        public static void SpawnKnightExplosion(Player player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            var node = new KnightExplosionNode(player);
+            AttachToScene(player, node);
+            node.GlobalPosition = player.GlobalPosition;
+
+            GD.Print($"[KnightExplosion] Spawned at {player.GlobalPosition}");
+        }
+
+        public static void SpawnDigitArrow(Player player, Character target, float maxRange)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateDigitArrow(player, direction, maxRange);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnSuperArrow(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateSuperArrow(player, direction, maxRange, onHitEffect, onHitChance);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnIceSpear(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateIceSpear(player, direction, maxRange, onHitEffect, onHitChance);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnMagicSlash(Player player, Character target, float maxRange)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateMagicSlash(player, direction, maxRange);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnTemporaryVisualEffect(
+            Player player,
+            string texturePath,
+            Vector2 position,
+            float duration,
+            float initialScale,
+            float targetScale = -1f,
+            float rotationSpeed = 0f,
+            bool flipH = false,
+            float initialRotation = 0f)
+        {
+            var node = new TemporaryVisualEffectNode(texturePath, duration, initialScale, targetScale, rotationSpeed, flipH, initialRotation);
+            AttachToScene(player, node);
+            node.GlobalPosition = position;
+        }
+
         private static Vector2 ResolveDirection(Player player, Character target)
         {
             if (target != null && Godot.Object.IsInstanceValid(target))
@@ -139,7 +207,7 @@ namespace QuestFantasy.Core.Data.Skills
             return Vector2.Right;
         }
 
-        private static void AttachToScene(Player player, SkillProjectileNode node)
+        private static void AttachToScene(Player player, Node2D node)
         {
             if (player == null || !Godot.Object.IsInstanceValid(player))
             {
@@ -205,6 +273,8 @@ namespace QuestFantasy.Core.Data.Skills
         private bool _isPiercing = false;
         private bool _isReturning = false;
         private bool _returningPhase = false;
+        private bool _ignoreWalls = false;
+        private bool _loopFlightAnimation = true;
 
         public static SkillProjectileNode CreateArrow(
             Player owner,
@@ -372,6 +442,148 @@ namespace QuestFantasy.Core.Data.Skills
             };
         }
 
+        public static SkillProjectileNode CreateDigitArrow(
+            Player owner,
+            Vector2 direction,
+            float maxRange)
+        {
+            return new SkillProjectileNode
+            {
+                _owner = owner,
+                _map = FindMap(owner),
+                _direction = direction,
+                _speed = ArrowSpeed * 1.3f,
+                _maxDistance = Mathf.Max(10f, maxRange),
+                _hitRadius = 12f,
+                _damageMin = 4,
+                _damageMax = 7,
+                _isAoe = false,
+                _isPiercing = true,
+                _ignoreWalls = true,
+                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/digit_arrow.png"),
+                _projectileScale = 0.25f,
+                _impactScale = 0.25f,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/digit_arrow.png"),
+                },
+                _impactFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/digit_arrow.png"),
+                }
+            };
+        }
+
+        public static SkillProjectileNode CreateSuperArrow(
+            Player owner,
+            Vector2 direction,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            return new SkillProjectileNode
+            {
+                _owner = owner,
+                _map = FindMap(owner),
+                _direction = direction,
+                _speed = ArrowSpeed * 0.75f,
+                _maxDistance = Mathf.Max(10f, maxRange),
+                _hitRadius = 28f,
+                _damageMin = 8,
+                _damageMax = 15,
+                _isAoe = false,
+                _ignoreWalls = true,
+                _isPiercing = true,
+                _onHitEffect = onHitEffect,
+                _onHitChance = onHitChance,
+                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/super_arrow.png"),
+                _projectileScale = 0.55f,
+                _impactScale = 0.55f,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/super_arrow.png"),
+                },
+                _impactFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/super_arrow.png"),
+                }
+            };
+        }
+
+        public static SkillProjectileNode CreateIceSpear(
+            Player owner,
+            Vector2 direction,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            return new SkillProjectileNode
+            {
+                _owner = owner,
+                _map = FindMap(owner),
+                _direction = direction,
+                _speed = ArrowSpeed * 0.6f,
+                _maxDistance = Mathf.Max(10f, maxRange),
+                _hitRadius = 15f,
+                _damageMin = 5,
+                _damageMax = 9,
+                _isAoe = false,
+                _onHitEffect = onHitEffect,
+                _onHitChance = onHitChance,
+                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-1.png"),
+                _projectileScale = 0.3f,
+                _impactScale = 0.35f,
+                _flightFrameDuration = 0.1f,
+                _impactFrameDuration = 0.08f,
+                _loopFlightAnimation = false,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-1.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-2.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-3.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-4.png"),
+                },
+                _impactFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-hit.png"),
+                }
+            };
+        }
+
+        public static SkillProjectileNode CreateMagicSlash(
+            Player owner,
+            Vector2 direction,
+            float maxRange)
+        {
+            return new SkillProjectileNode
+            {
+                _owner = owner,
+                _map = FindMap(owner),
+                _direction = direction,
+                _speed = ArrowSpeed * 1.2f,
+                _maxDistance = Mathf.Max(10f, maxRange),
+                _hitRadius = 20f,
+                _damageMin = 4,
+                _damageMax = 8,
+                _isAoe = false,
+                _onHitEffect = null,
+                _onHitChance = 0f,
+                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/magic_slash-2.png"),
+                _projectileScale = 0.3f,
+                _impactScale = 0.3f,
+                _flightFrameDuration = 0f,
+                _impactFrameDuration = ArrowImpactFrameDuration,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/magic_slash-2.png"),
+                },
+                _impactFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/magic_slash-2.png"),
+                }
+            };
+        }
+
         public override void _Ready()
         {
             Texture firstFlightTexture = _projectileTexture;
@@ -430,7 +642,11 @@ namespace QuestFantasy.Core.Data.Skills
 
             if (IsBlockedByWall(nextPosition) && !_returningPhase)
             {
-                if (_bouncesRemaining > 0)
+                if (_ignoreWalls)
+                {
+                    // Do not block - pierce the wall/obstacle!
+                }
+                else if (_bouncesRemaining > 0)
                 {
                     _bouncesRemaining--;
 
@@ -632,7 +848,22 @@ namespace QuestFantasy.Core.Data.Skills
             }
 
             _flightFrameTimer = 0f;
-            _flightFrameIndex = (_flightFrameIndex + 1) % _flightFrames.Length;
+            int nextIndex = _flightFrameIndex + 1;
+            if (nextIndex >= _flightFrames.Length)
+            {
+                if (_loopFlightAnimation)
+                {
+                    _flightFrameIndex = 0;
+                }
+                else
+                {
+                    _flightFrameIndex = _flightFrames.Length - 1; // Hold on the last frame
+                }
+            }
+            else
+            {
+                _flightFrameIndex = nextIndex;
+            }
             _sprite.Texture = _flightFrames[_flightFrameIndex] ?? _sprite.Texture;
         }
 
@@ -777,6 +1008,198 @@ namespace QuestFantasy.Core.Data.Skills
         private bool IsOwnerAlive()
         {
             return _owner != null && Godot.Object.IsInstanceValid(_owner);
+        }
+    }
+
+    internal class TemporaryVisualEffectNode : Node2D
+    {
+        private readonly string _texturePath;
+        private readonly float _duration;
+        private readonly float _initialScale;
+        private readonly float _targetScale;
+        private readonly float _rotationSpeed;
+        private readonly bool _flipH;
+        private readonly float _initialRotation;
+
+        private Sprite _sprite;
+        private float _elapsed = 0f;
+
+        public TemporaryVisualEffectNode(string texturePath, float duration, float initialScale, float targetScale = -1f, float rotationSpeed = 0f, bool flipH = false, float initialRotation = 0f)
+        {
+            _texturePath = texturePath;
+            _duration = duration;
+            _initialScale = initialScale;
+            _targetScale = targetScale < 0f ? initialScale : targetScale;
+            _rotationSpeed = rotationSpeed;
+            _flipH = flipH;
+            _initialRotation = initialRotation;
+        }
+
+        public override void _Ready()
+        {
+            Texture tex = GD.Load<Texture>(_texturePath);
+            _sprite = new Sprite
+            {
+                Texture = tex,
+                Centered = true,
+                Scale = new Vector2(_initialScale, _initialScale),
+                FlipH = _flipH
+            };
+            AddChild(_sprite);
+            Rotation = _initialRotation;
+            SetProcess(true);
+        }
+
+        public override void _Process(float delta)
+        {
+            _elapsed += delta;
+            if (_elapsed >= _duration)
+            {
+                QueueFree();
+                return;
+            }
+
+            // Lerp scale
+            float t = _elapsed / _duration;
+            float currentScale = Mathf.Lerp(_initialScale, _targetScale, t);
+            _sprite.Scale = new Vector2(currentScale, currentScale);
+
+            // Lerp opacity (fade out)
+            float opacity = Mathf.Lerp(1f, 0f, t);
+            _sprite.Modulate = new Color(1f, 1f, 1f, opacity);
+
+            // Rotate
+            if (_rotationSpeed != 0f)
+            {
+                Rotation += _rotationSpeed * delta;
+            }
+        }
+    }
+
+    internal class KnightExplosionNode : Node2D
+    {
+        private const float DURATION = 3.0f; // 3 seconds duration
+        private const float INITIAL_SCALE = 0.25f;
+        private const float TARGET_SCALE = 0.5f; // growing to 2x initial scale (0.25 * 2 = 0.5)
+        private const float DAMAGE_TICK_INTERVAL = 0.5f; // damage tick every 0.5s
+        private const float BASE_RADIUS = 160f; // base radius of explosion at scale 1.0
+
+        private readonly Player _owner;
+        private Sprite _sprite;
+        private float _elapsed = 0f;
+        private float _tickTimer = 0f;
+
+        public KnightExplosionNode(Player owner)
+        {
+            _owner = owner;
+        }
+
+        public override void _Ready()
+        {
+            Texture tex = GD.Load<Texture>("res://Assets/SkillAnimation/knight_explose.png");
+            _sprite = new Sprite
+            {
+                Texture = tex,
+                Centered = true,
+                Scale = new Vector2(INITIAL_SCALE, INITIAL_SCALE)
+            };
+            AddChild(_sprite);
+            SetProcess(true);
+
+            // Deal first tick immediately
+            DealExplosionDamage();
+        }
+
+        public override void _Process(float delta)
+        {
+            if (_owner == null || !Godot.Object.IsInstanceValid(_owner))
+            {
+                QueueFree();
+                return;
+            }
+
+            _elapsed += delta;
+            if (_elapsed >= DURATION)
+            {
+                QueueFree();
+                return;
+            }
+
+            // Lerp scale
+            float t = _elapsed / DURATION;
+            float currentScale = Mathf.Lerp(INITIAL_SCALE, TARGET_SCALE, t);
+            _sprite.Scale = new Vector2(currentScale, currentScale);
+
+            // Lerp opacity (fade out towards the end)
+            float opacity = t > 0.8f ? Mathf.Lerp(1f, 0f, (t - 0.8f) / 0.2f) : 1f;
+            _sprite.Modulate = new Color(1f, 1f, 1f, opacity);
+
+            // Tick damage
+            _tickTimer += delta;
+            if (_tickTimer >= DAMAGE_TICK_INTERVAL)
+            {
+                _tickTimer -= DAMAGE_TICK_INTERVAL;
+                DealExplosionDamage();
+            }
+        }
+
+        private void DealExplosionDamage()
+        {
+            if (_owner == null || !Godot.Object.IsInstanceValid(_owner))
+            {
+                return;
+            }
+
+            float currentScale = _sprite.Scale.x;
+            float currentRadius = BASE_RADIUS * currentScale;
+
+            int attackerAtk = _owner.Attributes?.EffectiveAtk ?? 1;
+
+            foreach (Character enemy in EnumerateEnemyCharacters())
+            {
+                if (enemy?.Attributes?.HP == null || !enemy.Attributes.HP.IsAlive)
+                {
+                    continue;
+                }
+
+                if (enemy.GlobalPosition.DistanceTo(GlobalPosition) <= currentRadius)
+                {
+                    int defenderDef = enemy.Attributes?.EffectiveDef ?? 0;
+                    int baseDamage = Mathf.Max(1, attackerAtk - Mathf.FloorToInt(defenderDef * 0.4f));
+                    // Roll smaller random damage per tick
+                    int rolled = Mathf.RoundToInt((float)GD.RandRange(1, 3));
+                    int damage = Mathf.Max(1, baseDamage + rolled);
+
+                    enemy.TakeDamage(damage);
+                    GD.Print($"[COMBAT] Knight Explosion ticked on {enemy.EntityName} for {damage} damage!");
+                }
+            }
+        }
+
+        private IEnumerable<Character> EnumerateEnemyCharacters()
+        {
+            Node root = _owner?.GetTree()?.Root;
+            if (root == null)
+            {
+                yield break;
+            }
+
+            var stack = new Stack<Node>();
+            stack.Push(root);
+
+            while (stack.Count > 0)
+            {
+                Node node = stack.Pop();
+                if (node is Character character && character != _owner)
+                {
+                    yield return character;
+                }
+
+                foreach (Node child in node.GetChildren())
+                {
+                    stack.Push(child);
+                }
+            }
         }
     }
 }

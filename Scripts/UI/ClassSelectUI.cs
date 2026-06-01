@@ -283,16 +283,27 @@ namespace QuestFantasy.UI
                 slotsBox.AddChild(slotPanel);
             }
 
-            // Skill grid (Middle)
-            // We use a container that will hold the skill cards based on current class
+            // Scroll container for skills (Middle)
+            var scroll = new ScrollContainer();
+            scroll.Name = "ScrollContainer";
+            scroll.SetAnchorsAndMarginsPreset(Control.LayoutPreset.TopWide);
+            scroll.MarginLeft = 24f;
+            scroll.MarginRight = -24f;
+            scroll.MarginTop = 100f;
+            scroll.MarginBottom = 385f;
+            scroll.RectMinSize = new Vector2(0f, 285f);
+            scroll.ScrollVerticalEnabled = false;
+            scroll.ScrollHorizontalEnabled = true;
+            _skillTabContent.AddChild(scroll);
+
+            // Skill grid inside scroll container
             var gridBox = new HBoxContainer();
             gridBox.Name = "SkillGrid";
-            gridBox.SetAnchorsAndMarginsPreset(Control.LayoutPreset.TopWide);
-            gridBox.MarginTop = 100f;
-            gridBox.MarginBottom = 340f;
+            gridBox.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
+            gridBox.SizeFlagsVertical = (int)Control.SizeFlags.ExpandFill;
             gridBox.Alignment = BoxContainer.AlignMode.Center;
             gridBox.AddConstantOverride("separation", (int)CardSpacing);
-            _skillTabContent.AddChild(gridBox);
+            scroll.AddChild(gridBox);
 
             // Footer (Bottom)
             float footerY = PanelHeight - FooterHeight - 50f;
@@ -621,7 +632,7 @@ namespace QuestFantasy.UI
             }
 
             // Rebuild grid
-            var gridBox = _skillTabContent.GetNodeOrNull<HBoxContainer>("SkillGrid");
+            var gridBox = _skillTabContent.GetNodeOrNull<HBoxContainer>("ScrollContainer/SkillGrid");
             if (gridBox != null)
             {
                 foreach (Node child in gridBox.GetChildren())

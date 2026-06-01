@@ -7,6 +7,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         Sword,
         Bow,
         Fireball,
+        ArcherShot,
+        KnightExplose,
     }
 
     /// <summary>
@@ -27,6 +29,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         private Texture[] _swordAttackFrames;
         private Texture[] _bowAttackFrames;
         private Texture[] _fireballAttackFrames;
+        private readonly Texture[] _archerShotFrames;
+        private readonly Texture[] _knightExploseFrames;
 
         private Texture _defenseTexture;
         private Texture _counterTexture;
@@ -68,6 +72,16 @@ namespace QuestFantasy.Characters.PlayerSystems
 
             _bowAttackFrames = BuildFrames(DefaultBowPaths[0], DefaultBowPaths[1], DefaultBowPaths[2]);
             _fireballAttackFrames = BuildFrames(DefaultFireballPaths[0], DefaultFireballPaths[1], DefaultFireballPaths[2]);
+
+            _archerShotFrames = new[]
+            {
+                GD.Load<Texture>("res://Assets/Characters/archer/shot.png"),
+                GD.Load<Texture>("res://Assets/Characters/archer/shot1.png")
+            };
+            _knightExploseFrames = new[]
+            {
+                GD.Load<Texture>("res://Assets/Characters/warrior/super_attack.png")
+            };
         }
 
         /// <summary>
@@ -137,6 +151,14 @@ namespace QuestFantasy.Characters.PlayerSystems
             else if (style == AttackAnimationStyle.Fireball)
             {
                 selectedFrames = _fireballAttackFrames;
+            }
+            else if (style == AttackAnimationStyle.ArcherShot)
+            {
+                selectedFrames = _archerShotFrames;
+            }
+            else if (style == AttackAnimationStyle.KnightExplose)
+            {
+                selectedFrames = _knightExploseFrames;
             }
 
             _animationSystem.SetAttackFrames(selectedFrames);

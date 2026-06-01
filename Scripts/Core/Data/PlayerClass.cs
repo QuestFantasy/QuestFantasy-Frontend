@@ -109,6 +109,12 @@ namespace QuestFantasy.Core.Data
         public const string SkillIdRicochetArrow = "ricochet_arrow";
         public const string SkillIdFlyingSword = "flying_sword";
         public const string SkillIdDefenseStance = "defense_stance";
+        public const string SkillIdMagicSlash = "magic_slash";
+        public const string SkillIdIceSpear = "ice_spear";
+        public const string SkillIdDigitArrow = "digit_arrow";
+        public const string SkillIdSuperArrow = "super_arrow";
+        public const string SkillIdRoundhouseSlash = "roundhouse_slash";
+        public const string SkillIdKnightExplose = "knight_explose";
 
         // ── Allowed skills per class ───────────────────────────────────────
 
@@ -119,17 +125,17 @@ namespace QuestFantasy.Core.Data
 
         private static readonly HashSet<string> MageSkills = new HashSet<string>
         {
-            SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball
+            SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball, SkillIdMagicSlash, SkillIdIceSpear
         };
 
         private static readonly HashSet<string> ArcherSkills = new HashSet<string>
         {
-            SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow
+            SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow, SkillIdDigitArrow, SkillIdSuperArrow
         };
 
         private static readonly HashSet<string> WarriorSkills = new HashSet<string>
         {
-            SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance
+            SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance, SkillIdRoundhouseSlash, SkillIdKnightExplose
         };
 
         /// <summary>
@@ -269,6 +275,60 @@ namespace QuestFantasy.Core.Data
             CooldownSec = 8.0f,
         };
 
+        private static readonly SkillDefinition DefMagicSlash = new SkillDefinition
+        {
+            Id = SkillIdMagicSlash,
+            DisplayName = "Magic Slash",
+            Description = "Strike with arcane energy, cutting through magic.",
+            Emoji = "✨",
+            CooldownSec = 1.0f,
+        };
+
+        private static readonly SkillDefinition DefIceSpear = new SkillDefinition
+        {
+            Id = SkillIdIceSpear,
+            DisplayName = "Ice Spear",
+            Description = "Launch a spear of ice that pierces and freezes enemies.",
+            Emoji = "❄️",
+            CooldownSec = 1.8f,
+        };
+
+        private static readonly SkillDefinition DefDigitArrow = new SkillDefinition
+        {
+            Id = SkillIdDigitArrow,
+            DisplayName = "Digit Arrow",
+            Description = "Fire an arrow that passes through obstacles and enemies, traveling a set distance.",
+            Emoji = "🏹",
+            CooldownSec = 1.2f,
+        };
+
+        private static readonly SkillDefinition DefSuperArrow = new SkillDefinition
+        {
+            Id = SkillIdSuperArrow,
+            DisplayName = "Super Arrow",
+            Description = "Fire a powerful arrow that paralyzes enemies for 5 seconds.",
+            Emoji = "💫",
+            CooldownSec = 30.0f,
+        };
+
+        private static readonly SkillDefinition DefRoundhouseSlash = new SkillDefinition
+        {
+            Id = SkillIdRoundhouseSlash,
+            DisplayName = "Roundhouse Slash",
+            Description = "Spin and strike all nearby enemies with a powerful slash.",
+            Emoji = "⚡",
+            CooldownSec = 2.0f,
+        };
+
+        private static readonly SkillDefinition DefKnightExplose = new SkillDefinition
+        {
+            Id = SkillIdKnightExplose,
+            DisplayName = "Knight Explosion",
+            Description = "Create an expanding explosion at your location that damages enemies inside it repeatedly.",
+            Emoji = "💥",
+            CooldownSec = 30.0f,
+        };
+
         /// <summary>
         /// Returns the ordered list of all <see cref="SkillDefinition"/>s that
         /// the given class is permitted to equip. Used to build the skill-equip UI.
@@ -278,11 +338,11 @@ namespace QuestFantasy.Core.Data
             switch (cls)
             {
                 case PlayerClass.Mage:
-                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefFireball, DefTripleFireball, DefGiantFireball });
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefFireball, DefTripleFireball, DefGiantFireball, DefMagicSlash, DefIceSpear });
                 case PlayerClass.Archer:
-                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefBow, DefTripleArrow, DefRicochetArrow });
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefBow, DefTripleArrow, DefRicochetArrow, DefDigitArrow, DefSuperArrow });
                 case PlayerClass.Warrior:
-                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefFlyingSword, DefDefenseStance });
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefFlyingSword, DefDefenseStance, DefRoundhouseSlash, DefKnightExplose });
                 default: // Adventurer
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefBow, DefFireball });
             }
@@ -296,9 +356,9 @@ namespace QuestFantasy.Core.Data
         {
             switch (cls)
             {
-                case PlayerClass.Mage: return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball });
-                case PlayerClass.Archer: return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow });
-                case PlayerClass.Warrior: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance });
+                case PlayerClass.Mage: return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdMagicSlash, SkillIdIceSpear });
+                case PlayerClass.Archer: return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdDigitArrow, SkillIdSuperArrow });
+                case PlayerClass.Warrior: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdRoundhouseSlash, SkillIdKnightExplose });
                 default: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdBow, SkillIdFireball });
             }
         }

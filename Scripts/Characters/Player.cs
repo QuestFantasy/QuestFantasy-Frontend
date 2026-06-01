@@ -502,7 +502,29 @@ namespace QuestFantasy.Characters
             PlayerClass restoredClass = PlayerClassData.Deserialize(snapshot.ClassName);
             SetClass(restoredClass, rebuildSkills: false);
 
-            _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills, restoredClass));
+            var newSkills = BuildSkillsFromSnapshot(snapshot.Skills, restoredClass);
+
+            // Check if the new list of skills matches our current skills in ID and order exactly.
+            // If they match, keep the current live skill instances to avoid resetting their local cooldowns.
+            var currentSkills = _combatSystem?.CurrentSkills;
+            bool skillsMatch = false;
+            if (currentSkills != null && currentSkills.Count == newSkills.Count)
+            {
+                skillsMatch = true;
+                for (int i = 0; i < currentSkills.Count; i++)
+                {
+                    if (ResolveSkillId(currentSkills[i]) != ResolveSkillId(newSkills[i]))
+                    {
+                        skillsMatch = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!skillsMatch)
+            {
+                _combatSystem?.SetSkills(newSkills);
+            }
 
             // Re-broadcast HP to refresh HUD after profile application.
             if (Attributes?.HP != null)
@@ -587,69 +609,20 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
-                if (string.Equals(snapshot.SkillId, "basic_attack", StringComparison.OrdinalIgnoreCase))
+                var skill = CreateSkillFromId(snapshot.SkillId);
+                if (skill == null)
                 {
-                    var basicAttack = new BasicAttackSkill
-                    {
-                        EffectRenderer = new BasicAttackEffectRenderer(),
-                    };
-                    skills.Add(basicAttack);
-                    continue;
+                    // Fall back to remote skill mapping if it's a remote/external skill not recognized locally
+                    skill = new RemoteSkill(
+                        snapshot.SkillId,
+                        snapshot.Name,
+                        snapshot.CooldownSeconds);
                 }
 
-                if (string.Equals(snapshot.SkillId, "bow_attack", StringComparison.OrdinalIgnoreCase))
+                if (skill != null)
                 {
-                    skills.Add(new BowAttackSkill());
-                    continue;
+                    skills.Add(skill);
                 }
-
-                if (string.Equals(snapshot.SkillId, "fireball", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new FireballSkill());
-                    continue;
-                }
-
-                if (string.Equals(snapshot.SkillId, "triple_fireball", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new TripleFireballSkill());
-                    continue;
-                }
-
-                if (string.Equals(snapshot.SkillId, "giant_fireball", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new GiantFireballSkill());
-                    continue;
-                }
-
-                if (string.Equals(snapshot.SkillId, "triple_arrow", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new TripleArrowSkill());
-                    continue;
-                }
-
-                if (string.Equals(snapshot.SkillId, "ricochet_arrow", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new RicochetArrowSkill());
-                    continue;
-                }
-
-                if (string.Equals(snapshot.SkillId, "flying_sword", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new FlyingSwordSkill());
-                    continue;
-                }
-
-                if (string.Equals(snapshot.SkillId, "defense_stance", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new DefenseStanceSkill());
-                    continue;
-                }
-
-                var remoteSkill = new RemoteSkill(
-                    snapshot.SkillId,
-                    snapshot.Name,
-                    snapshot.CooldownSeconds);
-                skills.Add(remoteSkill);
             }
 
             EnsureClassCoreSkills(skills, cls);
@@ -718,6 +691,36 @@ namespace QuestFantasy.Characters
             if (skill is DefenseStanceSkill)
             {
                 return "defense_stance";
+            }
+
+            if (skill is MagicSlashSkill)
+            {
+                return "magic_slash";
+            }
+
+            if (skill is IceSpearSkill)
+            {
+                return "ice_spear";
+            }
+
+            if (skill is DigitArrowSkill)
+            {
+                return "digit_arrow";
+            }
+
+            if (skill is SuperArrowSkill)
+            {
+                return "super_arrow";
+            }
+
+            if (skill is RoundhouseSlashSkill)
+            {
+                return "roundhouse_slash";
+            }
+
+            if (skill is KnightExploseSkill)
+            {
+                return "knight_explose";
             }
 
             if (skill is RemoteSkill remoteSkill)
@@ -790,64 +793,19 @@ namespace QuestFantasy.Characters
             // Remove skills that are not allowed for this class
             skills.RemoveAll(s => !allowed.Contains(ResolveSkillId(s)));
 
-            // Ensure the class's primary skill exists
-            bool hasSword = skills.Any(s => s is BasicAttackSkill);
-            bool hasBow = skills.Any(s => s is BowAttackSkill);
-            bool hasTripleArrow = skills.Any(s => s is TripleArrowSkill);
-            bool hasRicochetArrow = skills.Any(s => s is RicochetArrowSkill);
-            bool hasFireball = skills.Any(s => s is FireballSkill);
-            bool hasTripleFireball = skills.Any(s => s is TripleFireballSkill);
-            bool hasGiantFireball = skills.Any(s => s is GiantFireballSkill);
-            bool hasFlyingSword = skills.Any(s => s is FlyingSwordSkill);
-            bool hasDefenseStance = skills.Any(s => s is DefenseStanceSkill);
-
-            if (allowed.Contains(PlayerClassData.SkillIdSword) && !hasSword)
+            // If the player currently has no skills (newly initialized or class changed),
+            // populate with the class's default 3-skill loadout.
+            if (skills.Count == 0)
             {
-                var basicAttack = new BasicAttackSkill
+                var defaults = PlayerClassData.GetDefaultSkillLoadout(cls);
+                foreach (var skillId in defaults)
                 {
-                    EffectRenderer = new BasicAttackEffectRenderer(),
-                };
-                skills.Insert(0, basicAttack);
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdBow) && !hasBow)
-            {
-                skills.Add(new BowAttackSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdTripleArrow) && !hasTripleArrow)
-            {
-                skills.Add(new TripleArrowSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdRicochetArrow) && !hasRicochetArrow)
-            {
-                skills.Add(new RicochetArrowSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdFireball) && !hasFireball)
-            {
-                skills.Add(new FireballSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdTripleFireball) && !hasTripleFireball)
-            {
-                skills.Add(new TripleFireballSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdGiantFireball) && !hasGiantFireball)
-            {
-                skills.Add(new GiantFireballSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdFlyingSword) && !hasFlyingSword)
-            {
-                skills.Add(new FlyingSwordSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdDefenseStance) && !hasDefenseStance)
-            {
-                skills.Add(new DefenseStanceSkill());
+                    var skill = CreateSkillFromId(skillId);
+                    if (skill != null)
+                    {
+                        skills.Add(skill);
+                    }
+                }
             }
         }
 
@@ -882,10 +840,19 @@ namespace QuestFantasy.Characters
                 return;
             }
 
-            var current = _combatSystem.CurrentSkills.ToList();
-            EnsureClassCoreSkills(current, cls);
-            _combatSystem.SetSkills(current);
-            GD.Print($"[Player] Skills rebuilt for class {cls}: {string.Join(", ", current.Select(ResolveSkillId))}");
+            var defaultSkills = new List<Skills>();
+            var defaults = PlayerClassData.GetDefaultSkillLoadout(cls);
+            foreach (var skillId in defaults)
+            {
+                var skill = CreateSkillFromId(skillId);
+                if (skill != null)
+                {
+                    defaultSkills.Add(skill);
+                }
+            }
+
+            _combatSystem.SetSkills(defaultSkills);
+            GD.Print($"[Player] Skills rebuilt for class {cls}: {string.Join(", ", defaultSkills.Select(ResolveSkillId))}");
         }
 
         /// <summary>
@@ -1027,6 +994,11 @@ namespace QuestFantasy.Characters
         public bool IsAttacking => _animationController?.IsAttacking ?? false;
 
         /// <summary>
+        /// Expose player's facing direction (1.0f for right, -1.0f for left).
+        /// </summary>
+        public float FacingDirection => _animationController?.GetFacingDirection() ?? 1f;
+
+        /// <summary>
         /// Update skill cooldowns (called by PhysicsController)
         /// </summary>
         public void UpdateSkillCooldowns(float delta)
@@ -1083,6 +1055,75 @@ namespace QuestFantasy.Characters
         }
 
         /// <summary>
+        /// Creates a Skills instance based on the unique skill ID string.
+        /// </summary>
+        private static Skills CreateSkillFromId(string key)
+        {
+            string cleanKey = (key ?? string.Empty).ToLowerInvariant();
+            if (cleanKey == "basic_attack")
+            {
+                return new BasicAttackSkill { EffectRenderer = new BasicAttackEffectRenderer() };
+            }
+            if (cleanKey == "bow_attack")
+            {
+                return new BowAttackSkill();
+            }
+            if (cleanKey == "triple_arrow")
+            {
+                return new TripleArrowSkill();
+            }
+            if (cleanKey == "ricochet_arrow")
+            {
+                return new RicochetArrowSkill();
+            }
+            if (cleanKey == "fireball")
+            {
+                return new FireballSkill();
+            }
+            if (cleanKey == "triple_fireball")
+            {
+                return new TripleFireballSkill();
+            }
+            if (cleanKey == "giant_fireball")
+            {
+                return new GiantFireballSkill();
+            }
+            if (cleanKey == "flying_sword")
+            {
+                return new FlyingSwordSkill();
+            }
+            if (cleanKey == "defense_stance")
+            {
+                return new DefenseStanceSkill();
+            }
+            if (cleanKey == "magic_slash")
+            {
+                return new MagicSlashSkill();
+            }
+            if (cleanKey == "ice_spear")
+            {
+                return new IceSpearSkill();
+            }
+            if (cleanKey == "digit_arrow")
+            {
+                return new DigitArrowSkill();
+            }
+            if (cleanKey == "super_arrow")
+            {
+                return new SuperArrowSkill();
+            }
+            if (cleanKey == "roundhouse_slash")
+            {
+                return new RoundhouseSlashSkill();
+            }
+            if (cleanKey == "knight_explose")
+            {
+                return new KnightExploseSkill();
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Translates an ordered list of skill IDs into live skill instances,
         /// filtering out any IDs not allowed for the given class.
         /// </summary>
@@ -1100,41 +1141,10 @@ namespace QuestFantasy.Characters
                     string key = (id ?? string.Empty).ToLowerInvariant();
                     if (!allowed.Contains(key)) continue;
 
-                    if (key == "basic_attack")
+                    var skill = CreateSkillFromId(key);
+                    if (skill != null)
                     {
-                        skills.Add(new BasicAttackSkill { EffectRenderer = new BasicAttackEffectRenderer() });
-                    }
-                    else if (key == "bow_attack")
-                    {
-                        skills.Add(new BowAttackSkill());
-                    }
-                    else if (key == "triple_arrow")
-                    {
-                        skills.Add(new TripleArrowSkill());
-                    }
-                    else if (key == "ricochet_arrow")
-                    {
-                        skills.Add(new RicochetArrowSkill());
-                    }
-                    else if (key == "fireball")
-                    {
-                        skills.Add(new FireballSkill());
-                    }
-                    else if (key == "triple_fireball")
-                    {
-                        skills.Add(new TripleFireballSkill());
-                    }
-                    else if (key == "giant_fireball")
-                    {
-                        skills.Add(new GiantFireballSkill());
-                    }
-                    else if (key == "flying_sword")
-                    {
-                        skills.Add(new FlyingSwordSkill());
-                    }
-                    else if (key == "defense_stance")
-                    {
-                        skills.Add(new DefenseStanceSkill());
+                        skills.Add(skill);
                     }
                 }
             }

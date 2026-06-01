@@ -477,6 +477,34 @@ public class PlayerProfileSnapshot
         return snapshot;
     }
 
+    private static Godot.Collections.Array EncodeSkills(List<PlayerSkillSnapshot> skills)
+    {
+        var array = new Godot.Collections.Array();
+        if (skills == null)
+        {
+            return array;
+        }
+
+        foreach (var skill in skills)
+        {
+            if (skill == null)
+            {
+                continue;
+            }
+
+            var dict = new Godot.Collections.Dictionary
+            {
+                ["skill_id"] = skill.SkillId ?? string.Empty,
+                ["name"] = skill.Name ?? string.Empty,
+                ["cooldown_seconds"] = skill.CooldownSeconds,
+                ["display_order"] = skill.DisplayOrder,
+            };
+            array.Add(dict);
+        }
+
+        return array;
+    }
+
     public Godot.Collections.Dictionary ToUpdatePayload(string sessionId, int sequence)
     {
         return new Godot.Collections.Dictionary
@@ -492,6 +520,7 @@ public class PlayerProfileSnapshot
             ["inventory_items"] = InventoryItems ?? new Godot.Collections.Array(),
             ["discarded_items"] = DiscardedItems ?? new Godot.Collections.Array(),
             ["equipped_items"] = EquippedItemsPayload ?? new Godot.Collections.Dictionary(),
+            ["skills"] = EncodeSkills(Skills),
         };
     }
 
