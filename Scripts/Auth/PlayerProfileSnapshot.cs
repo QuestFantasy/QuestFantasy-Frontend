@@ -467,6 +467,9 @@ public class PlayerProfileSnapshot
                     DisplayOrder = ReadInt(skillDict, "display_order", i, min: 0),
                 });
             }
+
+            // Sort skills in-place by DisplayOrder to guarantee correct sequence on frontend load
+            snapshot.Skills.Sort((a, b) => a.DisplayOrder.CompareTo(b.DisplayOrder));
         }
 
         if (snapshot.Skills.Count == 0)
