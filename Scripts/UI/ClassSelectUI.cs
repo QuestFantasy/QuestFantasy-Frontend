@@ -313,6 +313,7 @@ namespace QuestFantasy.UI
             card.RectPosition = new Vector2(x, y);
             card.RectMinSize = new Vector2(CardWidth, CardHeight);
             card.AddStyleboxOverride("panel", MakeCardStyle(CardBgNormal, CardBorderNormal));
+            card.MouseFilter = Control.MouseFilterEnum.Stop;
 
             var stripe = new ColorRect { Color = accent, MouseFilter = Control.MouseFilterEnum.Ignore };
             stripe.SetAnchorsAndMarginsPreset(Control.LayoutPreset.TopWide);
@@ -325,14 +326,24 @@ namespace QuestFantasy.UI
             vbox.MarginRight = -8f;
             vbox.MarginTop = 14f;
             vbox.MarginBottom = -8f;
+            vbox.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
+            vbox.SizeFlagsVertical = (int)Control.SizeFlags.ExpandFill;
             card.AddChild(vbox);
 
             vbox.AddChild(MakeLabel(GetClassEmoji(cls), 32f, CardTitleColor, center: true));
             vbox.AddChild(MakeLabel(PlayerClassData.GetDisplayName(cls), 22f, CardTitleColor, center: true));
             vbox.AddChild(new HSeparator { RectMinSize = new Vector2(0f, 4f) });
             vbox.AddChild(MakeLabel(PlayerClassData.GetDescription(cls), 72f, CardDescColor, center: true, wrap: true));
-            vbox.AddChild(MakeLabel("Skills:", 16f, SubHeaderColor, center: true));
-            vbox.AddChild(MakeLabel(PlayerClassData.GetSkillListText(cls), 30f, SkillLabelColor, center: true, wrap: true));
+            
+            // Display all available skills for this class
+            vbox.AddChild(MakeLabel("Available Skills:", 16f, SubHeaderColor, center: true));
+            
+            var skillDefs = PlayerClassData.GetAllSkillDefinitions(cls);
+            foreach (var skillDef in skillDefs)
+            {
+                var skillLbl = MakeLabel($"{skillDef.Emoji} {skillDef.DisplayName}", 12f, SkillLabelColor, center: false, wrap: true);
+                vbox.AddChild(skillLbl);
+            }
 
             var btn = new Button { Text = string.Empty, Flat = true };
             btn.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
@@ -649,4 +660,6 @@ namespace QuestFantasy.UI
             return null;
         }
     }
+
+
 }
