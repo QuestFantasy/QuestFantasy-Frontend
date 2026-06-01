@@ -38,7 +38,7 @@ public class DeathScreenUI : CanvasLayer
         {
             AnchorRight = 1f,
             AnchorBottom = 1f,
-            Color = new Color(0, 0, 0, 0.75f),
+            Color = new Color(0, 0, 0, 0.5f),
             MouseFilter = Control.MouseFilterEnum.Stop
         };
         _root.AddChild(bg);
@@ -104,7 +104,7 @@ public class DeathScreenUI : CanvasLayer
 
         var normalStyle = new StyleBoxFlat
         {
-            BgColor = new Color(0.2f, 0.24f, 0.35f, 1f),
+            BgColor = new Color(0.2f, 0.24f, 0.35f, 0.6f),
             CornerRadiusTopLeft = 5,
             CornerRadiusTopRight = 5,
             CornerRadiusBottomLeft = 5,
@@ -112,10 +112,10 @@ public class DeathScreenUI : CanvasLayer
         };
 
         var hoverStyle = normalStyle.Duplicate() as StyleBoxFlat;
-        if (hoverStyle != null) hoverStyle.BgColor = new Color(0.3f, 0.35f, 0.5f, 1f);
+        if (hoverStyle != null) hoverStyle.BgColor = new Color(0.3f, 0.35f, 0.5f, 0.8f);
 
         var pressedStyle = normalStyle.Duplicate() as StyleBoxFlat;
-        if (pressedStyle != null) pressedStyle.BgColor = new Color(0.15f, 0.18f, 0.26f, 1f);
+        if (pressedStyle != null) pressedStyle.BgColor = new Color(0.15f, 0.18f, 0.26f, 0.5f);
 
         btn.AddStyleboxOverride("normal", normalStyle);
         btn.AddStyleboxOverride("hover", hoverStyle);

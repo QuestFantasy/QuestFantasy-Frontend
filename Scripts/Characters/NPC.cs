@@ -15,7 +15,8 @@ namespace QuestFantasy.Characters
     {
         Guide,
         Merchant,
-        Blacksmith
+        Blacksmith,
+        ClassSelector
     }
 
     /// <summary>
@@ -41,6 +42,7 @@ namespace QuestFantasy.Characters
         public event Action<NPC, Player> InteractionStarted;
         public event Action<NPC, Player> DialogueRequested;
         public event Action<NPC, Player> ShopRequested;
+        public event Action<NPC, Player> ClassChangeRequested;
 
         public override void _Ready()
         {
@@ -94,9 +96,23 @@ namespace QuestFantasy.Characters
             AddChild(_interactionPromptLabel);
         }
 
+        private string GetInteractionPromptTextForPlayer(Player player)
+        {
+            if (Role == NpcRole.ClassSelector)
+            {
+                if (player != null && player.Level < GameConstants.CLASS_CHANGE_MIN_LEVEL)
+                {
+                    return $"Press F to change class (Lv.{player.Level}/{GameConstants.CLASS_CHANGE_MIN_LEVEL})";
+                }
+                return "Press F to change class";
+            }
+
+            return IsShopkeeper ? "Press F to talk / trade" : "Press F to talk";
+        }
+
         private string GetInteractionPromptText()
         {
-            return IsShopkeeper ? "Press F to talk / trade" : "Press F to talk";
+            return GetInteractionPromptTextForPlayer(null);
         }
 
         public override void _Process(float delta)
@@ -142,6 +158,13 @@ namespace QuestFantasy.Characters
 
             GD.Print($"[NPC] {EntityName} says: {Dialogue}");
             InteractionStarted?.Invoke(this, player);
+
+            if (Role == NpcRole.ClassSelector)
+            {
+                ClassChangeRequested?.Invoke(this, player);
+                return;
+            }
+
             DialogueRequested?.Invoke(this, player);
 
             if (IsShopkeeper)
@@ -424,6 +447,7 @@ namespace QuestFantasy.Characters
                         return "res://Assets/NPC/NPC-sales.png";
                     }
                     return "res://Assets/NPC/NPC-poet.png";
+                case NpcRole.ClassSelector:
                 case NpcRole.Guide:
                 default:
                     return "res://Assets/NPC/NPC-previous-hero.png";
@@ -451,6 +475,10 @@ namespace QuestFantasy.Characters
             _playerInRange = inRange;
             if (_interactionPromptLabel != null)
             {
+                if (inRange && _nearbyPlayer != null)
+                {
+                    _interactionPromptLabel.Text = GetInteractionPromptTextForPlayer(_nearbyPlayer);
+                }
                 _interactionPromptLabel.Visible = inRange;
             }
         }

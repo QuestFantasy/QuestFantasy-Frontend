@@ -9,19 +9,19 @@ namespace QuestFantasy.Characters.PlayerSystems
     public class PlayerAnimationConfig
     {
         // Stand animation
-        public string StandFrame1Path { get; set; } = "res://Assets/Characters/stand.png";
-        public string StandFrame2Path { get; set; } = "res://Assets/Characters/stand2.png";
+        public string StandFrame1Path { get; set; } = "res://Assets/Characters/adventurer/stand.png";
+        public string StandFrame2Path { get; set; } = "res://Assets/Characters/adventurer/stand2.png";
 
         // Walk animation
         public float WalkAnimationFps { get; set; } = GameConstants.PLAYER_WALK_ANIMATION_FPS;
-        public string WalkFrame1Path { get; set; } = "res://Assets/Characters/walk.png";
-        public string WalkFrame2Path { get; set; } = "res://Assets/Characters/walk1.png";
+        public string WalkFrame1Path { get; set; } = "res://Assets/Characters/adventurer/walk.png";
+        public string WalkFrame2Path { get; set; } = "res://Assets/Characters/adventurer/walk1.png";
 
         // Attack animation
         public float AttackAnimationFps { get; set; } = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
-        public string AttackFrame1Path { get; set; } = "res://Assets/Characters/slash.png";
-        public string AttackFrame2Path { get; set; } = "res://Assets/Characters/slash1.png";
-        public string AttackFrame3Path { get; set; } = "res://Assets/Characters/slash2.png";
+        public string AttackFrame1Path { get; set; } = "res://Assets/Characters/adventurer/slash.png";
+        public string AttackFrame2Path { get; set; } = "res://Assets/Characters/adventurer/slash1.png";
+        public string AttackFrame3Path { get; set; } = "res://Assets/Characters/adventurer/slash2.png";
 
         /// <summary>
         /// Validate all animation settings and reset to defaults if invalid
@@ -77,15 +77,15 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void ResetToDefaults()
         {
-            StandFrame1Path = "res://Assets/Characters/stand.png";
-            StandFrame2Path = "res://Assets/Characters/stand2.png";
+            StandFrame1Path = "res://Assets/Characters/adventurer/stand.png";
+            StandFrame2Path = "res://Assets/Characters/adventurer/stand2.png";
             WalkAnimationFps = GameConstants.PLAYER_WALK_ANIMATION_FPS;
-            WalkFrame1Path = "res://Assets/Characters/walk.png";
-            WalkFrame2Path = "res://Assets/Characters/walk1.png";
+            WalkFrame1Path = "res://Assets/Characters/adventurer/walk.png";
+            WalkFrame2Path = "res://Assets/Characters/adventurer/walk1.png";
             AttackAnimationFps = GameConstants.PLAYER_ATTACK_ANIMATION_FPS;
-            AttackFrame1Path = "res://Assets/Characters/slash.png";
-            AttackFrame2Path = "res://Assets/Characters/slash1.png";
-            AttackFrame3Path = "res://Assets/Characters/slash2.png";
+            AttackFrame1Path = "res://Assets/Characters/adventurer/slash.png";
+            AttackFrame2Path = "res://Assets/Characters/adventurer/slash1.png";
+            AttackFrame3Path = "res://Assets/Characters/adventurer/slash2.png";
         }
     }
 }

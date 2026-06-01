@@ -483,6 +483,13 @@ public class Main : Node2D
         _mobileInputUI?.ShowDPad();
         _mobileInputUI?.ShowMapButton(false);
         _lobbyManager.SyncRequested += OnInventorySyncRequested;
+        _lobbyManager.ClassChangeRequested += OnClassChangeRequested;
+    }
+
+    private void OnClassChangeRequested(QuestFantasy.Core.Data.PlayerClass newClass)
+    {
+        GD.Print($"[Main] Player changed class to {newClass}. Syncing profile to backend.");
+        TransmitPlayerProfile("class_change");
     }
 
     private void EnsureLobbyBackpackContext()
@@ -497,6 +504,10 @@ public class Main : Node2D
 
         if (_pendingProfileSnapshot != null)
         {
+            if (_pendingProfileSnapshot.HpCurrent <= 0)
+            {
+                _pendingProfileSnapshot.HpCurrent = _pendingProfileSnapshot.HpMax;
+            }
             _player.ApplyProfile(_pendingProfileSnapshot);
         }
 
@@ -630,6 +641,16 @@ public class Main : Node2D
         // Save map difficulty before destroying it
         DifficultyLevel lastMapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
 
+        bool wasDead = _player == null || _player.Attributes?.HP == null || !_player.Attributes.HP.IsAlive;
+
+        // Restore HP to max before snapshotting so a dead player never carries
+        // 0 HP into the lobby or the next dungeon run.
+        if (_player != null)
+        {
+            int maxHp = _player.Attributes?.HP?.MaxHP ?? 100;
+            _player.Attributes?.HP?.SetMaxHPAndCurrentHP(maxHp, maxHp);
+        }
+
         // Save the current player state BEFORE destroying the world
         _pendingProfileSnapshot = _player?.BuildProfileSnapshot();
 
@@ -641,7 +662,7 @@ public class Main : Node2D
         // Rebuild the lobby for another session
         BuildLobby();
 
-        if (_player != null && Godot.Object.IsInstanceValid(_player))
+        if (!wasDead && _player != null && Godot.Object.IsInstanceValid(_player))
         {
             var coinDrop = new QuestFantasy.Items.CoinDrop();
             coinDrop.Initialize((int)_player.Level, lastMapDiff, 5.0f, _player, 0.5f);

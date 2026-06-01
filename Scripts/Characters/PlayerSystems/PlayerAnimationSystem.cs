@@ -48,9 +48,22 @@ namespace QuestFantasy.Characters.PlayerSystems
                                string attackFrame1Path, string attackFrame2Path, string attackFrame3Path,
                                Vector2 bodySize)
         {
-            _sprite = new Sprite();
-            _sprite.Centered = true;
-            owner.AddChild(_sprite);
+            // Reuse the existing sprite node if we already have one (class switch).
+            // Creating a new child every time would leave ghost sprites in the scene tree.
+            if (_sprite == null || !Godot.Object.IsInstanceValid(_sprite))
+            {
+                _sprite = new Sprite();
+                _sprite.Centered = true;
+                owner.AddChild(_sprite);
+            }
+
+            // Preserve Dead state across re-initialisation (e.g. class switches while dead).
+            // All other states reset normally so no stale frame lingers.
+            bool wasDead = _currentState == AnimationState.Dead;
+            _currentState = AnimationState.Idle;
+            _frameIndex = 0;
+            _animationTimer = 0f;
+            _hitTimer = 0f;
 
             // Load stand frames
             Texture standFrame1 = GD.Load<Texture>(standFrame1Path);
@@ -80,6 +93,14 @@ namespace QuestFantasy.Characters.PlayerSystems
             _attackFrames = new[] { attackFrame1, attackFrame2, attackFrame3 };
 
             RefreshScale(bodySize);
+
+            // If the player was dead before re-initialisation, restore the Dead state
+            // so the down sprite stays on screen until Revive() is called.
+            if (wasDead && _deadTexture != null)
+            {
+                _currentState = AnimationState.Dead;
+            }
+
             ApplyCurrentFrame(1f);
         }
 

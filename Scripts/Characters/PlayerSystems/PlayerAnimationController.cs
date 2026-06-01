@@ -22,9 +22,31 @@ namespace QuestFantasy.Characters.PlayerSystems
 
         private bool _isAttacking = false;
         private float _lastFacingX = 1f;
-        private readonly Texture[] _swordAttackFrames;
-        private readonly Texture[] _bowAttackFrames;
-        private readonly Texture[] _fireballAttackFrames;
+
+        // Per-skill-style attack frames — updated by UpdateClassFrames() on class switch.
+        private Texture[] _swordAttackFrames;
+        private Texture[] _bowAttackFrames;
+        private Texture[] _fireballAttackFrames;
+
+        // Default (Adventurer) frame paths for each skill style.
+        private static readonly string[] DefaultSwordPaths = new[]
+        {
+            "res://Assets/Characters/adventurer/slash.png",
+            "res://Assets/Characters/adventurer/slash1.png",
+            "res://Assets/Characters/adventurer/slash2.png",
+        };
+        private static readonly string[] DefaultBowPaths = new[]
+        {
+            "res://Assets/Characters/adventurer/shot_prepare.png",
+            "res://Assets/Characters/adventurer/shot.png",
+            "res://Assets/Characters/adventurer/shoted.png",
+        };
+        private static readonly string[] DefaultFireballPaths = new[]
+        {
+            "res://Assets/Characters/adventurer/magic.png",
+            "res://Assets/Characters/adventurer/magic1.png",
+            "res://Assets/Characters/adventurer/magic1.png",
+        };
 
         public bool IsAttacking => _isAttacking;
 
@@ -35,20 +57,14 @@ namespace QuestFantasy.Characters.PlayerSystems
             _animationSystem = animationSystem;
             _animationConfig = animationConfig;
 
+            // Load default (Adventurer) attack frames at startup.
             _swordAttackFrames = BuildFrames(
                 _animationConfig.AttackFrame1Path,
                 _animationConfig.AttackFrame2Path,
                 _animationConfig.AttackFrame3Path);
 
-            _bowAttackFrames = BuildFrames(
-                "res://Assets/Characters/shot_prepare.png",
-                "res://Assets/Characters/shot.png",
-                "res://Assets/Characters/shoted.png");
-
-            _fireballAttackFrames = BuildFrames(
-                "res://Assets/Characters/magic.png",
-                "res://Assets/Characters/magic1.png",
-                "res://Assets/Characters/magic1.png");
+            _bowAttackFrames = BuildFrames(DefaultBowPaths[0], DefaultBowPaths[1], DefaultBowPaths[2]);
+            _fireballAttackFrames = BuildFrames(DefaultFireballPaths[0], DefaultFireballPaths[1], DefaultFireballPaths[2]);
         }
 
         /// <summary>
@@ -125,6 +141,38 @@ namespace QuestFantasy.Characters.PlayerSystems
         }
 
         /// <summary>
+        /// Reload per-style attack frames to match the active player class.
+        /// Pass null for a style to fall back to the shared Adventurer frames.
+        /// </summary>
+        /// <param name="swordPaths">3-element array: [frame1, frame2, frame3] for sword style, or null to reset to default.</param>
+        /// <param name="bowPaths">3-element array for bow style, or null to reset to default.</param>
+        /// <param name="fireballPaths">3-element array for fireball style, or null to reset to default.</param>
+        public void UpdateClassFrames(string[] swordPaths, string[] bowPaths, string[] fireballPaths)
+        {
+            if (swordPaths != null && swordPaths.Length >= 3)
+            {
+                _swordAttackFrames = BuildFramesFallback(swordPaths, DefaultSwordPaths);
+            }
+            else
+            {
+                _swordAttackFrames = BuildFrames(
+                    _animationConfig.AttackFrame1Path,
+                    _animationConfig.AttackFrame2Path,
+                    _animationConfig.AttackFrame3Path);
+            }
+
+            _bowAttackFrames = bowPaths != null && bowPaths.Length >= 3
+                ? BuildFramesFallback(bowPaths, DefaultBowPaths)
+                : BuildFrames(DefaultBowPaths[0], DefaultBowPaths[1], DefaultBowPaths[2]);
+
+            _fireballAttackFrames = fireballPaths != null && fireballPaths.Length >= 3
+                ? BuildFramesFallback(fireballPaths, DefaultFireballPaths)
+                : BuildFrames(DefaultFireballPaths[0], DefaultFireballPaths[1], DefaultFireballPaths[2]);
+
+            GD.Print("[PlayerAnimationController] Attack frames updated for class.");
+        }
+
+        /// <summary>
         /// Trigger dead animation playback
         /// </summary>
         public void PlayDeadAnimation(Texture deadTexture)
@@ -189,6 +237,28 @@ namespace QuestFantasy.Characters.PlayerSystems
                 GD.Load<Texture>(frame2),
                 GD.Load<Texture>(frame3),
             };
+        }
+
+        /// <summary>
+        /// Load frames from <paramref name="paths"/>, falling back to the corresponding
+        /// <paramref name="fallbackPaths"/> entry when a primary path cannot be loaded.
+        /// </summary>
+        private static Texture[] BuildFramesFallback(string[] paths, string[] fallbackPaths)
+        {
+            var frames = new Texture[3];
+            for (int i = 0; i < 3; i++)
+            {
+                string primary = i < paths.Length ? paths[i] : null;
+                string fallback = i < fallbackPaths.Length ? fallbackPaths[i] : null;
+
+                Texture tex = (!string.IsNullOrEmpty(primary)) ? GD.Load<Texture>(primary) : null;
+                if (tex == null && !string.IsNullOrEmpty(fallback))
+                {
+                    tex = GD.Load<Texture>(fallback);
+                }
+                frames[i] = tex;
+            }
+            return frames;
         }
     }
 }
