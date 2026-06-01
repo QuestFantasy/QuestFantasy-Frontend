@@ -334,10 +334,10 @@ namespace QuestFantasy.UI
             vbox.AddChild(MakeLabel(PlayerClassData.GetDisplayName(cls), 22f, CardTitleColor, center: true));
             vbox.AddChild(new HSeparator { RectMinSize = new Vector2(0f, 4f) });
             vbox.AddChild(MakeLabel(PlayerClassData.GetDescription(cls), 72f, CardDescColor, center: true, wrap: true));
-            
+
             // Display all available skills for this class
             vbox.AddChild(MakeLabel("Available Skills:", 16f, SubHeaderColor, center: true));
-            
+
             var skillDefs = PlayerClassData.GetAllSkillDefinitions(cls);
             foreach (var skillDef in skillDefs)
             {
