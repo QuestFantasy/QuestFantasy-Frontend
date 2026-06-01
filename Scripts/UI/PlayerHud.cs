@@ -22,6 +22,8 @@ public class PlayerHud : CanvasLayer
         ["fireball"] = "res://Assets/SkillAnimation/fireball.png",
         ["triple_fireball"] = "res://Assets/SkillAnimation/fireball.png",
         ["giant_fireball"] = "res://Assets/SkillAnimation/fireball.png",
+        ["flying_sword"] = "res://Assets/SkillAnimation/fly_sword.png",
+        ["defense_stance"] = "res://Assets/Characters/warrior/defense.png",
     };
 
     private readonly List<SkillSlotUi> _skillSlots = new List<SkillSlotUi>();

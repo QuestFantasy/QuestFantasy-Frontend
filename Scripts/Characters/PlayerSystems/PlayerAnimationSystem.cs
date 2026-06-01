@@ -11,7 +11,8 @@ namespace QuestFantasy.Characters.PlayerSystems
         Walking, // Moving around
         Attacking, // Performing basic attack
         Dead,     // Character is dead
-        Hit       // Character took damage
+        Hit,      // Character took damage
+        Defending // Character is in defense stance
     }
 
     public class PlayerAnimationSystem
@@ -36,6 +37,11 @@ namespace QuestFantasy.Characters.PlayerSystems
         // Hit animation
         private Texture _hitTexture;
         private float _hitTimer = 0f;
+
+        // Defense animation
+        private Texture _defenseTexture;
+        private Texture _counterTexture;
+        private float _counterTimer = 0f;
 
         private AnimationState _currentState = AnimationState.Idle;
         private int _frameIndex = 0;
@@ -190,6 +196,16 @@ namespace QuestFantasy.Characters.PlayerSystems
                 }
             }
 
+            if (_currentState == AnimationState.Defending)
+            {
+                if (_counterTimer > 0f)
+                {
+                    _counterTimer -= delta;
+                }
+                ApplyCurrentFrame(facingX);
+                return;
+            }
+
             // Determine target state
             AnimationState targetState = isMoving ? AnimationState.Walking : AnimationState.Idle;
 
@@ -311,6 +327,34 @@ namespace QuestFantasy.Characters.PlayerSystems
             }
         }
 
+        public void PlayDefenseAnimation(Texture defenseTexture)
+        {
+            if (_currentState == AnimationState.Dead) return;
+
+            _currentState = AnimationState.Defending;
+            _defenseTexture = defenseTexture;
+            _counterTimer = 0f;
+            ApplyCurrentFrame(1f);
+        }
+
+        public void PlayDefenseCounterAnimation(Texture counterTexture, float duration)
+        {
+            if (_currentState != AnimationState.Defending) return;
+
+            _counterTexture = counterTexture;
+            _counterTimer = duration;
+            ApplyCurrentFrame(1f);
+        }
+
+        public void StopDefenseAnimation()
+        {
+            if (_currentState == AnimationState.Defending)
+            {
+                _currentState = AnimationState.Idle;
+                ApplyCurrentFrame(1f);
+            }
+        }
+
         /// <summary>
         /// Update attack animation and return true when finished
         /// </summary>
@@ -378,6 +422,16 @@ namespace QuestFantasy.Characters.PlayerSystems
                     if (_hitTexture != null)
                     {
                         frameToUse = _hitTexture;
+                    }
+                    break;
+                case AnimationState.Defending:
+                    if (_counterTimer > 0f && _counterTexture != null)
+                    {
+                        frameToUse = _counterTexture;
+                    }
+                    else if (_defenseTexture != null)
+                    {
+                        frameToUse = _defenseTexture;
                     }
                     break;
             }

@@ -36,7 +36,7 @@ namespace QuestFantasy.UI
         private static readonly Color BtnConfirmHover = new Color(0.30f, 0.65f, 1.00f, 1f);
         private static readonly Color BtnCloseBg = new Color(0.20f, 0.22f, 0.28f, 1f);
         private static readonly Color BtnCloseHover = new Color(0.30f, 0.33f, 0.42f, 1f);
-        
+
         // Tab colors
         private static readonly Color TabNormal = new Color(0.15f, 0.18f, 0.25f, 1f);
         private static readonly Color TabSelected = new Color(0.25f, 0.45f, 0.85f, 1f);
@@ -45,9 +45,9 @@ namespace QuestFantasy.UI
         private PlayerClass _currentClass = PlayerClass.Adventurer;
         private PlayerClass _selectedClass = PlayerClass.Adventurer;
         private int _playerLevel = 1;
-        
+
         // Skill state
-        private List<string> _equippedSkillIds = new List<string>();
+        private readonly List<string> _equippedSkillIds = new List<string>();
         private ReadOnlyCollection<SkillDefinition> _availableSkills;
 
         // UI References
@@ -58,7 +58,7 @@ namespace QuestFantasy.UI
         private Button _tabClassBtn;
         private Button _tabSkillsBtn;
         private Panel[] _cardPanels;
-        
+
         // Skill UI References
         private Label[] _skillSlotLabels;
         private Panel[] _skillCardPanels;
@@ -111,7 +111,7 @@ namespace QuestFantasy.UI
             _currentClass = currentClass;
             _selectedClass = currentClass;
             _playerLevel = playerLevel;
-            
+
             _equippedSkillIds.Clear();
             if (currentEquippedSkills != null)
             {
@@ -121,7 +121,7 @@ namespace QuestFantasy.UI
             {
                 _equippedSkillIds.AddRange(PlayerClassData.GetDefaultSkillLoadout(_currentClass));
             }
-            
+
             _availableSkills = PlayerClassData.GetAllSkillDefinitions(_currentClass);
 
             if (_subtitleLabel != null)
@@ -175,12 +175,12 @@ namespace QuestFantasy.UI
             tabsBox.MarginTop = 16f;
             tabsBox.MarginBottom = 50f;
             panel.AddChild(tabsBox);
-            
+
             _tabClassBtn = CreateStyledButton("⚡ Change Class", TabSelected, TabSelected);
             _tabClassBtn.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
             _tabClassBtn.Connect("pressed", this, nameof(OnTabPressed), new Godot.Collections.Array { 0 });
             tabsBox.AddChild(_tabClassBtn);
-            
+
             _tabSkillsBtn = CreateStyledButton("🗡 Skills", TabNormal, TabSelected);
             _tabSkillsBtn.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
             _tabSkillsBtn.Connect("pressed", this, nameof(OnTabPressed), new Godot.Collections.Array { 1 });
@@ -190,7 +190,7 @@ namespace QuestFantasy.UI
             _classTabContent.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
             _classTabContent.MarginTop = 50f;
             panel.AddChild(_classTabContent);
-            
+
             _skillTabContent = new Control();
             _skillTabContent.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
             _skillTabContent.MarginTop = 50f;
@@ -270,7 +270,7 @@ namespace QuestFantasy.UI
                 var slotPanel = new Panel();
                 slotPanel.RectMinSize = new Vector2(200f, 60f);
                 slotPanel.AddStyleboxOverride("panel", MakeCardStyle(new Color(0.12f, 0.15f, 0.22f, 1f), new Color(0.3f, 0.4f, 0.6f, 1f), 2));
-                
+
                 var lbl = new Label
                 {
                     Text = $"Slot {i + 1}: Empty",
@@ -351,7 +351,7 @@ namespace QuestFantasy.UI
         {
             var card = new Panel();
             card.RectMinSize = new Vector2(CardWidth, CardHeight);
-            
+
             var vbox = new VBoxContainer();
             vbox.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
             vbox.MarginLeft = 8f;
@@ -359,7 +359,7 @@ namespace QuestFantasy.UI
             vbox.MarginTop = 14f;
             vbox.MarginBottom = -8f;
             card.AddChild(vbox);
-            
+
             vbox.AddChild(MakeLabel(def.Emoji, 32f, CardTitleColor, center: true));
             vbox.AddChild(MakeLabel(def.DisplayName, 22f, CardTitleColor, center: true));
             vbox.AddChild(new HSeparator { RectMinSize = new Vector2(0f, 4f) });
@@ -461,10 +461,10 @@ namespace QuestFantasy.UI
         {
             _classTabContent.Visible = (tabIndex == 0);
             _skillTabContent.Visible = (tabIndex == 1);
-            
+
             _tabClassBtn.AddStyleboxOverride("normal", MakeButtonStyle(tabIndex == 0 ? TabSelected : TabNormal));
             _tabSkillsBtn.AddStyleboxOverride("normal", MakeButtonStyle(tabIndex == 1 ? TabSelected : TabNormal));
-            
+
             if (tabIndex == 1)
             {
                 RefreshSkillTab();
@@ -524,7 +524,7 @@ namespace QuestFantasy.UI
         {
             // If class only has 1 skill, it's always equipped
             if (_availableSkills.Count <= 1) return;
-            
+
             if (_equippedSkillIds.Contains(skillId))
             {
                 _equippedSkillIds.Remove(skillId);
@@ -584,7 +584,7 @@ namespace QuestFantasy.UI
                 }
             }
         }
-        
+
         private void RefreshSkillTab()
         {
             // Update slots
@@ -608,7 +608,7 @@ namespace QuestFantasy.UI
                     _skillSlotLabels[i].Text = $"Slot {i + 1}: Empty";
                 }
             }
-            
+
             // Rebuild grid
             var gridBox = _skillTabContent.GetNodeOrNull<HBoxContainer>("SkillGrid");
             if (gridBox != null)
@@ -617,28 +617,28 @@ namespace QuestFantasy.UI
                 {
                     child.QueueFree();
                 }
-                
+
                 _skillCardPanels = new Panel[_availableSkills.Count];
-                
+
                 for (int i = 0; i < _availableSkills.Count; i++)
                 {
                     var def = _availableSkills[i];
                     var card = BuildSkillCard(def);
-                    
+
                     bool isEquipped = _equippedSkillIds.Contains(def.Id);
-                    
+
                     card.AddStyleboxOverride("panel", MakeCardStyle(
                         isEquipped ? CardBgSelected : CardBgNormal,
                         isEquipped ? SkillLabelColor : CardBorderNormal,
                         isEquipped ? 3 : 2
                     ));
-                    
+
                     gridBox.AddChild(card);
                     _skillCardPanels[i] = card;
                 }
             }
         }
-        
+
         private SkillDefinition GetSkillDef(string id)
         {
             if (_availableSkills == null) return null;

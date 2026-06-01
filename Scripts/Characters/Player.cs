@@ -66,6 +66,7 @@ namespace QuestFantasy.Characters
         // Invincibility state
         private int _damageCooldownFrames = 0;
         private float _respawnInvincibilityTimer = 0f;
+        private float _defenseStanceTimer = 0f;
 
         // Previously exposed properties now delegated to subsystems
         public int Experience => _inventorySystem?.Experience ?? 0;
@@ -244,6 +245,13 @@ namespace QuestFantasy.Characters
         public System.Collections.Generic.IReadOnlyList<Item> DiscardedItems =>
             _inventorySystem?.Discarded?.Items.AsReadOnly() ?? new System.Collections.Generic.List<Item>().AsReadOnly();
 
+        public void ActivateDefenseStance(float duration)
+        {
+            _defenseStanceTimer = duration;
+            _animationController?.PlayDefenseAnimation();
+            GD.Print($"[Player] Defense Stance activated for {duration} seconds.");
+        }
+
         /// <summary>
         /// Set the map reference and initialize room tracking
         /// </summary>
@@ -289,14 +297,24 @@ namespace QuestFantasy.Characters
             Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit;
         }
 
-        public override void TakeDamage(int damage)
+        public override void TakeDamage(int damage, Character source = null)
         {
+            if (_defenseStanceTimer > 0f)
+            {
+                if (source != null && source.Attributes?.HP?.IsAlive == true)
+                {
+                    source.TakeDamage(Attributes.EffectiveAtk);
+                    _animationController?.PlayDefenseCounterAnimation(0.2f);
+                }
+                return;
+            }
+
             if (_respawnInvincibilityTimer > 0f) return;
             if (_damageCooldownFrames > 0) return;
 
             _damageCooldownFrames = 6; // 0.1 seconds at 60 FPS processing
 
-            base.TakeDamage(damage);
+            base.TakeDamage(damage, source);
             if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
             {
                 _animationController?.PlayHitAnimation(_hitTexture, 0.2f);
@@ -352,8 +370,17 @@ namespace QuestFantasy.Characters
             if (_map == null)
                 return;
 
+            if (_defenseStanceTimer > 0f)
+            {
+                _defenseStanceTimer -= delta;
+                if (_defenseStanceTimer <= 0f)
+                {
+                    _animationController?.StopDefenseAnimation();
+                }
+            }
+
             // Get current movement input
-            Vector2 movementInput = _inputHandler.GetMovementInput();
+            Vector2 movementInput = _defenseStanceTimer > 0f ? Vector2.Zero : _inputHandler.GetMovementInput();
 
             // 1. Handle physics and movement
             _physicsController.Update(
@@ -606,6 +633,18 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
+                if (string.Equals(snapshot.SkillId, "flying_sword", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new FlyingSwordSkill());
+                    continue;
+                }
+
+                if (string.Equals(snapshot.SkillId, "defense_stance", StringComparison.OrdinalIgnoreCase))
+                {
+                    skills.Add(new DefenseStanceSkill());
+                    continue;
+                }
+
                 var remoteSkill = new RemoteSkill(
                     snapshot.SkillId,
                     snapshot.Name,
@@ -669,6 +708,16 @@ namespace QuestFantasy.Characters
             if (skill is RicochetArrowSkill)
             {
                 return "ricochet_arrow";
+            }
+
+            if (skill is FlyingSwordSkill)
+            {
+                return "flying_sword";
+            }
+
+            if (skill is DefenseStanceSkill)
+            {
+                return "defense_stance";
             }
 
             if (skill is RemoteSkill remoteSkill)
@@ -749,6 +798,8 @@ namespace QuestFantasy.Characters
             bool hasFireball = skills.Any(s => s is FireballSkill);
             bool hasTripleFireball = skills.Any(s => s is TripleFireballSkill);
             bool hasGiantFireball = skills.Any(s => s is GiantFireballSkill);
+            bool hasFlyingSword = skills.Any(s => s is FlyingSwordSkill);
+            bool hasDefenseStance = skills.Any(s => s is DefenseStanceSkill);
 
             if (allowed.Contains(PlayerClassData.SkillIdSword) && !hasSword)
             {
@@ -787,6 +838,16 @@ namespace QuestFantasy.Characters
             if (allowed.Contains(PlayerClassData.SkillIdGiantFireball) && !hasGiantFireball)
             {
                 skills.Add(new GiantFireballSkill());
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdFlyingSword) && !hasFlyingSword)
+            {
+                skills.Add(new FlyingSwordSkill());
+            }
+
+            if (allowed.Contains(PlayerClassData.SkillIdDefenseStance) && !hasDefenseStance)
+            {
+                skills.Add(new DefenseStanceSkill());
             }
         }
 
@@ -879,9 +940,13 @@ namespace QuestFantasy.Characters
             // Reload class-specific hit / dead textures (with shared fallback).
             string hitPath = Resolve(paths.HitFrame, fallback.HitFrame);
             string deadPath = Resolve(paths.DeadFrame, fallback.DeadFrame);
+            string defPath = Resolve(paths.DefenseFrame, fallback.DefenseFrame);
+            string atkPath = Resolve(paths.SkillAttackFrame, fallback.SkillAttackFrame);
 
             _hitTexture = GD.Load<Texture>(hitPath);
             _deadTexture = GD.Load<Texture>(deadPath);
+
+            _animationController?.LoadDefenseTextures(defPath, atkPath);
 
             string bowFrame = paths.BowAttackPaths != null ? paths.BowAttackPaths[0] : "default";
             GD.Print($"[Player] Sprites updated for class {cls}. Stand={stand1}, Attack={attack1}, Bow={bowFrame}, Hit={hitPath}, Dead={deadPath}");
@@ -1026,7 +1091,7 @@ namespace QuestFantasy.Characters
             PlayerClass cls)
         {
             var allowed = PlayerClassData.GetAllowedSkillIds(cls);
-            var skills  = new System.Collections.Generic.List<Skills>();
+            var skills = new System.Collections.Generic.List<Skills>();
 
             if (orderedIds != null)
             {
@@ -1062,6 +1127,14 @@ namespace QuestFantasy.Characters
                     else if (key == "giant_fireball")
                     {
                         skills.Add(new GiantFireballSkill());
+                    }
+                    else if (key == "flying_sword")
+                    {
+                        skills.Add(new FlyingSwordSkill());
+                    }
+                    else if (key == "defense_stance")
+                    {
+                        skills.Add(new DefenseStanceSkill());
                     }
                 }
             }

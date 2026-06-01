@@ -28,6 +28,9 @@ namespace QuestFantasy.Characters.PlayerSystems
         private Texture[] _bowAttackFrames;
         private Texture[] _fireballAttackFrames;
 
+        private Texture _defenseTexture;
+        private Texture _counterTexture;
+
         // Default (Adventurer) frame paths for each skill style.
         private static readonly string[] DefaultSwordPaths = new[]
         {
@@ -170,6 +173,29 @@ namespace QuestFantasy.Characters.PlayerSystems
                 : BuildFrames(DefaultFireballPaths[0], DefaultFireballPaths[1], DefaultFireballPaths[2]);
 
             GD.Print("[PlayerAnimationController] Attack frames updated for class.");
+        }
+
+        public void LoadDefenseTextures(string defensePath, string counterPath)
+        {
+            _defenseTexture = !string.IsNullOrEmpty(defensePath) ? GD.Load<Texture>(defensePath) : null;
+            _counterTexture = !string.IsNullOrEmpty(counterPath) ? GD.Load<Texture>(counterPath) : null;
+        }
+
+        public void PlayDefenseAnimation()
+        {
+            if (_defenseTexture != null)
+                _animationSystem.PlayDefenseAnimation(_defenseTexture);
+        }
+
+        public void PlayDefenseCounterAnimation(float duration = 0.2f)
+        {
+            if (_counterTexture != null)
+                _animationSystem.PlayDefenseCounterAnimation(_counterTexture, duration);
+        }
+
+        public void StopDefenseAnimation()
+        {
+            _animationSystem.StopDefenseAnimation();
         }
 
         /// <summary>

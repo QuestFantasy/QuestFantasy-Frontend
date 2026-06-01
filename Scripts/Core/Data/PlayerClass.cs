@@ -47,6 +47,9 @@ namespace QuestFantasy.Core.Data
         // Death / knocked-down frame (optional)
         public string DeadFrame { get; set; }
 
+        public string DefenseFrame { get; set; }
+        public string SkillAttackFrame { get; set; }
+
         /// <summary>
         /// Uniform visual scale multiplier applied on top of the body-size calculation.
         /// 1.0 = normal size, 0.8 = 20 % smaller, etc.
@@ -61,11 +64,11 @@ namespace QuestFantasy.Core.Data
     /// </summary>
     public class SkillDefinition
     {
-        public string Id          { get; set; }
+        public string Id { get; set; }
         public string DisplayName { get; set; }
         public string Description { get; set; }
-        public string Emoji       { get; set; }
-        public float  CooldownSec { get; set; }
+        public string Emoji { get; set; }
+        public float CooldownSec { get; set; }
     }
 
     /// <summary>
@@ -104,6 +107,8 @@ namespace QuestFantasy.Core.Data
         public const string SkillIdGiantFireball = "giant_fireball";
         public const string SkillIdTripleArrow = "triple_arrow";
         public const string SkillIdRicochetArrow = "ricochet_arrow";
+        public const string SkillIdFlyingSword = "flying_sword";
+        public const string SkillIdDefenseStance = "defense_stance";
 
         // ── Allowed skills per class ───────────────────────────────────────
 
@@ -124,7 +129,7 @@ namespace QuestFantasy.Core.Data
 
         private static readonly HashSet<string> WarriorSkills = new HashSet<string>
         {
-            SkillIdSword
+            SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance
         };
 
         /// <summary>
@@ -246,6 +251,24 @@ namespace QuestFantasy.Core.Data
             CooldownSec = 3.0f,
         };
 
+        private static readonly SkillDefinition DefFlyingSword = new SkillDefinition
+        {
+            Id = SkillIdFlyingSword,
+            DisplayName = "Flying Sword",
+            Description = "Throw a sword that pierces enemies and returns to you.",
+            Emoji = "🗡️",
+            CooldownSec = 1.5f,
+        };
+
+        private static readonly SkillDefinition DefDefenseStance = new SkillDefinition
+        {
+            Id = SkillIdDefenseStance,
+            DisplayName = "Defense Stance",
+            Description = "Block all damage and counter-attack enemies when hit.",
+            Emoji = "🛡️",
+            CooldownSec = 8.0f,
+        };
+
         /// <summary>
         /// Returns the ordered list of all <see cref="SkillDefinition"/>s that
         /// the given class is permitted to equip. Used to build the skill-equip UI.
@@ -259,7 +282,7 @@ namespace QuestFantasy.Core.Data
                 case PlayerClass.Archer:
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefBow, DefTripleArrow, DefRicochetArrow });
                 case PlayerClass.Warrior:
-                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword });
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefFlyingSword, DefDefenseStance });
                 default: // Adventurer
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefBow, DefFireball });
             }
@@ -273,10 +296,10 @@ namespace QuestFantasy.Core.Data
         {
             switch (cls)
             {
-                case PlayerClass.Mage:    return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball });
-                case PlayerClass.Archer:  return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow });
-                case PlayerClass.Warrior: return new ReadOnlyCollection<string>(new[] { SkillIdSword });
-                default:                  return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdBow, SkillIdFireball });
+                case PlayerClass.Mage: return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball });
+                case PlayerClass.Archer: return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow });
+                case PlayerClass.Warrior: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance });
+                default: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdBow, SkillIdFireball });
             }
         }
 
@@ -350,6 +373,8 @@ namespace QuestFantasy.Core.Data
                             FireballAttackPaths = null,
                             HitFrame = W + "hit.png",
                             DeadFrame = W + "skill_down.png",   // knocked-down sprite
+                            DefenseFrame = W + "defense.png",
+                            SkillAttackFrame = W + "skill_attack.png",
                         };
                     }
 

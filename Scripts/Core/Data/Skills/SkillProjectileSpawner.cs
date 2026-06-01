@@ -30,7 +30,7 @@ namespace QuestFantasy.Core.Data.Skills
             float onHitChance = 0f)
         {
             Vector2 direction = ResolveDirection(player, target);
-            
+
             // Calculate a perpendicular offset vector (10 pixels wide) to separate the arrows
             Vector2 perpOffset = new Vector2(-direction.y, direction.x) * 12f;
 
@@ -41,7 +41,7 @@ namespace QuestFantasy.Core.Data.Skills
             AttachToScene(player, nodeCenter);
             AttachToScene(player, nodeLeft);
             AttachToScene(player, nodeRight);
-            
+
             // Apply the visual offsets
             nodeLeft.GlobalPosition += perpOffset;
             nodeRight.GlobalPosition -= perpOffset;
@@ -67,7 +67,7 @@ namespace QuestFantasy.Core.Data.Skills
             float onHitChance = 0f)
         {
             Vector2 direction = ResolveDirection(player, target);
-            
+
             // Calculate spread directions (±15 degrees = ±0.261799 radians)
             float spreadAngle = 15f * Mathf.Pi / 180f;
             Vector2 dirLeft = direction.Rotated(-spreadAngle);
@@ -91,6 +91,18 @@ namespace QuestFantasy.Core.Data.Skills
         {
             Vector2 direction = ResolveDirection(player, target);
             var node = SkillProjectileNode.CreateGiantFireball(player, direction, maxRange, onHitEffect, onHitChance);
+            AttachToScene(player, node);
+        }
+
+        public static void SpawnFlyingSword(
+            Player player,
+            Character target,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            Vector2 direction = ResolveDirection(player, target);
+            var node = SkillProjectileNode.CreateFlyingSword(player, direction, maxRange, onHitEffect, onHitChance);
             AttachToScene(player, node);
         }
 
@@ -189,7 +201,10 @@ namespace QuestFantasy.Core.Data.Skills
         private float _flightFrameDuration = 0f;
         private float _impactFrameDuration = ArrowImpactFrameDuration;
         private int _bouncesRemaining = 0;
-        private float _bounceRange = 150f;
+        private readonly float _bounceRange = 150f;
+        private bool _isPiercing = false;
+        private bool _isReturning = false;
+        private bool _returningPhase = false;
 
         public static SkillProjectileNode CreateArrow(
             Player owner,
@@ -312,6 +327,47 @@ namespace QuestFantasy.Core.Data.Skills
             };
         }
 
+        public static SkillProjectileNode CreateFlyingSword(
+            Player owner,
+            Vector2 direction,
+            float maxRange,
+            Func<StatusEffect> onHitEffect = null,
+            float onHitChance = 0f)
+        {
+            return new SkillProjectileNode
+            {
+                _owner = owner,
+                _map = FindMap(owner),
+                _direction = direction,
+                _speed = ArrowSpeed * 0.9f,
+                _maxDistance = Mathf.Max(10f, maxRange),
+                _hitRadius = 16f,
+                _damageMin = 6,
+                _damageMax = 12,
+                _isAoe = false,
+                _aoeRadius = 0f,
+                _isPiercing = true,
+                _isReturning = true,
+                _onHitEffect = onHitEffect,
+                _onHitChance = onHitChance,
+                _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/fly_sword.png"),
+                _projectileScale = 0.3f,
+                _impactScale = 0.3f,
+                _flightFrameDuration = 0.08f,
+                _impactFrameDuration = ArrowImpactFrameDuration,
+                _flightFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fly_sword.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fly_sword-1.png"),
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fly_sword-2.png"),
+                },
+                _impactFrames = new[]
+                {
+                    GD.Load<Texture>("res://Assets/SkillAnimation/fly_sword.png"),
+                }
+            };
+        }
+
         public override void _Ready()
         {
             Texture firstFlightTexture = _projectileTexture;
@@ -353,31 +409,48 @@ namespace QuestFantasy.Core.Data.Skills
 
             UpdateFlightAnimation(delta);
 
+            if (_returningPhase)
+            {
+                Vector2 toOwner = _owner.GlobalPosition - GlobalPosition;
+                if (toOwner.LengthSquared() < 400f) // approx 20 units
+                {
+                    QueueFree();
+                    return;
+                }
+                _direction = toOwner.Normalized();
+                Rotation = _direction.Angle();
+            }
+
             Vector2 step = _direction * _speed * delta;
             Vector2 nextPosition = GlobalPosition + step;
 
-            if (IsBlockedByWall(nextPosition))
+            if (IsBlockedByWall(nextPosition) && !_returningPhase)
             {
                 if (_bouncesRemaining > 0)
                 {
                     _bouncesRemaining--;
-                    
+
                     // Simple reflection based on axis
                     bool xBlocked = IsBlockedByWall(GlobalPosition + new Vector2(step.x, 0));
                     bool yBlocked = IsBlockedByWall(GlobalPosition + new Vector2(0, step.y));
-                    
+
                     if (xBlocked) _direction.x *= -1;
                     if (yBlocked) _direction.y *= -1;
-                    
+
                     // Corner case: if both or neither (diagonal corner), just flip both
                     if (!xBlocked && !yBlocked) { _direction = -_direction; }
-                    
+
                     _direction = _direction.Normalized();
                     Rotation = _direction.Angle();
                     return; // continue next frame
                 }
                 else
                 {
+                    if (_isReturning)
+                    {
+                        StartReturningPhase();
+                        return;
+                    }
                     BeginImpact(nextPosition, null);
                     return;
                 }
@@ -390,7 +463,7 @@ namespace QuestFantasy.Core.Data.Skills
                 {
                     ApplyDamage(hitTarget);
                     _bouncesRemaining--;
-                    
+
                     // Find next target
                     Character nextTarget = FindNextBounceTarget(hitTarget.GlobalPosition);
                     if (nextTarget != null)
@@ -399,12 +472,16 @@ namespace QuestFantasy.Core.Data.Skills
                         Rotation = _direction.Angle();
                         return; // continue next frame
                     }
-                    else 
+                    else
                     {
                         // No target to bounce to, just impact
                         BeginImpact(hitTarget.GlobalPosition, hitTarget);
                         return;
                     }
+                }
+                else if (_isPiercing)
+                {
+                    ApplyDamage(hitTarget);
                 }
                 else
                 {
@@ -414,11 +491,29 @@ namespace QuestFantasy.Core.Data.Skills
             }
 
             GlobalPosition = nextPosition;
-            _traveled += step.Length();
-            if (_traveled >= _maxDistance)
+
+            if (!_returningPhase)
             {
-                QueueFree();
+                _traveled += step.Length();
+                if (_traveled >= _maxDistance)
+                {
+                    if (_isReturning)
+                    {
+                        StartReturningPhase();
+                    }
+                    else
+                    {
+                        QueueFree();
+                    }
+                }
             }
+        }
+
+        private void StartReturningPhase()
+        {
+            _returningPhase = true;
+            _damagedTargets.Clear();
+            _isPiercing = true;
         }
 
         private bool IsBlockedByWall(Vector2 position)
@@ -476,7 +571,7 @@ namespace QuestFantasy.Core.Data.Skills
                 {
                     continue;
                 }
-                
+
                 // Do not bounce back to already hit targets
                 if (_damagedTargets.Contains(enemy))
                 {
