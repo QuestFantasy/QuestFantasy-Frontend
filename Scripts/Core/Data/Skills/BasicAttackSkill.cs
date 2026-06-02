@@ -2,6 +2,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Base;
+using QuestFantasy.Core.Data;
 using QuestFantasy.Core.Data.Attributes;
 using QuestFantasy.Core.Systems.StatusEffects;
 
@@ -48,6 +49,29 @@ namespace QuestFantasy.Core.Data.Skills
             {
                 GD.PrintErr("BasicAttackSkill: Cannot execute attack with null player");
                 return;
+            }
+
+            // Determine aim direction
+            Vector2 targetPos = target != null ? target.GlobalPosition : player.GetGlobalMousePosition();
+            Vector2 towardTarget = targetPos - player.GlobalPosition;
+            Vector2 dir = towardTarget.LengthSquared() > 0.0001f ? towardTarget.Normalized() : Vector2.Right;
+            Vector2 effectPos = player.GlobalPosition + dir * 30f;
+            effectPos.y -= 8f;
+
+            // Spawn standard slash effect only for Warrior (Sword Slash)
+            if (player.PlayerClass == PlayerClass.Warrior)
+            {
+                SkillProjectileSpawner.SpawnTemporaryVisualEffect(
+                    player,
+                    "res://Assets/SkillAnimation/slash-effect.png",
+                    effectPos,
+                    0.25f,
+                    0.25f,
+                    0.3f,
+                    0f,
+                    false,
+                    dir.Angle()
+                );
             }
 
             // Allow empty swing if no target
