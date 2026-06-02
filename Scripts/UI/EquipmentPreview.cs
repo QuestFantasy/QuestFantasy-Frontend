@@ -283,7 +283,7 @@ public class EquipmentPreview : CanvasLayer
         grid.AddChild(new Label() { Text = $"Attack: +{atk}" });
         grid.AddChild(new Label() { Text = $"Defense: +{def}" });
         grid.AddChild(new Label() { Text = $"Agility: +{spd}" });
-        grid.AddChild(new Label() { Text = $"Stamina: +{vit}" });
+        grid.AddChild(new Label() { Text = $"HP: +{vit}" });
         grid.AddChild(new Label() { Text = $"Level Req:" });
         grid.AddChild(new Label() { Text = $"{levelReq}" });
         var priceLabel = new Label() { Text = $"Price: {price}" };

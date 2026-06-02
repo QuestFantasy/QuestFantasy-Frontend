@@ -57,7 +57,6 @@ public class BackpackUI : CanvasLayer
     private Label _statAtkValueLabel;
     private Label _statDefValueLabel;
     private Label _statSpdValueLabel;
-    private Label _statVitValueLabel;
     private GridContainer _grid;
     private CenterContainer _gridCenter;
     private Label _pageLabel;
@@ -459,7 +458,6 @@ public class BackpackUI : CanvasLayer
         _statAtkValueLabel = AddStatRow(statsContent, "ATK", new Color(1f, 0.78f, 0.48f));
         _statDefValueLabel = AddStatRow(statsContent, "DEF", new Color(0.68f, 0.86f, 1f));
         _statSpdValueLabel = AddStatRow(statsContent, "SPD", new Color(0.62f, 1f, 0.78f));
-        _statVitValueLabel = AddStatRow(statsContent, "VIT", new Color(0.95f, 0.74f, 1f));
 
         _panelRoot.AddChild(_statsPanel);
     }
@@ -596,7 +594,7 @@ public class BackpackUI : CanvasLayer
 
         if (_player == null || _player.Attributes == null)
         {
-            SetStatValues("--", "--", "--", "--", "--", "--");
+            SetStatValues("--", "--", "--", "--", "--");
             return;
         }
 
@@ -610,18 +608,16 @@ public class BackpackUI : CanvasLayer
             hpText,
             FormatEffectiveStat(attributes.EffectiveAtk, attributes.TotalAtk),
             FormatEffectiveStat(attributes.EffectiveDef, attributes.TotalDef),
-            attributes.TotalSpd.ToString(),
-            attributes.TotalVit.ToString());
+            attributes.TotalSpd.ToString());
     }
 
-    private void SetStatValues(string level, string hp, string atk, string def, string spd, string vit)
+    private void SetStatValues(string level, string hp, string atk, string def, string spd)
     {
         _statLevelValueLabel.Text = level;
         _statHpValueLabel.Text = hp;
         _statAtkValueLabel.Text = atk;
         _statDefValueLabel.Text = def;
         _statSpdValueLabel.Text = spd;
-        _statVitValueLabel.Text = vit;
     }
 
     private string FormatEffectiveStat(int effectiveValue, int totalValue)

@@ -13,6 +13,9 @@ public static class GameConstants
     /// <summary>Conversion factor from speed stat points to pixels per second.</summary>
     public const float PLAYER_SPEED_TO_PIXELS_MULTIPLIER = 50f;
 
+    /// <summary>Max HP gained from each manually allocated HP point.</summary>
+    public const int PLAYER_HP_STAT_BONUS = 10;
+
     /// <summary>Default player body dimensions in tiles.</summary>
     public static readonly Vector2 PLAYER_BODY_SIZE_IN_TILES = new Vector2(1.0f, 1.9f);
 

@@ -55,6 +55,7 @@ namespace QuestFantasy.Characters
         private PlayerEquipmentSystem _equipmentSystem;
         private PlayerAnimationConfig _animationConfig;
         private PlayerConfigValidator.PlayerConfig _playerConfig;
+        private readonly Abilities _allocatedStatPoints = new Abilities();
 
         // Death state
         private Texture _deadTexture;
@@ -73,6 +74,12 @@ namespace QuestFantasy.Characters
         public int Gold => _inventorySystem?.Gold ?? 0;
         public Weapon EquippedWeapon => _equipmentSystem?.EquippedWeapon;
         public EquippedItems EquippedItems => _equipmentSystem?.EquippedItems;
+        public int AllocatedAtkPoints => _allocatedStatPoints.Atk;
+        public int AllocatedDefPoints => _allocatedStatPoints.Def;
+        public int AllocatedSpdPoints => _allocatedStatPoints.Spd;
+        public int AllocatedVitPoints => _allocatedStatPoints.Vit;
+        public int SpentStatPoints => _allocatedStatPoints.GetTotal();
+        public int AvailableStatPoints => Math.Max(0, (int)Math.Max(1, Level) - SpentStatPoints);
 
         // Events - delegated from subsystems
         public event Action<int> OnExperienceChanged;
@@ -80,6 +87,7 @@ namespace QuestFantasy.Characters
         public event Action<Item> OnInventoryChanged;
         public event Action<int> OnLevelChanged;
         public event Action<int, int> OnHpChanged;
+        public event Action OnStatPointsChanged;
         public event Action OnDied;
         public event Action<Vector2, string> OnRoomEntered;
 
@@ -291,10 +299,10 @@ namespace QuestFantasy.Characters
             var jobBonuses = CurrentJob?.BaseAbilities ?? new Abilities();
             var equipmentBonuses = _equipmentSystem?.GetAllEquipmentBonuses() ?? new Abilities();
 
-            Attributes.TotalAtk = jobBonuses.Atk + equipmentBonuses.Atk;
-            Attributes.TotalDef = jobBonuses.Def + equipmentBonuses.Def;
-            Attributes.TotalSpd = jobBonuses.Spd + equipmentBonuses.Spd;
-            Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit;
+            Attributes.TotalAtk = jobBonuses.Atk + equipmentBonuses.Atk + _allocatedStatPoints.Atk;
+            Attributes.TotalDef = jobBonuses.Def + equipmentBonuses.Def + _allocatedStatPoints.Def;
+            Attributes.TotalSpd = jobBonuses.Spd + equipmentBonuses.Spd + _allocatedStatPoints.Spd;
+            Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit + _allocatedStatPoints.Vit;
         }
 
         public override void TakeDamage(int damage, Character source = null)
@@ -461,6 +469,66 @@ namespace QuestFantasy.Characters
             OnLevelChanged?.Invoke(normalized);
         }
 
+        public bool AllocateStatPoint(string statKey)
+        {
+            if (AvailableStatPoints <= 0)
+            {
+                return false;
+            }
+
+            bool allocatedVit = false;
+            switch ((statKey ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "atk":
+                    _allocatedStatPoints.Atk += 1;
+                    break;
+                case "def":
+                    _allocatedStatPoints.Def += 1;
+                    break;
+                case "spd":
+                    _allocatedStatPoints.Spd += 1;
+                    break;
+                case "vit":
+                    _allocatedStatPoints.Vit += 1;
+                    allocatedVit = true;
+                    break;
+                default:
+                    GD.PrintErr($"[Player] Unknown stat allocation key: {statKey}");
+                    return false;
+            }
+
+            UpdateAttributes();
+            if (allocatedVit && Attributes?.HP != null)
+            {
+                int maxHp = Attributes.HP.MaxHP + GameConstants.PLAYER_HP_STAT_BONUS;
+                int currentHp = Attributes.HP.CurrentHP + GameConstants.PLAYER_HP_STAT_BONUS;
+                Attributes.HP.SetMaxHPAndCurrentHP(maxHp, currentHp);
+                OnHpChanged?.Invoke(Attributes.HP.CurrentHP, Attributes.HP.MaxHP);
+            }
+
+            OnStatPointsChanged?.Invoke();
+            return true;
+        }
+
+        public void ApplyStatAllocations(int atk, int def, int spd, int vit)
+        {
+            int remaining = Math.Max(1, (int)Math.Max(1, Level));
+            _allocatedStatPoints.Atk = ConsumeStatAllocation(Math.Max(0, atk), ref remaining);
+            _allocatedStatPoints.Def = ConsumeStatAllocation(Math.Max(0, def), ref remaining);
+            _allocatedStatPoints.Spd = ConsumeStatAllocation(Math.Max(0, spd), ref remaining);
+            _allocatedStatPoints.Vit = ConsumeStatAllocation(Math.Max(0, vit), ref remaining);
+
+            UpdateAttributes();
+            OnStatPointsChanged?.Invoke();
+        }
+
+        private static int ConsumeStatAllocation(int requested, ref int remaining)
+        {
+            int applied = Math.Min(requested, Math.Max(0, remaining));
+            remaining -= applied;
+            return applied;
+        }
+
         public void ApplyProfile(PlayerProfileSnapshot snapshot)
         {
             if (snapshot == null)
@@ -469,6 +537,11 @@ namespace QuestFantasy.Characters
             }
 
             SetLevel(snapshot.Level);
+            ApplyStatAllocations(
+                snapshot.StatAtkPoints,
+                snapshot.StatDefPoints,
+                snapshot.StatSpdPoints,
+                snapshot.StatVitPoints);
             Attributes?.HP?.SetMaxHPAndCurrentHP(snapshot.HpMax, snapshot.HpCurrent);
             _inventorySystem?.SetSnapshot(snapshot.Experience, snapshot.Gold);
 
@@ -542,6 +615,10 @@ namespace QuestFantasy.Characters
                 Gold = Gold,
                 HpMax = Attributes?.HP?.MaxHP ?? 100,
                 HpCurrent = Attributes?.HP?.CurrentHP ?? 100,
+                StatAtkPoints = _allocatedStatPoints.Atk,
+                StatDefPoints = _allocatedStatPoints.Def,
+                StatSpdPoints = _allocatedStatPoints.Spd,
+                StatVitPoints = _allocatedStatPoints.Vit,
                 Skills = GetSkillSnapshots().ToList(),
                 InventoryItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Inventory?.Items),
                 DiscardedItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Discarded?.Items),

@@ -396,11 +396,17 @@ public static class PlayerItemSnapshotCodec
 
 public class PlayerProfileSnapshot
 {
+    private const string StatAllocationsKey = "stat_allocations";
+
     public int Level { get; set; } = 1;
     public int Experience { get; set; } = 0;
     public int HpMax { get; set; } = 100;
     public int HpCurrent { get; set; } = 100;
     public int Gold { get; set; } = 0;
+    public int StatAtkPoints { get; set; } = 0;
+    public int StatDefPoints { get; set; } = 0;
+    public int StatSpdPoints { get; set; } = 0;
+    public int StatVitPoints { get; set; } = 0;
     public bool Ignored { get; set; } = false;
     public string IgnoreReason { get; set; } = string.Empty;
     public bool HasInventoryItemsPayload { get; set; } = false;
@@ -448,6 +454,12 @@ public class PlayerProfileSnapshot
         {
             snapshot.HasEquippedItemsPayload = true;
             snapshot.EquippedItemsPayload = equippedDict;
+            snapshot.ReadStatAllocations(equippedDict);
+        }
+
+        if (data.Contains(StatAllocationsKey) && data[StatAllocationsKey] is Godot.Collections.Dictionary statDict)
+        {
+            snapshot.ReadStatAllocations(statDict);
         }
 
         if (data.Contains("skills") && data["skills"] is Godot.Collections.Array rawSkills)
@@ -510,6 +522,9 @@ public class PlayerProfileSnapshot
 
     public Godot.Collections.Dictionary ToUpdatePayload(string sessionId, int sequence)
     {
+        var equippedItems = EquippedItemsPayload ?? new Godot.Collections.Dictionary();
+        equippedItems[StatAllocationsKey] = BuildStatAllocationsPayload();
+
         return new Godot.Collections.Dictionary
         {
             ["session_id"] = sessionId ?? string.Empty,
@@ -522,9 +537,39 @@ public class PlayerProfileSnapshot
             ["class_name"] = string.IsNullOrWhiteSpace(ClassName) ? "adventurer" : ClassName,
             ["inventory_items"] = InventoryItems ?? new Godot.Collections.Array(),
             ["discarded_items"] = DiscardedItems ?? new Godot.Collections.Array(),
-            ["equipped_items"] = EquippedItemsPayload ?? new Godot.Collections.Dictionary(),
+            ["equipped_items"] = equippedItems,
             ["skills"] = EncodeSkills(Skills),
         };
+    }
+
+    private Godot.Collections.Dictionary BuildStatAllocationsPayload()
+    {
+        return new Godot.Collections.Dictionary
+        {
+            ["atk"] = Math.Max(0, StatAtkPoints),
+            ["def"] = Math.Max(0, StatDefPoints),
+            ["spd"] = Math.Max(0, StatSpdPoints),
+            ["vit"] = Math.Max(0, StatVitPoints),
+        };
+    }
+
+    private void ReadStatAllocations(Godot.Collections.Dictionary data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        Godot.Collections.Dictionary source = data;
+        if (data.Contains(StatAllocationsKey) && data[StatAllocationsKey] is Godot.Collections.Dictionary nested)
+        {
+            source = nested;
+        }
+
+        StatAtkPoints = ReadInt(source, "atk", StatAtkPoints, min: 0);
+        StatDefPoints = ReadInt(source, "def", StatDefPoints, min: 0);
+        StatSpdPoints = ReadInt(source, "spd", StatSpdPoints, min: 0);
+        StatVitPoints = ReadInt(source, "vit", StatVitPoints, min: 0);
     }
 
     private static string ReadString(Godot.Collections.Dictionary data, string key, string fallback)

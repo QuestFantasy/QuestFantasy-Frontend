@@ -38,6 +38,7 @@ namespace QuestFantasy.Prototype
         private readonly EquipmentManager _equipmentFactory = new EquipmentManager();
         private readonly List<NPC> _lobbyNpcs = new List<NPC>();
         private Player _sharedPlayer;
+        private Player _classSelectTarget;
 
         public void Initialize(Player sharedPlayer, AuthApiClient apiClient = null, string authToken = null)
         {
@@ -314,11 +315,12 @@ namespace QuestFantasy.Prototype
             AddChild(_classSelectUI);
             _classSelectUI.ClassSelected += OnClassSelected;
             _classSelectUI.SkillLoadoutChanged += OnSkillLoadoutChanged;
+            _classSelectUI.StatPointRequested += OnStatPointRequested;
         }
 
         private void OnSkillLoadoutChanged(List<string> orderedSkillIds)
         {
-            Player target = _player;
+            Player target = _classSelectTarget ?? _player;
             if (target == null)
             {
                 return;
@@ -337,17 +339,29 @@ namespace QuestFantasy.Prototype
             }
 
             Player target = player ?? _player;
+            _classSelectTarget = target;
             PlayerClass current = target?.PlayerClass ?? PlayerClass.Adventurer;
             int level = (int)(target?.Level ?? 1);
             var equippedSkills = target?.GetEquippedSkillIds();
 
-            _classSelectUI.Show(current, level, equippedSkills);
+            _classSelectUI.Show(
+                current,
+                level,
+                equippedSkills,
+                target?.Attributes?.TotalAtk ?? 0,
+                target?.Attributes?.TotalDef ?? 0,
+                target?.Attributes?.TotalSpd ?? 0,
+                target?.Attributes?.HP?.MaxHP ?? 0,
+                target?.AllocatedAtkPoints ?? 0,
+                target?.AllocatedDefPoints ?? 0,
+                target?.AllocatedSpdPoints ?? 0,
+                target?.AllocatedVitPoints ?? 0);
             GD.Print($"[Lobby] Class selector opened by {npc.EntityName}. Current class: {current}, Player Level: {level}");
         }
 
         private void OnClassSelected(PlayerClass newClass)
         {
-            Player target = _player;
+            Player target = _classSelectTarget ?? _player;
             if (target == null)
             {
                 return;
@@ -356,6 +370,24 @@ namespace QuestFantasy.Prototype
             target.SetClass(newClass);
             GD.Print($"[Lobby] Player class set to {newClass}");
             ClassChangeRequested?.Invoke(newClass);
+        }
+
+        private bool OnStatPointRequested(string statKey)
+        {
+            Player target = _classSelectTarget ?? _player;
+            if (target == null)
+            {
+                return false;
+            }
+
+            bool applied = target.AllocateStatPoint(statKey);
+            if (applied)
+            {
+                GD.Print($"[Lobby] Allocated stat point to {statKey}. Remaining: {target.AvailableStatPoints}");
+                SyncRequested?.Invoke();
+            }
+
+            return applied;
         }
 
         private void OnShopClosed()

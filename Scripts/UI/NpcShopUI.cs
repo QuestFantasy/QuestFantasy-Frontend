@@ -945,12 +945,12 @@ public class NpcShopUI : CanvasLayer
     {
         if (item is Equipment equipment)
         {
-            return $"ATK +{equipment.EquipmentAbilities?.Atk ?? 0}\nDEF +{equipment.EquipmentAbilities?.Def ?? 0}\nSPD +{equipment.EquipmentAbilities?.Spd ?? 0}\nVIT +{equipment.EquipmentAbilities?.Vit ?? 0}\nLevel Req {equipment.LevelRequirement}";
+            return $"ATK +{equipment.EquipmentAbilities?.Atk ?? 0}\nDEF +{equipment.EquipmentAbilities?.Def ?? 0}\nSPD +{equipment.EquipmentAbilities?.Spd ?? 0}\nHP +{equipment.EquipmentAbilities?.Vit ?? 0}\nLevel Req {equipment.LevelRequirement}";
         }
 
         if (item is Weapon weapon)
         {
-            return $"ATK +{weapon.WeaponAbilities?.Atk ?? 0}\nDEF +{weapon.WeaponAbilities?.Def ?? 0}\nSPD +{weapon.WeaponAbilities?.Spd ?? 0}\nVIT +{weapon.WeaponAbilities?.Vit ?? 0}\nLevel Req {weapon.LevelRequirement}";
+            return $"ATK +{weapon.WeaponAbilities?.Atk ?? 0}\nDEF +{weapon.WeaponAbilities?.Def ?? 0}\nSPD +{weapon.WeaponAbilities?.Spd ?? 0}\nHP +{weapon.WeaponAbilities?.Vit ?? 0}\nLevel Req {weapon.LevelRequirement}";
         }
 
         return "No extra stats.";
