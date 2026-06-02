@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace QuestFantasy.Core.Data
 {
@@ -11,7 +12,7 @@ namespace QuestFantasy.Core.Data
         Adventurer,
         Mage,
         Archer,
-        Warrior
+        Knight
     }
 
     /// <summary>
@@ -46,12 +47,28 @@ namespace QuestFantasy.Core.Data
         // Death / knocked-down frame (optional)
         public string DeadFrame { get; set; }
 
+        public string DefenseFrame { get; set; }
+        public string SkillAttackFrame { get; set; }
+
         /// <summary>
         /// Uniform visual scale multiplier applied on top of the body-size calculation.
         /// 1.0 = normal size, 0.8 = 20 % smaller, etc.
         /// Does NOT affect the physics body / hitbox.
         /// </summary>
         public float ScaleMultiplier { get; set; } = 1.0f;
+    }
+
+    /// <summary>
+    /// Immutable descriptor for a single learnable skill.
+    /// Used by the skill-equip UI to build cards without coupling to concrete skill classes.
+    /// </summary>
+    public class SkillDefinition
+    {
+        public string Id { get; set; }
+        public string DisplayName { get; set; }
+        public string Description { get; set; }
+        public string Emoji { get; set; }
+        public float CooldownSec { get; set; }
     }
 
     /// <summary>
@@ -86,6 +103,18 @@ namespace QuestFantasy.Core.Data
         public const string SkillIdSword = "basic_attack";
         public const string SkillIdBow = "bow_attack";
         public const string SkillIdFireball = "fireball";
+        public const string SkillIdTripleFireball = "triple_fireball";
+        public const string SkillIdGiantFireball = "giant_fireball";
+        public const string SkillIdTripleArrow = "triple_arrow";
+        public const string SkillIdRicochetArrow = "ricochet_arrow";
+        public const string SkillIdFlyingSword = "flying_sword";
+        public const string SkillIdDefenseStance = "defense_stance";
+        public const string SkillIdMagicSlash = "magic_slash";
+        public const string SkillIdIceSpear = "ice_spear";
+        public const string SkillIdDigitArrow = "digit_arrow";
+        public const string SkillIdSuperArrow = "super_arrow";
+        public const string SkillIdRoundhouseSlash = "roundhouse_slash";
+        public const string SkillIdKnightExplose = "knight_explose";
 
         // ── Allowed skills per class ───────────────────────────────────────
 
@@ -96,17 +125,17 @@ namespace QuestFantasy.Core.Data
 
         private static readonly HashSet<string> MageSkills = new HashSet<string>
         {
-            SkillIdFireball
+            SkillIdFireball, SkillIdTripleFireball, SkillIdGiantFireball, SkillIdMagicSlash, SkillIdIceSpear
         };
 
         private static readonly HashSet<string> ArcherSkills = new HashSet<string>
         {
-            SkillIdBow
+            SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow, SkillIdDigitArrow, SkillIdSuperArrow
         };
 
-        private static readonly HashSet<string> WarriorSkills = new HashSet<string>
+        private static readonly HashSet<string> KnightSkills = new HashSet<string>
         {
-            SkillIdSword
+            SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance, SkillIdRoundhouseSlash, SkillIdKnightExplose
         };
 
         /// <summary>
@@ -118,7 +147,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return MageSkills;
                 case PlayerClass.Archer: return ArcherSkills;
-                case PlayerClass.Warrior: return WarriorSkills;
+                case PlayerClass.Knight: return KnightSkills;
                 default: return AdventurerSkills;
             }
         }
@@ -130,7 +159,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return "Mage";
                 case PlayerClass.Archer: return "Archer";
-                case PlayerClass.Warrior: return "Warrior";
+                case PlayerClass.Knight: return "Knight";
                 default: return "Adventurer";
             }
         }
@@ -144,7 +173,7 @@ namespace QuestFantasy.Core.Data
                     return "Wields the arcane arts.\nMasters the art of Fireball magic.";
                 case PlayerClass.Archer:
                     return "Swift and precise.\nStrikes enemies from a distance with arrows.";
-                case PlayerClass.Warrior:
+                case PlayerClass.Knight:
                     return "Unyielding and fierce.\nCleaves foes with a powerful sword slash.";
                 default:
                     return "The all-rounder.\nCommands sword, bow, and magic freely.";
@@ -158,8 +187,179 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return "Fireball";
                 case PlayerClass.Archer: return "Arrow Shot";
-                case PlayerClass.Warrior: return "Sword Slash";
+                case PlayerClass.Knight: return "Sword Slash";
                 default: return "Sword Slash, Arrow Shot, Fireball";
+            }
+        }
+
+        // ── Skill definition catalogue ─────────────────────────────────────
+
+        private static readonly SkillDefinition DefSword = new SkillDefinition
+        {
+            Id = SkillIdSword,
+            DisplayName = "Sword Slash",
+            Description = "A powerful melee strike that hits nearby enemies.",
+            Emoji = "⚔️",
+            CooldownSec = 0.3f,
+        };
+
+        private static readonly SkillDefinition DefBow = new SkillDefinition
+        {
+            Id = SkillIdBow,
+            DisplayName = "Arrow Shot",
+            Description = "Fire an arrow that pierces enemies at range.",
+            Emoji = "🏹",
+            CooldownSec = 0.8f,
+        };
+
+        private static readonly SkillDefinition DefTripleArrow = new SkillDefinition
+        {
+            Id = SkillIdTripleArrow,
+            DisplayName = "Triple Arrow",
+            Description = "Fire 3 parallel arrows at once that pierce enemies.",
+            Emoji = "🏹",
+            CooldownSec = 1.5f,
+        };
+
+        private static readonly SkillDefinition DefRicochetArrow = new SkillDefinition
+        {
+            Id = SkillIdRicochetArrow,
+            DisplayName = "Ricochet Arrow",
+            Description = "Fire an arrow that bounces between enemies and walls.",
+            Emoji = "↪️",
+            CooldownSec = 2.5f,
+        };
+
+        private static readonly SkillDefinition DefFireball = new SkillDefinition
+        {
+            Id = SkillIdFireball,
+            DisplayName = "Fireball",
+            Description = "Launch a fireball that explodes on impact and may Burn.",
+            Emoji = "🔥",
+            CooldownSec = 1.2f,
+        };
+
+        private static readonly SkillDefinition DefTripleFireball = new SkillDefinition
+        {
+            Id = SkillIdTripleFireball,
+            DisplayName = "Triple Fireball",
+            Description = "Launch 3 fireballs in a spread that explode on impact.",
+            Emoji = "☄️",
+            CooldownSec = 2.0f,
+        };
+
+        private static readonly SkillDefinition DefGiantFireball = new SkillDefinition
+        {
+            Id = SkillIdGiantFireball,
+            DisplayName = "Giant Fireball",
+            Description = "Launch a massive fireball that explodes on impact.",
+            Emoji = "🔥",
+            CooldownSec = 3.0f,
+        };
+
+        private static readonly SkillDefinition DefFlyingSword = new SkillDefinition
+        {
+            Id = SkillIdFlyingSword,
+            DisplayName = "Flying Sword",
+            Description = "Throw a sword that pierces enemies and returns to you.",
+            Emoji = "🗡️",
+            CooldownSec = 1.5f,
+        };
+
+        private static readonly SkillDefinition DefDefenseStance = new SkillDefinition
+        {
+            Id = SkillIdDefenseStance,
+            DisplayName = "Defense Stance",
+            Description = "Block all damage and counter-attack enemies when hit.",
+            Emoji = "🛡️",
+            CooldownSec = 8.0f,
+        };
+
+        private static readonly SkillDefinition DefMagicSlash = new SkillDefinition
+        {
+            Id = SkillIdMagicSlash,
+            DisplayName = "Magic Slash",
+            Description = "Strike with arcane energy, cutting through magic.",
+            Emoji = "✨",
+            CooldownSec = 1.0f,
+        };
+
+        private static readonly SkillDefinition DefIceSpear = new SkillDefinition
+        {
+            Id = SkillIdIceSpear,
+            DisplayName = "Ice Spear",
+            Description = "Launch a spear of ice that pierces and freezes enemies.",
+            Emoji = "❄️",
+            CooldownSec = 1.8f,
+        };
+
+        private static readonly SkillDefinition DefDigitArrow = new SkillDefinition
+        {
+            Id = SkillIdDigitArrow,
+            DisplayName = "Digit Arrow",
+            Description = "Fire an arrow that passes through obstacles and enemies, traveling a set distance.",
+            Emoji = "🏹",
+            CooldownSec = 1.2f,
+        };
+
+        private static readonly SkillDefinition DefSuperArrow = new SkillDefinition
+        {
+            Id = SkillIdSuperArrow,
+            DisplayName = "Super Arrow",
+            Description = "Fire a powerful arrow that paralyzes enemies for 5 seconds.",
+            Emoji = "💫",
+            CooldownSec = 10.0f,
+        };
+
+        private static readonly SkillDefinition DefRoundhouseSlash = new SkillDefinition
+        {
+            Id = SkillIdRoundhouseSlash,
+            DisplayName = "Roundhouse Slash",
+            Description = "Spin and strike all nearby enemies with a powerful slash.",
+            Emoji = "⚡",
+            CooldownSec = 2.0f,
+        };
+
+        private static readonly SkillDefinition DefKnightExplose = new SkillDefinition
+        {
+            Id = SkillIdKnightExplose,
+            DisplayName = "Knight Explosion",
+            Description = "Create an expanding explosion at your location that damages enemies inside it repeatedly.",
+            Emoji = "💥",
+            CooldownSec = 30.0f,
+        };
+
+        /// <summary>
+        /// Returns the ordered list of all <see cref="SkillDefinition"/>s that
+        /// the given class is permitted to equip. Used to build the skill-equip UI.
+        /// </summary>
+        public static ReadOnlyCollection<SkillDefinition> GetAllSkillDefinitions(PlayerClass cls)
+        {
+            switch (cls)
+            {
+                case PlayerClass.Mage:
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefFireball, DefTripleFireball, DefGiantFireball, DefMagicSlash, DefIceSpear });
+                case PlayerClass.Archer:
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefBow, DefTripleArrow, DefRicochetArrow, DefDigitArrow, DefSuperArrow });
+                case PlayerClass.Knight:
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefFlyingSword, DefDefenseStance, DefRoundhouseSlash, DefKnightExplose });
+                default: // Adventurer
+                    return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefBow, DefFireball });
+            }
+        }
+
+        /// <summary>
+        /// Returns the default ordered skill-ID loadout for <paramref name="cls"/>.
+        /// Used to reset the loadout when the player changes class.
+        /// </summary>
+        public static ReadOnlyCollection<string> GetDefaultSkillLoadout(PlayerClass cls)
+        {
+            switch (cls)
+            {
+                case PlayerClass.Mage: return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdMagicSlash, SkillIdIceSpear });
+                case PlayerClass.Archer: return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdDigitArrow, SkillIdSuperArrow });
+                case PlayerClass.Knight: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdRoundhouseSlash, SkillIdKnightExplose });
+                default: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdBow, SkillIdFireball });
             }
         }
 
@@ -215,7 +415,7 @@ namespace QuestFantasy.Core.Data
                         };
                     }
 
-                case PlayerClass.Warrior:
+                case PlayerClass.Knight:
                     {
                         const string W = "res://Assets/Characters/warrior/";
                         return new ClassSpritePaths
@@ -233,6 +433,8 @@ namespace QuestFantasy.Core.Data
                             FireballAttackPaths = null,
                             HitFrame = W + "hit.png",
                             DeadFrame = W + "skill_down.png",   // knocked-down sprite
+                            DefenseFrame = W + "defense.png",
+                            SkillAttackFrame = W + "skill_attack.png",
                         };
                     }
 
@@ -271,7 +473,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return "mage";
                 case PlayerClass.Archer: return "archer";
-                case PlayerClass.Warrior: return "warrior";
+                case PlayerClass.Knight: return "knight";
                 default: return "adventurer";
             }
         }
@@ -286,7 +488,8 @@ namespace QuestFantasy.Core.Data
             {
                 case "mage": return PlayerClass.Mage;
                 case "archer": return PlayerClass.Archer;
-                case "warrior": return PlayerClass.Warrior;
+                case "knight":
+                case "warrior": return PlayerClass.Knight;
                 default: return PlayerClass.Adventurer;
             }
         }

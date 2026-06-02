@@ -93,7 +93,7 @@ namespace QuestFantasy.Characters
         /// Apply damage to this character.
         /// Blocked entirely when <see cref="IsInvincible"/> is true.
         /// </summary>
-        public virtual void TakeDamage(int damage)
+        public virtual void TakeDamage(int damage, Character source = null)
         {
             // Invincibility guard — effect-based immunity
             if (IsInvincible) return;

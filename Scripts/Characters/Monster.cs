@@ -211,9 +211,9 @@ namespace QuestFantasy.Characters
             Attributes.TotalDef = 0;
         }
 
-        public override void TakeDamage(int damage)
+        public override void TakeDamage(int damage, Character source = null)
         {
-            base.TakeDamage(damage);
+            base.TakeDamage(damage, source);
             if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
             {
                 _isHit = true;
@@ -815,7 +815,7 @@ namespace QuestFantasy.Characters
             {
                 // EffectiveAtk respects Burn debuff (ATK reduction while burning)
                 int damage = Attributes?.EffectiveAtk ?? 1;
-                _player.TakeDamage(damage);
+                _player.TakeDamage(damage, this);
                 GD.Print($"[COMBAT] {EntityName} attacks Player for {damage} damage! Player HP: {_player.Attributes.HP.CurrentHP}/{_player.Attributes.HP.MaxHP}");
             }
         }

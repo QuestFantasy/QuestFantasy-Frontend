@@ -66,6 +66,7 @@ namespace QuestFantasy.Characters
         // Invincibility state
         private int _damageCooldownFrames = 0;
         private float _respawnInvincibilityTimer = 0f;
+        private float _defenseStanceTimer = 0f;
 
         // Previously exposed properties now delegated to subsystems
         public int Experience => _inventorySystem?.Experience ?? 0;
@@ -244,6 +245,13 @@ namespace QuestFantasy.Characters
         public System.Collections.Generic.IReadOnlyList<Item> DiscardedItems =>
             _inventorySystem?.Discarded?.Items.AsReadOnly() ?? new System.Collections.Generic.List<Item>().AsReadOnly();
 
+        public void ActivateDefenseStance(float duration)
+        {
+            _defenseStanceTimer = duration;
+            _animationController?.PlayDefenseAnimation();
+            GD.Print($"[Player] Defense Stance activated for {duration} seconds.");
+        }
+
         /// <summary>
         /// Set the map reference and initialize room tracking
         /// </summary>
@@ -289,14 +297,24 @@ namespace QuestFantasy.Characters
             Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit;
         }
 
-        public override void TakeDamage(int damage)
+        public override void TakeDamage(int damage, Character source = null)
         {
+            if (_defenseStanceTimer > 0f)
+            {
+                if (source != null && source.Attributes?.HP?.IsAlive == true)
+                {
+                    source.TakeDamage(Attributes.EffectiveAtk);
+                    _animationController?.PlayDefenseCounterAnimation(0.2f);
+                }
+                return;
+            }
+
             if (_respawnInvincibilityTimer > 0f) return;
             if (_damageCooldownFrames > 0) return;
 
             _damageCooldownFrames = 6; // 0.1 seconds at 60 FPS processing
 
-            base.TakeDamage(damage);
+            base.TakeDamage(damage, source);
             if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
             {
                 _animationController?.PlayHitAnimation(_hitTexture, 0.2f);
@@ -352,8 +370,17 @@ namespace QuestFantasy.Characters
             if (_map == null)
                 return;
 
+            if (_defenseStanceTimer > 0f)
+            {
+                _defenseStanceTimer -= delta;
+                if (_defenseStanceTimer <= 0f)
+                {
+                    _animationController?.StopDefenseAnimation();
+                }
+            }
+
             // Get current movement input
-            Vector2 movementInput = _inputHandler.GetMovementInput();
+            Vector2 movementInput = _defenseStanceTimer > 0f ? Vector2.Zero : _inputHandler.GetMovementInput();
 
             // 1. Handle physics and movement
             _physicsController.Update(
@@ -475,7 +502,29 @@ namespace QuestFantasy.Characters
             PlayerClass restoredClass = PlayerClassData.Deserialize(snapshot.ClassName);
             SetClass(restoredClass, rebuildSkills: false);
 
-            _combatSystem?.SetSkills(BuildSkillsFromSnapshot(snapshot.Skills, restoredClass));
+            var newSkills = BuildSkillsFromSnapshot(snapshot.Skills, restoredClass);
+
+            // Check if the new list of skills matches our current skills in ID and order exactly.
+            // If they match, keep the current live skill instances to avoid resetting their local cooldowns.
+            var currentSkills = _combatSystem?.CurrentSkills;
+            bool skillsMatch = false;
+            if (currentSkills != null && currentSkills.Count == newSkills.Count)
+            {
+                skillsMatch = true;
+                for (int i = 0; i < currentSkills.Count; i++)
+                {
+                    if (ResolveSkillId(currentSkills[i]) != ResolveSkillId(newSkills[i]))
+                    {
+                        skillsMatch = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!skillsMatch)
+            {
+                _combatSystem?.SetSkills(newSkills);
+            }
 
             // Re-broadcast HP to refresh HUD after profile application.
             if (Attributes?.HP != null)
@@ -560,33 +609,20 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
-                if (string.Equals(snapshot.SkillId, "basic_attack", StringComparison.OrdinalIgnoreCase))
+                var skill = CreateSkillFromId(snapshot.SkillId);
+                if (skill == null)
                 {
-                    var basicAttack = new BasicAttackSkill
-                    {
-                        EffectRenderer = new BasicAttackEffectRenderer(),
-                    };
-                    skills.Add(basicAttack);
-                    continue;
+                    // Fall back to remote skill mapping if it's a remote/external skill not recognized locally
+                    skill = new RemoteSkill(
+                        snapshot.SkillId,
+                        snapshot.Name,
+                        snapshot.CooldownSeconds);
                 }
 
-                if (string.Equals(snapshot.SkillId, "bow_attack", StringComparison.OrdinalIgnoreCase))
+                if (skill != null)
                 {
-                    skills.Add(new BowAttackSkill());
-                    continue;
+                    skills.Add(skill);
                 }
-
-                if (string.Equals(snapshot.SkillId, "fireball", StringComparison.OrdinalIgnoreCase))
-                {
-                    skills.Add(new FireballSkill());
-                    continue;
-                }
-
-                var remoteSkill = new RemoteSkill(
-                    snapshot.SkillId,
-                    snapshot.Name,
-                    snapshot.CooldownSeconds);
-                skills.Add(remoteSkill);
             }
 
             EnsureClassCoreSkills(skills, cls);
@@ -625,6 +661,66 @@ namespace QuestFantasy.Characters
             if (skill is FireballSkill)
             {
                 return "fireball";
+            }
+
+            if (skill is TripleFireballSkill)
+            {
+                return "triple_fireball";
+            }
+
+            if (skill is GiantFireballSkill)
+            {
+                return "giant_fireball";
+            }
+
+            if (skill is TripleArrowSkill)
+            {
+                return "triple_arrow";
+            }
+
+            if (skill is RicochetArrowSkill)
+            {
+                return "ricochet_arrow";
+            }
+
+            if (skill is FlyingSwordSkill)
+            {
+                return "flying_sword";
+            }
+
+            if (skill is DefenseStanceSkill)
+            {
+                return "defense_stance";
+            }
+
+            if (skill is MagicSlashSkill)
+            {
+                return "magic_slash";
+            }
+
+            if (skill is IceSpearSkill)
+            {
+                return "ice_spear";
+            }
+
+            if (skill is DigitArrowSkill)
+            {
+                return "digit_arrow";
+            }
+
+            if (skill is SuperArrowSkill)
+            {
+                return "super_arrow";
+            }
+
+            if (skill is RoundhouseSlashSkill)
+            {
+                return "roundhouse_slash";
+            }
+
+            if (skill is KnightExploseSkill)
+            {
+                return "knight_explose";
             }
 
             if (skill is RemoteSkill remoteSkill)
@@ -697,28 +793,19 @@ namespace QuestFantasy.Characters
             // Remove skills that are not allowed for this class
             skills.RemoveAll(s => !allowed.Contains(ResolveSkillId(s)));
 
-            // Ensure the class's primary skill exists
-            bool hasSword = skills.Any(s => s is BasicAttackSkill);
-            bool hasBow = skills.Any(s => s is BowAttackSkill);
-            bool hasFireball = skills.Any(s => s is FireballSkill);
-
-            if (allowed.Contains(PlayerClassData.SkillIdSword) && !hasSword)
+            // If the player currently has no skills (newly initialized or class changed),
+            // populate with the class's default 3-skill loadout.
+            if (skills.Count == 0)
             {
-                var basicAttack = new BasicAttackSkill
+                var defaults = PlayerClassData.GetDefaultSkillLoadout(cls);
+                foreach (var skillId in defaults)
                 {
-                    EffectRenderer = new BasicAttackEffectRenderer(),
-                };
-                skills.Insert(0, basicAttack);
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdBow) && !hasBow)
-            {
-                skills.Add(new BowAttackSkill());
-            }
-
-            if (allowed.Contains(PlayerClassData.SkillIdFireball) && !hasFireball)
-            {
-                skills.Add(new FireballSkill());
+                    var skill = CreateSkillFromId(skillId);
+                    if (skill != null)
+                    {
+                        skills.Add(skill);
+                    }
+                }
             }
         }
 
@@ -753,10 +840,19 @@ namespace QuestFantasy.Characters
                 return;
             }
 
-            var current = _combatSystem.CurrentSkills.ToList();
-            EnsureClassCoreSkills(current, cls);
-            _combatSystem.SetSkills(current);
-            GD.Print($"[Player] Skills rebuilt for class {cls}: {string.Join(", ", current.Select(ResolveSkillId))}");
+            var defaultSkills = new List<Skills>();
+            var defaults = PlayerClassData.GetDefaultSkillLoadout(cls);
+            foreach (var skillId in defaults)
+            {
+                var skill = CreateSkillFromId(skillId);
+                if (skill != null)
+                {
+                    defaultSkills.Add(skill);
+                }
+            }
+
+            _combatSystem.SetSkills(defaultSkills);
+            GD.Print($"[Player] Skills rebuilt for class {cls}: {string.Join(", ", defaultSkills.Select(ResolveSkillId))}");
         }
 
         /// <summary>
@@ -811,9 +907,13 @@ namespace QuestFantasy.Characters
             // Reload class-specific hit / dead textures (with shared fallback).
             string hitPath = Resolve(paths.HitFrame, fallback.HitFrame);
             string deadPath = Resolve(paths.DeadFrame, fallback.DeadFrame);
+            string defPath = Resolve(paths.DefenseFrame, fallback.DefenseFrame);
+            string atkPath = Resolve(paths.SkillAttackFrame, fallback.SkillAttackFrame);
 
             _hitTexture = GD.Load<Texture>(hitPath);
             _deadTexture = GD.Load<Texture>(deadPath);
+
+            _animationController?.LoadDefenseTextures(defPath, atkPath);
 
             string bowFrame = paths.BowAttackPaths != null ? paths.BowAttackPaths[0] : "default";
             GD.Print($"[Player] Sprites updated for class {cls}. Stand={stand1}, Attack={attack1}, Bow={bowFrame}, Hit={hitPath}, Dead={deadPath}");
@@ -894,6 +994,11 @@ namespace QuestFantasy.Characters
         public bool IsAttacking => _animationController?.IsAttacking ?? false;
 
         /// <summary>
+        /// Expose player's facing direction (1.0f for right, -1.0f for left).
+        /// </summary>
+        public float FacingDirection => _animationController?.GetFacingDirection() ?? 1f;
+
+        /// <summary>
         /// Update skill cooldowns (called by PhysicsController)
         /// </summary>
         public void UpdateSkillCooldowns(float delta)
@@ -918,6 +1023,133 @@ namespace QuestFantasy.Characters
         public void LearnSkill(Skills skill)
         {
             _combatSystem?.LearnSkill(skill);
+        }
+
+        /// <summary>
+        /// Replace the player's equipped skill list with the given ordered list of skill IDs,
+        /// enforcing class restrictions. Called from the skill-equip UI after the player
+        /// saves their loadout. Invalid / disallowed IDs are silently skipped.
+        /// </summary>
+        public void SetEquippedSkills(System.Collections.Generic.List<string> orderedSkillIds)
+        {
+            if (_combatSystem == null) return;
+
+            var builtSkills = BuildSkillsFromIds(orderedSkillIds, PlayerClass);
+            _combatSystem.SetSkills(builtSkills);
+            GD.Print($"[Player] Skill loadout updated: {string.Join(", ", orderedSkillIds)}");
+        }
+
+        /// <summary>
+        /// Returns the ordered list of skill IDs currently equipped by the player.
+        /// </summary>
+        public System.Collections.Generic.List<string> GetEquippedSkillIds()
+        {
+            var ids = new System.Collections.Generic.List<string>();
+            var skills = _combatSystem?.CurrentSkills;
+            if (skills == null) return ids;
+            foreach (var s in skills)
+            {
+                if (s != null) ids.Add(ResolveSkillId(s));
+            }
+            return ids;
+        }
+
+        /// <summary>
+        /// Creates a Skills instance based on the unique skill ID string.
+        /// </summary>
+        private static Skills CreateSkillFromId(string key)
+        {
+            string cleanKey = (key ?? string.Empty).ToLowerInvariant();
+            if (cleanKey == "basic_attack")
+            {
+                return new BasicAttackSkill { EffectRenderer = new BasicAttackEffectRenderer() };
+            }
+            if (cleanKey == "bow_attack")
+            {
+                return new BowAttackSkill();
+            }
+            if (cleanKey == "triple_arrow")
+            {
+                return new TripleArrowSkill();
+            }
+            if (cleanKey == "ricochet_arrow")
+            {
+                return new RicochetArrowSkill();
+            }
+            if (cleanKey == "fireball")
+            {
+                return new FireballSkill();
+            }
+            if (cleanKey == "triple_fireball")
+            {
+                return new TripleFireballSkill();
+            }
+            if (cleanKey == "giant_fireball")
+            {
+                return new GiantFireballSkill();
+            }
+            if (cleanKey == "flying_sword")
+            {
+                return new FlyingSwordSkill();
+            }
+            if (cleanKey == "defense_stance")
+            {
+                return new DefenseStanceSkill();
+            }
+            if (cleanKey == "magic_slash")
+            {
+                return new MagicSlashSkill();
+            }
+            if (cleanKey == "ice_spear")
+            {
+                return new IceSpearSkill();
+            }
+            if (cleanKey == "digit_arrow")
+            {
+                return new DigitArrowSkill();
+            }
+            if (cleanKey == "super_arrow")
+            {
+                return new SuperArrowSkill();
+            }
+            if (cleanKey == "roundhouse_slash")
+            {
+                return new RoundhouseSlashSkill();
+            }
+            if (cleanKey == "knight_explose")
+            {
+                return new KnightExploseSkill();
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Translates an ordered list of skill IDs into live skill instances,
+        /// filtering out any IDs not allowed for the given class.
+        /// </summary>
+        private static System.Collections.Generic.List<Skills> BuildSkillsFromIds(
+            System.Collections.Generic.List<string> orderedIds,
+            PlayerClass cls)
+        {
+            var allowed = PlayerClassData.GetAllowedSkillIds(cls);
+            var skills = new System.Collections.Generic.List<Skills>();
+
+            if (orderedIds != null)
+            {
+                foreach (var id in orderedIds)
+                {
+                    string key = (id ?? string.Empty).ToLowerInvariant();
+                    if (!allowed.Contains(key)) continue;
+
+                    var skill = CreateSkillFromId(key);
+                    if (skill != null)
+                    {
+                        skills.Add(skill);
+                    }
+                }
+            }
+
+            return skills;
         }
 
         // ==================== Inventory System ====================

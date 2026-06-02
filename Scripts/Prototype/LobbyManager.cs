@@ -313,6 +313,20 @@ namespace QuestFantasy.Prototype
             _classSelectUI = new ClassSelectUI();
             AddChild(_classSelectUI);
             _classSelectUI.ClassSelected += OnClassSelected;
+            _classSelectUI.SkillLoadoutChanged += OnSkillLoadoutChanged;
+        }
+
+        private void OnSkillLoadoutChanged(List<string> orderedSkillIds)
+        {
+            Player target = _player;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.SetEquippedSkills(orderedSkillIds);
+            GD.Print($"[Lobby] Applied skill loadout to {target.Name}");
+            SyncRequested?.Invoke();
         }
 
         private void OnNpcClassChangeRequested(NPC npc, Player player)
@@ -325,8 +339,9 @@ namespace QuestFantasy.Prototype
             Player target = player ?? _player;
             PlayerClass current = target?.PlayerClass ?? PlayerClass.Adventurer;
             int level = (int)(target?.Level ?? 1);
+            var equippedSkills = target?.GetEquippedSkillIds();
 
-            _classSelectUI.Show(current, level);
+            _classSelectUI.Show(current, level, equippedSkills);
             GD.Print($"[Lobby] Class selector opened by {npc.EntityName}. Current class: {current}, Player Level: {level}");
         }
 

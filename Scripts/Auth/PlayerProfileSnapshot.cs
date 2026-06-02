@@ -410,7 +410,7 @@ public class PlayerProfileSnapshot
     public Godot.Collections.Array DiscardedItems { get; set; } = new Godot.Collections.Array();
     public Godot.Collections.Dictionary EquippedItemsPayload { get; set; } = new Godot.Collections.Dictionary();
 
-    /// <summary>Serialised class name, e.g. "adventurer", "mage", "archer", "warrior".</summary>
+    /// <summary>Serialised class name, e.g. "adventurer", "mage", "archer", "knight".</summary>
     public string ClassName { get; set; } = "adventurer";
 
     public List<PlayerSkillSnapshot> Skills { get; set; } = new List<PlayerSkillSnapshot>();
@@ -467,6 +467,9 @@ public class PlayerProfileSnapshot
                     DisplayOrder = ReadInt(skillDict, "display_order", i, min: 0),
                 });
             }
+
+            // Sort skills in-place by DisplayOrder to guarantee correct sequence on frontend load
+            snapshot.Skills.Sort((a, b) => a.DisplayOrder.CompareTo(b.DisplayOrder));
         }
 
         if (snapshot.Skills.Count == 0)
@@ -475,6 +478,34 @@ public class PlayerProfileSnapshot
         }
 
         return snapshot;
+    }
+
+    private static Godot.Collections.Array EncodeSkills(List<PlayerSkillSnapshot> skills)
+    {
+        var array = new Godot.Collections.Array();
+        if (skills == null)
+        {
+            return array;
+        }
+
+        foreach (var skill in skills)
+        {
+            if (skill == null)
+            {
+                continue;
+            }
+
+            var dict = new Godot.Collections.Dictionary
+            {
+                ["skill_id"] = skill.SkillId ?? string.Empty,
+                ["name"] = skill.Name ?? string.Empty,
+                ["cooldown_seconds"] = skill.CooldownSeconds,
+                ["display_order"] = skill.DisplayOrder,
+            };
+            array.Add(dict);
+        }
+
+        return array;
     }
 
     public Godot.Collections.Dictionary ToUpdatePayload(string sessionId, int sequence)
@@ -492,6 +523,7 @@ public class PlayerProfileSnapshot
             ["inventory_items"] = InventoryItems ?? new Godot.Collections.Array(),
             ["discarded_items"] = DiscardedItems ?? new Godot.Collections.Array(),
             ["equipped_items"] = EquippedItemsPayload ?? new Godot.Collections.Dictionary(),
+            ["skills"] = EncodeSkills(Skills),
         };
     }
 
