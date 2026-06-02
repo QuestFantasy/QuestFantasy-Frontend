@@ -82,7 +82,7 @@ public static class PlayerItemSnapshotCodec
         if (item is Equipment equipment)
         {
             baseDict["equipment_type"] = equipment.EquipmentType.ToString();
-            baseDict["rarity"] = Math.Max(1, equipment.Rarity);
+            baseDict["rarity"] = EquipmentManager.ClampRarity(equipment.Rarity);
             baseDict["level_requirement"] = Math.Max(1, equipment.LevelRequirement);
             baseDict["source"] = equipment.Source ?? string.Empty;
             baseDict["sprite_path"] = NormalizeSpritePathForStorage(equipment.SpritePath, equipment.Sprite);
@@ -93,7 +93,7 @@ public static class PlayerItemSnapshotCodec
         if (item is Weapon weapon)
         {
             baseDict["weapon_type"] = weapon.WeaponType.ToString();
-            baseDict["rarity"] = Math.Max(1, weapon.Rarity);
+            baseDict["rarity"] = EquipmentManager.ClampRarity(weapon.Rarity);
             baseDict["level_requirement"] = Math.Max(1, weapon.LevelRequirement);
             baseDict["source"] = weapon.Source ?? string.Empty;
             baseDict["sprite_path"] = NormalizeSpritePathForStorage(weapon.SpritePath, weapon.Sprite);
@@ -139,7 +139,7 @@ public static class PlayerItemSnapshotCodec
                 Quantity = ReadInt(data, "quantity", 1, 1),
                 Price = ReadInt(data, "price", 0, 0),
                 EquipmentType = ReadEnum(ReadString(data, "equipment_type", "Other"), EquipmentType.Other),
-                Rarity = ReadInt(data, "rarity", 1, 1),
+                Rarity = EquipmentManager.ClampRarity(ReadInt(data, "rarity", 1, 1)),
                 LevelRequirement = ReadInt(data, "level_requirement", 1, 1),
                 Source = ReadString(data, "source", string.Empty),
                 SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", string.Empty)),
@@ -159,7 +159,7 @@ public static class PlayerItemSnapshotCodec
                 Quantity = ReadInt(data, "quantity", 1, 1),
                 Price = ReadInt(data, "price", 0, 0),
                 WeaponType = ReadEnum(ReadString(data, "weapon_type", "Sword"), WeaponType.Sword),
-                Rarity = ReadInt(data, "rarity", 1, 1),
+                Rarity = EquipmentManager.ClampRarity(ReadInt(data, "rarity", 1, 1)),
                 LevelRequirement = ReadInt(data, "level_requirement", 1, 1),
                 Source = ReadString(data, "source", string.Empty),
                 SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", string.Empty)),

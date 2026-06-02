@@ -72,12 +72,14 @@ namespace QuestFantasy.UI
         private readonly Dictionary<string, Label> _statValueLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, Label> _statAllocationLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, Button> _statPlusButtons = new Dictionary<string, Button>();
+        private Button _statResetButton;
         private bool _interactionButtonSuppressed = false;
 
         public event Action<PlayerClass> ClassSelected;
         public event Action<List<string>> SkillLoadoutChanged;
         public delegate bool StatPointRequestHandler(string statKey);
         public event StatPointRequestHandler StatPointRequested;
+        public event Func<bool> StatPointsResetRequested;
 
         private static readonly PlayerClass[] AllClasses =
         {
@@ -405,8 +407,14 @@ namespace QuestFantasy.UI
             AddStatAllocationRow(rowsBox, "vit", "HP", "Max HP");
 
             float footerY = PanelHeight - FooterHeight - 50f;
+            _statResetButton = CreateStyledButton("Reset", BtnCloseBg, BtnCloseHover);
+            _statResetButton.RectPosition = new Vector2(PanelWidth / 2f - 120f, footerY);
+            _statResetButton.RectMinSize = new Vector2(112f, 42f);
+            _statResetButton.Connect("pressed", this, nameof(OnResetStatsPressed));
+            _statsTabContent.AddChild(_statResetButton);
+
             var closeBtn = CreateStyledButton("Done", BtnCloseBg, BtnCloseHover);
-            closeBtn.RectPosition = new Vector2(PanelWidth / 2f - 56f, footerY);
+            closeBtn.RectPosition = new Vector2(PanelWidth / 2f + 8f, footerY);
             closeBtn.RectMinSize = new Vector2(112f, 42f);
             closeBtn.Connect("pressed", this, nameof(OnClosePressed));
             _statsTabContent.AddChild(closeBtn);
@@ -635,13 +643,18 @@ namespace QuestFantasy.UI
 
         private int GetAvailableStatPoints()
         {
+            return Math.Max(0, _playerLevel - GetSpentStatPoints());
+        }
+
+        private int GetSpentStatPoints()
+        {
             int spent = 0;
             foreach (int value in _statAllocations.Values)
             {
                 spent += Math.Max(0, value);
             }
 
-            return Math.Max(0, _playerLevel - spent);
+            return Math.Max(0, spent);
         }
 
         private void SetInteractionButtonSuppressed(bool suppressed)
@@ -785,6 +798,34 @@ namespace QuestFantasy.UI
             RefreshStatsTab();
         }
 
+        private void OnResetStatsPressed()
+        {
+            if (GetSpentStatPoints() <= 0)
+            {
+                return;
+            }
+
+            bool reset = StatPointsResetRequested?.Invoke() ?? false;
+            if (!reset)
+            {
+                return;
+            }
+
+            foreach (string statKey in new[] { "atk", "def", "spd", "vit" })
+            {
+                int allocatedValue = _statAllocations.ContainsKey(statKey) ? _statAllocations[statKey] : 0;
+                int totalValue = _statValues.ContainsKey(statKey) ? _statValues[statKey] : 0;
+                int statBonus = statKey == "vit"
+                    ? allocatedValue * GameConstants.PLAYER_HP_STAT_BONUS
+                    : allocatedValue;
+
+                _statValues[statKey] = Math.Max(0, totalValue - statBonus);
+                _statAllocations[statKey] = 0;
+            }
+
+            RefreshStatsTab();
+        }
+
         // ── Highlight refresh ─────────────────────────────────────────────
 
         private void RefreshCardHighlights()
@@ -907,6 +948,11 @@ namespace QuestFantasy.UI
                 {
                     _statPlusButtons[statKey].Disabled = availablePoints <= 0;
                 }
+            }
+
+            if (_statResetButton != null)
+            {
+                _statResetButton.Disabled = GetSpentStatPoints() <= 0;
             }
         }
 

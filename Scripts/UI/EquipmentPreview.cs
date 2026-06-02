@@ -18,6 +18,10 @@ public class EquipmentPreview : CanvasLayer
     public int HeaderTopPadding = 8;
     [Export]
     public int InnerHorizontalPadding = 12;
+    [Export]
+    public int ScreenMargin = 24;
+    [Export]
+    public int ShadowOffset = 4;
 
     public override void _Ready()
     {
@@ -59,6 +63,7 @@ public class EquipmentPreview : CanvasLayer
 
         // Shadow panel (slightly offset to simulate drop shadow)
         _shadowPanel = new Panel();
+        _shadowPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
         var shadowStyle = new StyleBoxFlat();
         shadowStyle.BgColor = new Color(0, 0, 0, 0.25f);
         shadowStyle.CornerRadiusTopLeft = 8;
@@ -70,16 +75,19 @@ public class EquipmentPreview : CanvasLayer
         AddChild(_shadowPanel);
 
         _panel = new Panel();
+        _panel.MouseFilter = Control.MouseFilterEnum.Ignore;
         _panel.Visible = false;
         AddChild(_panel);
 
         _box = new VBoxContainer();
+        _box.MouseFilter = Control.MouseFilterEnum.Ignore;
         _box.RectMinSize = new Vector2(200, 10);
 
         // Panel background will be drawn by the Panel's StyleBoxFlat (rounded corners)
 
         // Inner panel to provide padding and border for attributes
         var innerPanel = new Panel();
+        innerPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
         var innerStyle = new StyleBoxFlat();
         innerStyle.BorderColor = new Color(0.2f, 0.2f, 0.2f);
         innerStyle.BorderWidthLeft = 1;
@@ -98,9 +106,12 @@ public class EquipmentPreview : CanvasLayer
         innerPanel.AddStyleboxOverride("panel", innerStyle);
         // Wrap the VBox in a horizontal container with left/right spacers
         var wrapper = new HBoxContainer();
+        wrapper.MouseFilter = Control.MouseFilterEnum.Ignore;
         var leftSpacer = new Control();
+        leftSpacer.MouseFilter = Control.MouseFilterEnum.Ignore;
         leftSpacer.RectMinSize = new Vector2(InnerHorizontalPadding, 0);
         var rightSpacer = new Control();
+        rightSpacer.MouseFilter = Control.MouseFilterEnum.Ignore;
         rightSpacer.RectMinSize = new Vector2(InnerHorizontalPadding, 0);
         wrapper.AddChild(leftSpacer);
         wrapper.AddChild(_box);
@@ -138,10 +149,12 @@ public class EquipmentPreview : CanvasLayer
         }
         // Add explicit top spacer so there's visible space above the first line
         var topSpacer = new Control();
+        topSpacer.MouseFilter = Control.MouseFilterEnum.Ignore;
         topSpacer.RectMinSize = new Vector2(0, InnerTopPadding);
         _box.AddChild(topSpacer);
         // Header: icon + title + rarity
         var header = new HBoxContainer();
+        header.MouseFilter = Control.MouseFilterEnum.Ignore;
         var headerStyle = new StyleBoxFlat();
         headerStyle.BgColor = new Color(0, 0, 0, 0.0f);
         headerStyle.ContentMarginLeft = 4;
@@ -162,7 +175,7 @@ public class EquipmentPreview : CanvasLayer
         if (item is QuestFantasy.Core.Data.Items.Equipment eq)
         {
             titleText = eq.Name ?? eq.EquipmentType.ToString();
-            metaText = $"{eq.EquipmentType} • Rarity {eq.Rarity}";
+            metaText = $"{eq.EquipmentType} • {EquipmentManager.RarityDisplayName(eq.Rarity)} • Lv.{Math.Max(1, eq.LevelRequirement)}";
             rarityColor = GetRarityColor(eq.Rarity);
             if (!string.IsNullOrEmpty(eq.SpritePath))
             {
@@ -174,7 +187,7 @@ public class EquipmentPreview : CanvasLayer
         else if (item is QuestFantasy.Core.Data.Items.Weapon w)
         {
             titleText = w.Name ?? w.WeaponType.ToString();
-            metaText = $"{w.WeaponType} • Rarity {w.Rarity}";
+            metaText = $"{w.WeaponType} • {EquipmentManager.RarityDisplayName(w.Rarity)} • Lv.{Math.Max(1, w.LevelRequirement)}";
             rarityColor = GetRarityColor(w.Rarity);
             if (!string.IsNullOrEmpty(w.SpritePath))
             {
@@ -213,6 +226,7 @@ public class EquipmentPreview : CanvasLayer
 
         // Icon
         var iconRect = new TextureRect();
+        iconRect.MouseFilter = Control.MouseFilterEnum.Ignore;
         iconRect.RectMinSize = new Vector2(48, 48);
         iconRect.Expand = true;
         iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
@@ -221,7 +235,9 @@ public class EquipmentPreview : CanvasLayer
 
         // Title + meta
         var titleBox = new VBoxContainer();
+        titleBox.MouseFilter = Control.MouseFilterEnum.Ignore;
         var title = new Label();
+        title.MouseFilter = Control.MouseFilterEnum.Ignore;
         title.Text = titleText;
         title.AddColorOverride("font_color", new Color(0.95f, 0.95f, 0.95f));
         title.AddColorOverride("font_color_shadow", new Color(0, 0, 0, 0.5f));
@@ -229,6 +245,7 @@ public class EquipmentPreview : CanvasLayer
         titleBox.AddChild(title);
 
         var meta = new Label();
+        meta.MouseFilter = Control.MouseFilterEnum.Ignore;
         meta.Text = metaText;
         meta.AddColorOverride("font_color", rarityColor);
         titleBox.AddChild(meta);
@@ -247,62 +264,82 @@ public class EquipmentPreview : CanvasLayer
         float height = FixedPreviewHeight;
         _panel.RectSize = new Vector2(width, height);
 
-        // Convert world position to screen coordinates using active Camera2D if available.
-        Vector2 screenPos = globalPos;
         var vp = GetViewport();
-        if (vp != null)
-        {
-            var cam = FindActiveCamera2D();
-            if (cam != null)
-            {
-                screenPos = globalPos - cam.GlobalPosition + vp.Size * 0.5f;
-            }
-        }
+        var pos = GetTopRightScreenPosition(vp);
 
-        // clamp within viewport
-        var pos = screenPos + new Vector2(16, 16);
-        var maxX = vp.Size.x - _panel.RectSize.x - 8;
-        var maxY = vp.Size.y - _panel.RectSize.y - 8;
-        pos.x = Math.Min(Math.Max(8, pos.x), Math.Max(8, maxX));
-        pos.y = Math.Min(Math.Max(8, pos.y), Math.Max(8, maxY));
         // position shadow slightly offset and sized the same
         if (_shadowPanel != null)
         {
             _shadowPanel.RectSize = _panel.RectSize;
-            _shadowPanel.RectPosition = pos + new Vector2(4, 4);
+            _shadowPanel.RectPosition = pos + new Vector2(ShadowOffset, ShadowOffset);
             _shadowPanel.Visible = true;
         }
         _panel.RectPosition = pos;
+        SetMouseIgnoreRecursive(_panel);
         _panel.Visible = true;
+    }
+
+    private void SetMouseIgnoreRecursive(Control control)
+    {
+        if (control == null)
+        {
+            return;
+        }
+
+        control.MouseFilter = Control.MouseFilterEnum.Ignore;
+        foreach (Node child in control.GetChildren())
+        {
+            if (child is Control childControl)
+            {
+                SetMouseIgnoreRecursive(childControl);
+            }
+        }
+    }
+
+    private Vector2 GetTopRightScreenPosition(Viewport viewport)
+    {
+        var viewportSize = viewport?.Size ?? OS.WindowSize;
+        float margin = Math.Max(0, ScreenMargin);
+        float shadowOffset = Math.Max(0, ShadowOffset);
+
+        float maxX = viewportSize.x - _panel.RectSize.x - margin - shadowOffset;
+        float maxY = viewportSize.y - _panel.RectSize.y - margin - shadowOffset;
+        float x = Math.Max(margin, maxX);
+        float y = Math.Min(margin, Math.Max(margin, maxY));
+
+        return new Vector2(x, y);
     }
 
     private void AddAttributeGrid(int atk, int def, int spd, int vit, int levelReq, int price)
     {
         var grid = new GridContainer();
+        grid.MouseFilter = Control.MouseFilterEnum.Ignore;
         grid.Columns = 2;
-        grid.AddChild(new Label() { Text = $"Attack: +{atk}" });
-        grid.AddChild(new Label() { Text = $"Defense: +{def}" });
-        grid.AddChild(new Label() { Text = $"Agility: +{spd}" });
-        grid.AddChild(new Label() { Text = $"HP: +{vit}" });
-        grid.AddChild(new Label() { Text = $"Level Req:" });
-        grid.AddChild(new Label() { Text = $"{levelReq}" });
+        grid.AddChild(MakePreviewLabel($"Attack: +{atk}"));
+        grid.AddChild(MakePreviewLabel($"Defense: +{def}"));
+        grid.AddChild(MakePreviewLabel($"Agility: +{spd}"));
+        grid.AddChild(MakePreviewLabel($"HP: +{vit}"));
+        grid.AddChild(MakePreviewLabel("Level Req:"));
+        grid.AddChild(MakePreviewLabel($"{levelReq}"));
         var priceLabel = new Label() { Text = $"Price: {price}" };
+        priceLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
         priceLabel.AddColorOverride("font_color", new Color(0.95f, 0.9f, 0.6f));
         grid.AddChild(priceLabel);
         _box.AddChild(grid);
     }
 
+    private Label MakePreviewLabel(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+    }
+
     private Color GetRarityColor(int rarity)
     {
-        switch (rarity)
-        {
-            case 0: return new Color(0.8f, 0.8f, 0.8f); // common
-            case 1: return new Color(0.3f, 0.8f, 0.3f); // uncommon
-            case 2: return new Color(0.2f, 0.6f, 1.0f); // rare
-            case 3: return new Color(0.7f, 0.3f, 1.0f); // epic
-            case 4: return new Color(1.0f, 0.75f, 0.2f); // legendary
-            default: return new Color(0.9f, 0.9f, 0.9f);
-        }
+        return EquipmentManager.RarityColor(rarity);
     }
 
     public void Show(object item, Vector2 globalPos)

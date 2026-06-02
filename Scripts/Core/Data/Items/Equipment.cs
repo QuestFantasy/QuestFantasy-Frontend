@@ -162,6 +162,12 @@ namespace QuestFantasy.Core.Data.Items
             base.Use(player);
         }
 
+        public override bool CanUse(Player player)
+        {
+            return base.CanUse(player)
+                && player.Level >= Mathf.Max(1, LevelRequirement);
+        }
+
         public override Item Clone()
         {
             var clone = (Equipment)base.Clone();

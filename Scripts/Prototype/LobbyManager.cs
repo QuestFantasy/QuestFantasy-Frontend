@@ -98,6 +98,7 @@ namespace QuestFantasy.Prototype
             GD.Print("[Lobby] Player spawned at: " + _player.Position);
 
             _player.SetMap(_lobbyMap);
+            _player.RestoreFullHp();
 
             // Set camera bounds to entire lobby with padding
             float lobbyWidth = _lobbyMap.WorldPixelWidth;
@@ -316,6 +317,7 @@ namespace QuestFantasy.Prototype
             _classSelectUI.ClassSelected += OnClassSelected;
             _classSelectUI.SkillLoadoutChanged += OnSkillLoadoutChanged;
             _classSelectUI.StatPointRequested += OnStatPointRequested;
+            _classSelectUI.StatPointsResetRequested += OnStatPointsResetRequested;
         }
 
         private void OnSkillLoadoutChanged(List<string> orderedSkillIds)
@@ -388,6 +390,24 @@ namespace QuestFantasy.Prototype
             }
 
             return applied;
+        }
+
+        private bool OnStatPointsResetRequested()
+        {
+            Player target = _classSelectTarget ?? _player;
+            if (target == null)
+            {
+                return false;
+            }
+
+            bool reset = target.ResetStatAllocations();
+            if (reset)
+            {
+                GD.Print($"[Lobby] Reset stat allocations. Available: {target.AvailableStatPoints}");
+                SyncRequested?.Invoke();
+            }
+
+            return reset;
         }
 
         private void OnShopClosed()

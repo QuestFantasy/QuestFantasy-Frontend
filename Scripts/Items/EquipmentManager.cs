@@ -16,7 +16,22 @@ public class EquipmentManager : Node
     public float PickupSpriteScale = 0.1f;
 
     [Export]
-    public float LevelScalingMultiplier = 1.0f; // scaling factor per equipment level (factor = 1 + level * multiplier)
+    public float LevelScalingMultiplier = 0.08f;
+
+    [Export]
+    public int BasicRarityWeight = 55;
+
+    [Export]
+    public int FineRarityWeight = 25;
+
+    [Export]
+    public int RareRarityWeight = 12;
+
+    [Export]
+    public int EpicRarityWeight = 6;
+
+    [Export]
+    public int LegendaryRarityWeight = 2;
 
     // Provide explicit asset lists per equipment category (no automatic discovery).
     [Export]
@@ -111,7 +126,17 @@ public class EquipmentManager : Node
     // Map rarity to a human-friendly prefix
     public string RarityPrefix(int rarity)
     {
-        switch (rarity)
+        return RarityDisplayName(rarity);
+    }
+
+    public static int ClampRarity(int rarity)
+    {
+        return Math.Max(1, Math.Min(5, rarity));
+    }
+
+    public static string RarityDisplayName(int rarity)
+    {
+        switch (ClampRarity(rarity))
         {
             case 1: return "Basic";
             case 2: return "Fine";
@@ -119,6 +144,32 @@ public class EquipmentManager : Node
             case 4: return "Epic";
             case 5: return "Legendary";
             default: return "Basic";
+        }
+    }
+
+    public static Color RarityColor(int rarity)
+    {
+        switch (ClampRarity(rarity))
+        {
+            case 1: return new Color(0.78f, 0.78f, 0.78f);
+            case 2: return new Color(0.34f, 0.80f, 0.34f);
+            case 3: return new Color(0.23f, 0.60f, 1.0f);
+            case 4: return new Color(0.75f, 0.38f, 1.0f);
+            case 5: return new Color(1.0f, 0.78f, 0.24f);
+            default: return new Color(0.95f, 0.95f, 0.95f);
+        }
+    }
+
+    public static float RarityStatMultiplier(int rarity)
+    {
+        switch (ClampRarity(rarity))
+        {
+            case 1: return 1.00f;
+            case 2: return 1.25f;
+            case 3: return 1.55f;
+            case 4: return 1.95f;
+            case 5: return 2.50f;
+            default: return 1.00f;
         }
     }
 
@@ -145,6 +196,7 @@ public class EquipmentManager : Node
         if (tex == null)
             return null;
 
+        rarity = ClampRarity(rarity);
         var cat = (category ?? "").Trim().ToLower();
         bool isWeaponCat = (cat == "sword" || cat == "bow" || cat == "staff" || cat == "blade" || cat == "dagger");
 
@@ -392,6 +444,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "bow", rarity);
@@ -410,6 +463,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "sword", rarity);
@@ -428,6 +482,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "staff", rarity);
@@ -446,6 +501,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "chestplate", rarity);
@@ -464,6 +520,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "gloves", rarity);
@@ -482,6 +539,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "helmet", rarity);
@@ -500,6 +558,7 @@ public class EquipmentManager : Node
                 var left = parts[0].Trim();
                 int rarity = 1;
                 if (parts.Length > 1) int.TryParse(parts[1].Trim(), out rarity);
+                rarity = ClampRarity(rarity);
                 Item it = null;
                 if (left.Contains("/") || left.StartsWith("Assets/") || left.StartsWith("res://"))
                     it = CreateFromAssetWithCategory(left, "shoes", rarity);
@@ -580,17 +639,17 @@ public class EquipmentManager : Node
         return null;
     }
 
-    // Return a set of items (Equipment or Weapon). By default selects base rarity==1 items
-    // and sets their LevelRequirement based on playerLevel +/- levelOffset.
+    // Return a set of items (Equipment or Weapon). Uses loaded assets as templates,
+    // then rolls an equipment level and one of five rarity tiers for each generated item.
     public System.Collections.Generic.List<Item> GetEquipmentSet(int count, int playerLevel, int levelOffset = 0)
     {
         var all = LoadAllFromFolder();
         var candidates = new System.Collections.Generic.List<Item>();
         foreach (var it in all)
         {
-            if (it is Equipment e && e.Rarity == 1)
+            if (it is Equipment)
                 candidates.Add(it);
-            else if (it is Weapon w && w.Rarity == 1)
+            else if (it is Weapon)
                 candidates.Add(it);
         }
 
@@ -611,25 +670,16 @@ public class EquipmentManager : Node
                 eq.EquipmentType = se.EquipmentType;
                 eq.EquipmentAbilities = new Abilities();
                 eq.EquipmentAbilities.Set(se.EquipmentAbilities?.Atk ?? 0, se.EquipmentAbilities?.Def ?? 0, se.EquipmentAbilities?.Spd ?? 0, se.EquipmentAbilities?.Vit ?? 0);
-                eq.Rarity = se.Rarity;
+                eq.Rarity = RollRarity();
                 eq.Sprite = se.Sprite;
-                eq.Name = se.Name;
                 eq.SpritePath = se.SpritePath;
                 eq.Source = se.Source;
-                eq.Price = se.Price;
 
-                int minLevel = Math.Max(1, playerLevel - levelOffset);
-                int maxLevel = Math.Max(1, playerLevel + levelOffset);
-                int chosen = minLevel;
-                if (maxLevel > minLevel)
-                    chosen = (int)Math.Floor(GD.Randf() * (maxLevel - minLevel + 1)) + minLevel;
+                int chosen = RollEquipmentLevel(playerLevel, levelOffset);
                 eq.LevelRequirement = chosen;
-                // Scale abilities by factor = 1 + LevelRequirement * LevelScalingMultiplier
-                float factor = 1f + eq.LevelRequirement * LevelScalingMultiplier;
-                eq.EquipmentAbilities.Atk = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Atk * factor));
-                eq.EquipmentAbilities.Def = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Def * factor));
-                eq.EquipmentAbilities.Spd = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Spd * factor));
-                eq.EquipmentAbilities.Vit = (int)System.Math.Max(0, System.Math.Round(eq.EquipmentAbilities.Vit * factor));
+                eq.Name = BuildGeneratedName(eq);
+                eq.Price = CalculateGeneratedPrice(se.Price, eq.LevelRequirement, eq.Rarity);
+                ApplyGeneratedScaling(eq.EquipmentAbilities, eq.LevelRequirement, eq.Rarity);
                 result.Add(eq);
             }
             else if (src is Weapon sw)
@@ -638,30 +688,113 @@ public class EquipmentManager : Node
                 w.WeaponType = sw.WeaponType;
                 w.WeaponAbilities = new Abilities();
                 w.WeaponAbilities.Set(sw.WeaponAbilities?.Atk ?? 0, sw.WeaponAbilities?.Def ?? 0, sw.WeaponAbilities?.Spd ?? 0, sw.WeaponAbilities?.Vit ?? 0);
-                w.Rarity = sw.Rarity;
+                w.Rarity = RollRarity();
                 w.Sprite = sw.Sprite;
-                w.Name = sw.Name;
                 w.SpritePath = sw.SpritePath;
                 w.Source = sw.Source;
-                w.Price = sw.Price;
 
-                int minLevel = Math.Max(1, playerLevel - levelOffset);
-                int maxLevel = Math.Max(1, playerLevel + levelOffset);
-                int chosen = minLevel;
-                if (maxLevel > minLevel)
-                    chosen = (int)Math.Floor(GD.Randf() * (maxLevel - minLevel + 1)) + minLevel;
+                int chosen = RollEquipmentLevel(playerLevel, levelOffset);
                 w.LevelRequirement = chosen;
-                // Scale abilities by factor = 1 + LevelRequirement * LevelScalingMultiplier
-                float wfactor = 1f + w.LevelRequirement * LevelScalingMultiplier;
-                w.WeaponAbilities.Atk = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Atk * wfactor));
-                w.WeaponAbilities.Def = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Def * wfactor));
-                w.WeaponAbilities.Spd = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Spd * wfactor));
-                w.WeaponAbilities.Vit = (int)System.Math.Max(0, System.Math.Round(w.WeaponAbilities.Vit * wfactor));
+                w.Name = BuildGeneratedName(w);
+                w.Price = CalculateGeneratedPrice(sw.Price, w.LevelRequirement, w.Rarity);
+                ApplyGeneratedScaling(w.WeaponAbilities, w.LevelRequirement, w.Rarity);
                 result.Add(w);
             }
         }
 
         return result;
+    }
+
+    private int RollRarity()
+    {
+        int[] weights =
+        {
+            Math.Max(0, BasicRarityWeight),
+            Math.Max(0, FineRarityWeight),
+            Math.Max(0, RareRarityWeight),
+            Math.Max(0, EpicRarityWeight),
+            Math.Max(0, LegendaryRarityWeight)
+        };
+
+        int total = 0;
+        foreach (int weight in weights)
+        {
+            total += weight;
+        }
+
+        if (total <= 0)
+        {
+            return 1;
+        }
+
+        int roll = (int)Math.Floor(GD.Randf() * total);
+        int accumulated = 0;
+        for (int i = 0; i < weights.Length; i++)
+        {
+            accumulated += weights[i];
+            if (roll < accumulated)
+            {
+                return i + 1;
+            }
+        }
+
+        return 1;
+    }
+
+    private int RollEquipmentLevel(int playerLevel, int levelOffset)
+    {
+        int minLevel = Math.Max(1, playerLevel - levelOffset);
+        int maxLevel = Math.Max(1, playerLevel + levelOffset);
+        if (maxLevel <= minLevel)
+        {
+            return minLevel;
+        }
+
+        return (int)Math.Floor(GD.Randf() * (maxLevel - minLevel + 1)) + minLevel;
+    }
+
+    private void ApplyGeneratedScaling(Abilities abilities, int levelRequirement, int rarity)
+    {
+        if (abilities == null)
+        {
+            return;
+        }
+
+        abilities.Atk = ScaleGeneratedStat(abilities.Atk, levelRequirement, rarity);
+        abilities.Def = ScaleGeneratedStat(abilities.Def, levelRequirement, rarity);
+        abilities.Spd = ScaleGeneratedStat(abilities.Spd, levelRequirement, rarity);
+        abilities.Vit = ScaleGeneratedStat(abilities.Vit, levelRequirement, rarity);
+    }
+
+    private int ScaleGeneratedStat(int baseValue, int levelRequirement, int rarity)
+    {
+        if (baseValue <= 0)
+        {
+            return 0;
+        }
+
+        float levelFactor = 1f + Math.Max(0, levelRequirement - 1) * Math.Max(0f, LevelScalingMultiplier);
+        float rarityFactor = RarityStatMultiplier(rarity);
+        return (int)Math.Max(1, Math.Round(baseValue * levelFactor * rarityFactor));
+    }
+
+    private int CalculateGeneratedPrice(int basePrice, int levelRequirement, int rarity)
+    {
+        float rarityFactor = RarityStatMultiplier(rarity);
+        float price = (Math.Max(10, basePrice) + Math.Max(1, levelRequirement) * 6) * rarityFactor;
+        return (int)Math.Max(1, Math.Round(price));
+    }
+
+    private string BuildGeneratedName(Equipment equipment)
+    {
+        string category = equipment == null ? "Equipment" : equipment.EquipmentType.ToString();
+        return CombineToDisplayName(RarityDisplayName(equipment?.Rarity ?? 1), CategoryDisplayName(category));
+    }
+
+    private string BuildGeneratedName(Weapon weapon)
+    {
+        string category = weapon == null ? "Weapon" : weapon.WeaponType.ToString();
+        return CombineToDisplayName(RarityDisplayName(weapon?.Rarity ?? 1), CategoryDisplayName(category));
     }
 
     // Save an Equipment resource with a specified file name (without extension) under res://Items/Generated/

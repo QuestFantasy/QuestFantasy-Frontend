@@ -672,22 +672,7 @@ public class NpcShopUI : CanvasLayer
 
     private Color GetRarityColor(Item item)
     {
-        int rarity = GetItemRarity(item);
-        switch (rarity)
-        {
-            case 0:
-                return new Color(0.72f, 0.72f, 0.72f);
-            case 1:
-                return new Color(0.34f, 0.80f, 0.34f);
-            case 2:
-                return new Color(0.23f, 0.60f, 1.0f);
-            case 3:
-                return new Color(0.75f, 0.38f, 1.0f);
-            case 4:
-                return new Color(1.0f, 0.78f, 0.24f);
-            default:
-                return new Color(0.95f, 0.95f, 0.95f);
-        }
+        return EquipmentManager.RarityColor(GetItemRarity(item));
     }
 
     private int GetItemRarity(Item item)
@@ -954,18 +939,19 @@ public class NpcShopUI : CanvasLayer
     private string BuildPreviewMeta(Item item)
     {
         int rarity = GetItemRarity(item);
+        string rarityName = EquipmentManager.RarityDisplayName(rarity);
 
         if (item is Equipment equipment)
         {
-            return $"{equipment.EquipmentType}  •  Rarity {rarity}";
+            return $"{equipment.EquipmentType}  •  {rarityName}  •  Lv.{Math.Max(1, equipment.LevelRequirement)}";
         }
 
         if (item is Weapon weapon)
         {
-            return $"{weapon.WeaponType}  •  Rarity {rarity}";
+            return $"{weapon.WeaponType}  •  {rarityName}  •  Lv.{Math.Max(1, weapon.LevelRequirement)}";
         }
 
-        return $"Rarity {rarity}";
+        return rarity > 0 ? rarityName : "Common";
     }
 
     private string BuildPreviewStats(Item item)

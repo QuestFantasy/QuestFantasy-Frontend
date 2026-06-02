@@ -457,6 +457,20 @@ namespace QuestFantasy.Characters
             Update();
         }
 
+        public void RestoreFullHp()
+        {
+            if (Attributes?.HP == null)
+            {
+                return;
+            }
+
+            _isDead = false;
+            int maxHp = Attributes.HP.MaxHP;
+            Attributes.HP.SetMaxHPAndCurrentHP(maxHp, maxHp);
+            _animationController?.Revive();
+            Modulate = new Color(1f, 1f, 1f, 1f);
+        }
+
         public void SetLevel(int level)
         {
             int normalized = Mathf.Max(1, level);
@@ -520,6 +534,34 @@ namespace QuestFantasy.Characters
 
             UpdateAttributes();
             OnStatPointsChanged?.Invoke();
+        }
+
+        public bool ResetStatAllocations()
+        {
+            if (SpentStatPoints <= 0)
+            {
+                return false;
+            }
+
+            int removedHpBonus = _allocatedStatPoints.Vit * GameConstants.PLAYER_HP_STAT_BONUS;
+            int currentHp = Attributes?.HP?.CurrentHP ?? 0;
+            int currentMaxHp = Attributes?.HP?.MaxHP ?? 100;
+
+            _allocatedStatPoints.Atk = 0;
+            _allocatedStatPoints.Def = 0;
+            _allocatedStatPoints.Spd = 0;
+            _allocatedStatPoints.Vit = 0;
+
+            UpdateAttributes();
+
+            if (Attributes?.HP != null && removedHpBonus > 0)
+            {
+                int newMaxHp = Math.Max(1, currentMaxHp - removedHpBonus);
+                Attributes.HP.SetMaxHPAndCurrentHP(newMaxHp, Math.Min(currentHp, newMaxHp));
+            }
+
+            OnStatPointsChanged?.Invoke();
+            return true;
         }
 
         private static int ConsumeStatAllocation(int requested, ref int remaining)
