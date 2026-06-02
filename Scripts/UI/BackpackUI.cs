@@ -51,6 +51,13 @@ public class BackpackUI : CanvasLayer
     private Control _panelRoot;
     private TextureRect _panelBackground;
     private Label _moneyValueLabel;
+    private PanelContainer _statsPanel;
+    private Label _statLevelValueLabel;
+    private Label _statHpValueLabel;
+    private Label _statAtkValueLabel;
+    private Label _statDefValueLabel;
+    private Label _statSpdValueLabel;
+    private Label _statVitValueLabel;
     private GridContainer _grid;
     private CenterContainer _gridCenter;
     private Label _pageLabel;
@@ -109,6 +116,10 @@ public class BackpackUI : CanvasLayer
         if (_viewDirty || itemCount != _lastItemCount || gold != _lastGold)
         {
             RefreshView();
+        }
+        else
+        {
+            RefreshStatsPanel();
         }
 
         if (!IsMouseHoveringAnyBackpackSlot())
@@ -269,6 +280,8 @@ public class BackpackUI : CanvasLayer
         };
         _panelRoot.AddChild(_panelBackground);
 
+        BuildStatsPanel();
+
         var content = new VBoxContainer
         {
             AnchorLeft = 0f,
@@ -389,6 +402,102 @@ public class BackpackUI : CanvasLayer
         content.AddChild(footer);
     }
 
+    private void BuildStatsPanel()
+    {
+        _statsPanel = new PanelContainer
+        {
+            AnchorLeft = 0f,
+            AnchorRight = 0f,
+            AnchorTop = 0f,
+            AnchorBottom = 0f,
+            MarginLeft = -72f,
+            MarginTop = 122f,
+            MarginRight = 56f,
+            MarginBottom = 314f,
+            MouseFilter = Control.MouseFilterEnum.Stop,
+        };
+
+        var panelStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.08f, 0.09f, 0.14f, 0.84f),
+            BorderColor = new Color(0.72f, 0.86f, 1f, 0.72f),
+            BorderWidthTop = 2,
+            BorderWidthRight = 2,
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomLeft = 6,
+            CornerRadiusBottomRight = 6,
+            ContentMarginLeft = 10,
+            ContentMarginRight = 10,
+            ContentMarginTop = 8,
+            ContentMarginBottom = 8,
+        };
+        _statsPanel.AddStyleboxOverride("panel", panelStyle);
+
+        var statsContent = new VBoxContainer
+        {
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = (int)Control.SizeFlags.ExpandFill,
+        };
+        statsContent.AddConstantOverride("separation", 3);
+        _statsPanel.AddChild(statsContent);
+
+        var title = new Label
+        {
+            Text = "STATS",
+            Align = Label.AlignEnum.Center,
+            RectMinSize = new Vector2(0f, 20f),
+        };
+        title.AddColorOverride("font_color", new Color(0.82f, 0.92f, 1f));
+        title.AddColorOverride("font_color_shadow", new Color(0f, 0f, 0f, 0.75f));
+        statsContent.AddChild(title);
+
+        _statLevelValueLabel = AddStatRow(statsContent, "LV", new Color(1f, 0.92f, 0.45f));
+        _statHpValueLabel = AddStatRow(statsContent, "HP", new Color(1f, 0.58f, 0.58f));
+        _statAtkValueLabel = AddStatRow(statsContent, "ATK", new Color(1f, 0.78f, 0.48f));
+        _statDefValueLabel = AddStatRow(statsContent, "DEF", new Color(0.68f, 0.86f, 1f));
+        _statSpdValueLabel = AddStatRow(statsContent, "SPD", new Color(0.62f, 1f, 0.78f));
+        _statVitValueLabel = AddStatRow(statsContent, "VIT", new Color(0.95f, 0.74f, 1f));
+
+        _panelRoot.AddChild(_statsPanel);
+    }
+
+    private Label AddStatRow(VBoxContainer parent, string statName, Color valueColor)
+    {
+        var row = new HBoxContainer
+        {
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+            RectMinSize = new Vector2(0f, 20f),
+        };
+        row.AddConstantOverride("separation", 6);
+
+        var nameLabel = new Label
+        {
+            Text = statName,
+            RectMinSize = new Vector2(36f, 18f),
+            Align = Label.AlignEnum.Left,
+            Valign = Label.VAlign.Center,
+        };
+        nameLabel.AddColorOverride("font_color", new Color(0.75f, 0.78f, 0.86f));
+        row.AddChild(nameLabel);
+
+        var valueLabel = new Label
+        {
+            Text = "--",
+            Align = Label.AlignEnum.Right,
+            Valign = Label.VAlign.Center,
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+        };
+        valueLabel.AddColorOverride("font_color", valueColor);
+        valueLabel.AddColorOverride("font_color_shadow", new Color(0f, 0f, 0f, 0.8f));
+        row.AddChild(valueLabel);
+
+        parent.AddChild(row);
+        return valueLabel;
+    }
+
     private void EnsureToggleInputAction()
     {
         if (!InputMap.HasAction("toggle_inventory"))
@@ -445,6 +554,7 @@ public class BackpackUI : CanvasLayer
         if (_player == null)
         {
             _moneyValueLabel.Text = "0";
+            RefreshStatsPanel();
             _cachedItems.Clear();
             RebuildSlots(_cachedItems);
             RebuildEquipSlots();
@@ -472,8 +582,53 @@ public class BackpackUI : CanvasLayer
         _viewDirty = false;
 
         UpdateModeControls();
+        RefreshStatsPanel();
         RebuildSlots(_cachedItems);
         RebuildEquipSlots();
+    }
+
+    private void RefreshStatsPanel()
+    {
+        if (_statLevelValueLabel == null)
+        {
+            return;
+        }
+
+        if (_player == null || _player.Attributes == null)
+        {
+            SetStatValues("--", "--", "--", "--", "--", "--");
+            return;
+        }
+
+        var attributes = _player.Attributes;
+        string hpText = attributes.HP != null
+            ? $"{attributes.HP.CurrentHP}/{attributes.HP.MaxHP}"
+            : "--";
+
+        SetStatValues(
+            Math.Max(1L, _player.Level).ToString(),
+            hpText,
+            FormatEffectiveStat(attributes.EffectiveAtk, attributes.TotalAtk),
+            FormatEffectiveStat(attributes.EffectiveDef, attributes.TotalDef),
+            attributes.TotalSpd.ToString(),
+            attributes.TotalVit.ToString());
+    }
+
+    private void SetStatValues(string level, string hp, string atk, string def, string spd, string vit)
+    {
+        _statLevelValueLabel.Text = level;
+        _statHpValueLabel.Text = hp;
+        _statAtkValueLabel.Text = atk;
+        _statDefValueLabel.Text = def;
+        _statSpdValueLabel.Text = spd;
+        _statVitValueLabel.Text = vit;
+    }
+
+    private string FormatEffectiveStat(int effectiveValue, int totalValue)
+    {
+        return effectiveValue == totalValue
+            ? totalValue.ToString()
+            : $"{effectiveValue} ({totalValue})";
     }
 
     private void RebuildEquipSlots()
