@@ -2,12 +2,15 @@ using System;
 
 using Godot;
 
+using QuestFantasy.UI;
+
 public class DeathScreenUI : CanvasLayer
 {
     public event Action OnRespawnClicked;
     public event Action OnExitClicked;
 
     private Control _root;
+    private bool _interactionButtonSuppressed = false;
 
     public override void _Ready()
     {
@@ -20,6 +23,31 @@ public class DeathScreenUI : CanvasLayer
         if (_root != null)
         {
             _root.Visible = visible;
+        }
+
+        SetInteractionButtonSuppressed(visible);
+    }
+
+    public override void _ExitTree()
+    {
+        SetInteractionButtonSuppressed(false);
+    }
+
+    private void SetInteractionButtonSuppressed(bool suppressed)
+    {
+        if (_interactionButtonSuppressed == suppressed)
+        {
+            return;
+        }
+
+        _interactionButtonSuppressed = suppressed;
+        if (suppressed)
+        {
+            InteractionButtonUI.PushSuppression();
+        }
+        else
+        {
+            InteractionButtonUI.PopSuppression();
         }
     }
 

@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.UI;
 
 // Equipment slot definition
 public struct EquipSlotDef
@@ -83,6 +84,7 @@ public class BackpackUI : CanvasLayer
     private int _selectedGlobalIndex = -1;
     private BackpackViewMode _viewMode = BackpackViewMode.Gear;
     private bool _viewDirty = true;
+    private bool _interactionButtonSuppressed = false;
     private int _lastItemCount = -1;
     private int _lastGold = -1;
 
@@ -149,6 +151,8 @@ public class BackpackUI : CanvasLayer
         {
             _player.OnGoldChanged -= HandleGoldChanged;
         }
+
+        SetInteractionButtonSuppressed(false);
     }
 
     public void SetGameplayVisible(bool visible)
@@ -537,6 +541,7 @@ public class BackpackUI : CanvasLayer
         _panelRoot.Visible = visible;
         if (visible)
         {
+            SetInteractionButtonSuppressed(true);
             _viewDirty = true;
             SyncRequested?.Invoke();   // Ask Main to sync so items get their instance_id.
             RefreshView();
@@ -544,6 +549,25 @@ public class BackpackUI : CanvasLayer
         else
         {
             EquipmentPreview.Instance?.HidePreview();
+            SetInteractionButtonSuppressed(false);
+        }
+    }
+
+    private void SetInteractionButtonSuppressed(bool suppressed)
+    {
+        if (_interactionButtonSuppressed == suppressed)
+        {
+            return;
+        }
+
+        _interactionButtonSuppressed = suppressed;
+        if (suppressed)
+        {
+            InteractionButtonUI.PushSuppression();
+        }
+        else
+        {
+            InteractionButtonUI.PopSuppression();
         }
     }
 

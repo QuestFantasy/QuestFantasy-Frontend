@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.UI;
 
 /// <summary>
 /// Minimal shop UI used by lobby NPCs.
@@ -183,6 +184,7 @@ public class NpcShopUI : CanvasLayer
     private NPC _activeNpc;
     private Player _activePlayer;
     private bool _isVisible;
+    private bool _interactionButtonSuppressed = false;
 
     public override void _Ready()
     {
@@ -217,6 +219,7 @@ public class NpcShopUI : CanvasLayer
 
         RebuildLists();
 
+        SetInteractionButtonSuppressed(true);
         _root.Visible = true;
         _panel.Visible = true;
         _isVisible = true;
@@ -241,7 +244,31 @@ public class NpcShopUI : CanvasLayer
         _activeNpc = null;
         _activePlayer = null;
         _isVisible = false;
+        SetInteractionButtonSuppressed(false);
         GetTree().Paused = false;
+    }
+
+    public override void _ExitTree()
+    {
+        SetInteractionButtonSuppressed(false);
+    }
+
+    private void SetInteractionButtonSuppressed(bool suppressed)
+    {
+        if (_interactionButtonSuppressed == suppressed)
+        {
+            return;
+        }
+
+        _interactionButtonSuppressed = suppressed;
+        if (suppressed)
+        {
+            InteractionButtonUI.PushSuppression();
+        }
+        else
+        {
+            InteractionButtonUI.PopSuppression();
+        }
     }
 
     public override void _Process(float delta)

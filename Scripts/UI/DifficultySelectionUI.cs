@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.UI;
 
 /// <summary>
 /// UI for difficulty selection when entering a game level from the lobby.
@@ -17,6 +18,7 @@ public class DifficultySelectionUI : CanvasLayer
     private Control _uiContainer;
     private VBoxContainer _buttonContainer;
     private bool _isVisible;
+    private bool _interactionButtonSuppressed = false;
     private Player _player;
     private readonly Dictionary<DifficultyLevel, Button> _difficultyButtons = new Dictionary<DifficultyLevel, Button>();
 
@@ -133,6 +135,7 @@ public class DifficultySelectionUI : CanvasLayer
     public void ShowDifficultyMenu()
     {
         RefreshLocks();
+        SetInteractionButtonSuppressed(true);
         _uiContainer.Visible = true;
         _isVisible = true;
         GetTree().Paused = true;
@@ -142,7 +145,31 @@ public class DifficultySelectionUI : CanvasLayer
     {
         _uiContainer.Visible = false;
         _isVisible = false;
+        SetInteractionButtonSuppressed(false);
         GetTree().Paused = false;
+    }
+
+    public override void _ExitTree()
+    {
+        SetInteractionButtonSuppressed(false);
+    }
+
+    private void SetInteractionButtonSuppressed(bool suppressed)
+    {
+        if (_interactionButtonSuppressed == suppressed)
+        {
+            return;
+        }
+
+        _interactionButtonSuppressed = suppressed;
+        if (suppressed)
+        {
+            InteractionButtonUI.PushSuppression();
+        }
+        else
+        {
+            InteractionButtonUI.PopSuppression();
+        }
     }
 
     public bool IsMenuVisible => _isVisible;

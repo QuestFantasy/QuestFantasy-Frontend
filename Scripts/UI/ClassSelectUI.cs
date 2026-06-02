@@ -72,6 +72,7 @@ namespace QuestFantasy.UI
         private readonly Dictionary<string, Label> _statValueLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, Label> _statAllocationLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, Button> _statPlusButtons = new Dictionary<string, Button>();
+        private bool _interactionButtonSuppressed = false;
 
         public event Action<PlayerClass> ClassSelected;
         public event Action<List<string>> SkillLoadoutChanged;
@@ -162,6 +163,7 @@ namespace QuestFantasy.UI
             }
             RefreshCardHighlights();
             SwitchTab(0);
+            SetInteractionButtonSuppressed(true);
             _root.Visible = true;
         }
 
@@ -171,6 +173,13 @@ namespace QuestFantasy.UI
             {
                 _root.Visible = false;
             }
+
+            SetInteractionButtonSuppressed(false);
+        }
+
+        public override void _ExitTree()
+        {
+            SetInteractionButtonSuppressed(false);
         }
 
         // ── Layout ────────────────────────────────────────────────────────
@@ -633,6 +642,24 @@ namespace QuestFantasy.UI
             }
 
             return Math.Max(0, _playerLevel - spent);
+        }
+
+        private void SetInteractionButtonSuppressed(bool suppressed)
+        {
+            if (_interactionButtonSuppressed == suppressed)
+            {
+                return;
+            }
+
+            _interactionButtonSuppressed = suppressed;
+            if (suppressed)
+            {
+                InteractionButtonUI.PushSuppression();
+            }
+            else
+            {
+                InteractionButtonUI.PopSuppression();
+            }
         }
 
         // ── Signal handlers ───────────────────────────────────────────────

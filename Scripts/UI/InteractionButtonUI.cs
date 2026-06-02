@@ -24,11 +24,14 @@ namespace QuestFantasy.UI
         /// </summary>
         public static bool IsButtonVisible { get; private set; }
 
+        public static bool IsSuppressed => _suppressRequestCount > 0;
+
         private const float ButtonWidth = 110f;
         private const float ButtonHeight = 48f;
         private const float OffsetY = -40f; // Above the object
         private const float ScreenPadding = 8f;
 
+        private static int _suppressRequestCount = 0;
         private Button _button;
         private bool _pressed;
         private Vector2 _worldTarget = Vector2.Zero;
@@ -131,6 +134,12 @@ namespace QuestFantasy.UI
         /// </summary>
         public void Show(string label, Vector2 worldPosition)
         {
+            if (IsSuppressed)
+            {
+                HideButton();
+                return;
+            }
+
             _button.Text = label;
             _worldTarget = worldPosition;
             _tracking = true;
@@ -155,13 +164,33 @@ namespace QuestFantasy.UI
             IsButtonVisible = false;
         }
 
+        public static void PushSuppression()
+        {
+            _suppressRequestCount++;
+            WasJustPressed = false;
+            Instance?.HideButton();
+        }
+
+        public static void PopSuppression()
+        {
+            if (_suppressRequestCount > 0)
+            {
+                _suppressRequestCount--;
+            }
+
+            if (IsSuppressed)
+            {
+                Instance?.HideButton();
+            }
+        }
+
         /// <summary>
         /// Check if the button was pressed this frame. Does not consume the press,
         /// allowing multiple scripts to react (matching keyboard 'F' behavior).
         /// </summary>
         public static bool IsPressed()
         {
-            return WasJustPressed;
+            return !IsSuppressed && WasJustPressed;
         }
 
         private void OnButtonPressed()
@@ -202,6 +231,7 @@ namespace QuestFantasy.UI
                 Instance = null;
                 IsButtonVisible = false;
                 WasJustPressed = false;
+                _suppressRequestCount = 0;
             }
         }
     }
