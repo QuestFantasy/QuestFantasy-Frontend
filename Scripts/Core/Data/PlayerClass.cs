@@ -12,7 +12,7 @@ namespace QuestFantasy.Core.Data
         Adventurer,
         Mage,
         Archer,
-        Warrior
+        Knight
     }
 
     /// <summary>
@@ -133,7 +133,7 @@ namespace QuestFantasy.Core.Data
             SkillIdBow, SkillIdTripleArrow, SkillIdRicochetArrow, SkillIdDigitArrow, SkillIdSuperArrow
         };
 
-        private static readonly HashSet<string> WarriorSkills = new HashSet<string>
+        private static readonly HashSet<string> KnightSkills = new HashSet<string>
         {
             SkillIdSword, SkillIdFlyingSword, SkillIdDefenseStance, SkillIdRoundhouseSlash, SkillIdKnightExplose
         };
@@ -147,7 +147,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return MageSkills;
                 case PlayerClass.Archer: return ArcherSkills;
-                case PlayerClass.Warrior: return WarriorSkills;
+                case PlayerClass.Knight: return KnightSkills;
                 default: return AdventurerSkills;
             }
         }
@@ -159,7 +159,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return "Mage";
                 case PlayerClass.Archer: return "Archer";
-                case PlayerClass.Warrior: return "Warrior";
+                case PlayerClass.Knight: return "Knight";
                 default: return "Adventurer";
             }
         }
@@ -173,7 +173,7 @@ namespace QuestFantasy.Core.Data
                     return "Wields the arcane arts.\nMasters the art of Fireball magic.";
                 case PlayerClass.Archer:
                     return "Swift and precise.\nStrikes enemies from a distance with arrows.";
-                case PlayerClass.Warrior:
+                case PlayerClass.Knight:
                     return "Unyielding and fierce.\nCleaves foes with a powerful sword slash.";
                 default:
                     return "The all-rounder.\nCommands sword, bow, and magic freely.";
@@ -187,7 +187,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return "Fireball";
                 case PlayerClass.Archer: return "Arrow Shot";
-                case PlayerClass.Warrior: return "Sword Slash";
+                case PlayerClass.Knight: return "Sword Slash";
                 default: return "Sword Slash, Arrow Shot, Fireball";
             }
         }
@@ -341,7 +341,7 @@ namespace QuestFantasy.Core.Data
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefFireball, DefTripleFireball, DefGiantFireball, DefMagicSlash, DefIceSpear });
                 case PlayerClass.Archer:
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefBow, DefTripleArrow, DefRicochetArrow, DefDigitArrow, DefSuperArrow });
-                case PlayerClass.Warrior:
+                case PlayerClass.Knight:
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefFlyingSword, DefDefenseStance, DefRoundhouseSlash, DefKnightExplose });
                 default: // Adventurer
                     return new ReadOnlyCollection<SkillDefinition>(new[] { DefSword, DefBow, DefFireball });
@@ -358,7 +358,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return new ReadOnlyCollection<string>(new[] { SkillIdFireball, SkillIdMagicSlash, SkillIdIceSpear });
                 case PlayerClass.Archer: return new ReadOnlyCollection<string>(new[] { SkillIdBow, SkillIdDigitArrow, SkillIdSuperArrow });
-                case PlayerClass.Warrior: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdRoundhouseSlash, SkillIdKnightExplose });
+                case PlayerClass.Knight: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdRoundhouseSlash, SkillIdKnightExplose });
                 default: return new ReadOnlyCollection<string>(new[] { SkillIdSword, SkillIdBow, SkillIdFireball });
             }
         }
@@ -415,7 +415,7 @@ namespace QuestFantasy.Core.Data
                         };
                     }
 
-                case PlayerClass.Warrior:
+                case PlayerClass.Knight:
                     {
                         const string W = "res://Assets/Characters/warrior/";
                         return new ClassSpritePaths
@@ -473,7 +473,7 @@ namespace QuestFantasy.Core.Data
             {
                 case PlayerClass.Mage: return "mage";
                 case PlayerClass.Archer: return "archer";
-                case PlayerClass.Warrior: return "warrior";
+                case PlayerClass.Knight: return "knight";
                 default: return "adventurer";
             }
         }
@@ -488,7 +488,8 @@ namespace QuestFantasy.Core.Data
             {
                 case "mage": return PlayerClass.Mage;
                 case "archer": return PlayerClass.Archer;
-                case "warrior": return PlayerClass.Warrior;
+                case "knight":
+                case "warrior": return PlayerClass.Knight;
                 default: return PlayerClass.Adventurer;
             }
         }

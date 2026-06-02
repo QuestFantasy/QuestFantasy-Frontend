@@ -58,8 +58,8 @@ namespace QuestFantasy.Core.Data.Skills
             Vector2 effectPos = player.GlobalPosition + dir * 30f;
             effectPos.y -= 8f;
 
-            // Spawn standard slash effect only for Warrior (Sword Slash)
-            if (player.PlayerClass == PlayerClass.Warrior)
+            // Spawn standard slash effect only for Knight (Sword Slash)
+            if (player.PlayerClass == PlayerClass.Knight)
             {
                 SkillProjectileSpawner.SpawnTemporaryVisualEffect(
                     player,

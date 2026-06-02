@@ -71,7 +71,7 @@ namespace QuestFantasy.UI
             PlayerClass.Adventurer,
             PlayerClass.Mage,
             PlayerClass.Archer,
-            PlayerClass.Warrior
+            PlayerClass.Knight
         };
 
         // ── Class accent colours ──────────────────────────────────────────
@@ -81,7 +81,7 @@ namespace QuestFantasy.UI
             {
                 case PlayerClass.Mage: return new Color(0.75f, 0.40f, 1.00f, 1f);
                 case PlayerClass.Archer: return new Color(0.40f, 0.90f, 0.50f, 1f);
-                case PlayerClass.Warrior: return new Color(1.00f, 0.50f, 0.25f, 1f);
+                case PlayerClass.Knight: return new Color(1.00f, 0.50f, 0.25f, 1f);
                 default: return new Color(0.40f, 0.70f, 1.00f, 1f);
             }
         }
@@ -92,7 +92,7 @@ namespace QuestFantasy.UI
             {
                 case PlayerClass.Mage: return "🔮";
                 case PlayerClass.Archer: return "🏹";
-                case PlayerClass.Warrior: return "⚔️";
+                case PlayerClass.Knight: return "⚔️";
                 default: return "🗺️";
             }
         }

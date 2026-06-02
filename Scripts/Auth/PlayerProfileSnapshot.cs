@@ -410,7 +410,7 @@ public class PlayerProfileSnapshot
     public Godot.Collections.Array DiscardedItems { get; set; } = new Godot.Collections.Array();
     public Godot.Collections.Dictionary EquippedItemsPayload { get; set; } = new Godot.Collections.Dictionary();
 
-    /// <summary>Serialised class name, e.g. "adventurer", "mage", "archer", "warrior".</summary>
+    /// <summary>Serialised class name, e.g. "adventurer", "mage", "archer", "knight".</summary>
     public string ClassName { get; set; } = "adventurer";
 
     public List<PlayerSkillSnapshot> Skills { get; set; } = new List<PlayerSkillSnapshot>();
