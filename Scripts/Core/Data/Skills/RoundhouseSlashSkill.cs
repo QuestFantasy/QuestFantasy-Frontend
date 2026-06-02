@@ -22,7 +22,7 @@ namespace QuestFantasy.Core.Data.Skills
             Description = "Spin and strike all nearby enemies with a powerful slash.";
         }
 
-        public override float MaxRange => 120f;
+        public override float MaxRange => 80f;
 
         public override float GetCooldownDuration() => 2.0f;
 
