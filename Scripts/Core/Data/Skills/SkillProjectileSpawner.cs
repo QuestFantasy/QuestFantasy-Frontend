@@ -275,6 +275,7 @@ namespace QuestFantasy.Core.Data.Skills
         private bool _returningPhase = false;
         private bool _ignoreWalls = false;
         private bool _loopFlightAnimation = true;
+        private Character _lastHitTarget = null;
 
         public static SkillProjectileNode CreateArrow(
             Player owner,
@@ -694,8 +695,7 @@ namespace QuestFantasy.Core.Data.Skills
                     }
                     else
                     {
-                        // No target to bounce to, just impact
-                        BeginImpact(hitTarget.GlobalPosition, hitTarget);
+                        // No target to bounce to, just continue flying in current direction so it can bounce off walls later!
                         return;
                     }
                 }
@@ -761,9 +761,20 @@ namespace QuestFantasy.Core.Data.Skills
                     continue;
                 }
 
-                if (_damagedTargets.Contains(enemy))
+                // For bouncing projectiles (ricochet arrow), we only prevent hitting the immediate last hit target consecutively
+                if (_bouncesRemaining > 0)
                 {
-                    continue;
+                    if (enemy == _lastHitTarget)
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (_damagedTargets.Contains(enemy))
+                    {
+                        continue;
+                    }
                 }
 
                 if (enemy.GlobalPosition.DistanceTo(position) <= _hitRadius)
@@ -792,8 +803,8 @@ namespace QuestFantasy.Core.Data.Skills
                     continue;
                 }
 
-                // Do not bounce back to already hit targets
-                if (_damagedTargets.Contains(enemy))
+                // Do not bounce back to the immediate last hit target consecutively
+                if (enemy == _lastHitTarget)
                 {
                     continue;
                 }
@@ -918,9 +929,20 @@ namespace QuestFantasy.Core.Data.Skills
                 return;
             }
 
-            if (_damagedTargets.Contains(target))
+            // For bouncing projectiles, allow re-damaging targets on subsequent bounces, but not consecutively
+            if (_bouncesRemaining > 0)
             {
-                return;
+                if (target == _lastHitTarget)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (_damagedTargets.Contains(target))
+                {
+                    return;
+                }
             }
 
             // Use effective stats so Burn (ATK debuff) and Bleed (DEF debuff) are reflected
@@ -931,6 +953,7 @@ namespace QuestFantasy.Core.Data.Skills
 
             target.TakeDamage(damage);
             _damagedTargets.Add(target);
+            _lastHitTarget = target;
 
             GD.Print($"[COMBAT] {_owner.EntityName} hit {target.EntityName} with projectile for {damage}. HP={target.Attributes.HP.CurrentHP}/{target.Attributes.HP.MaxHP}");
 
