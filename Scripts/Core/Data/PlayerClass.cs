@@ -308,7 +308,7 @@ namespace QuestFantasy.Core.Data
             DisplayName = "Super Arrow",
             Description = "Fire a powerful arrow that paralyzes enemies for 5 seconds.",
             Emoji = "💫",
-            CooldownSec = 30.0f,
+            CooldownSec = 10.0f,
         };
 
         private static readonly SkillDefinition DefRoundhouseSlash = new SkillDefinition

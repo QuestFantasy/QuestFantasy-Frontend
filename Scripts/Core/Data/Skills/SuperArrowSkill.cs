@@ -20,7 +20,7 @@ namespace QuestFantasy.Core.Data.Skills
 
         public override float MaxRange => 350f;
 
-        public override float GetCooldownDuration() => 30.0f;
+        public override float GetCooldownDuration() => 10.0f;
 
         public override void Effect(Player player, Character target)
         {
