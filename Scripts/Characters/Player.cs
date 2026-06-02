@@ -222,11 +222,8 @@ namespace QuestFantasy.Characters
             _deadTexture = GD.Load<Texture>("res://Assets/Characters/adventurer/down.png");
             _hitTexture = GD.Load<Texture>("res://Assets/Characters/adventurer/hit.png");
 
-            // Set stats according to requirements
-            if (Attributes != null)
-            {
-                Attributes.TotalAtk = 1;
-            }
+            ApplyClassStats(PlayerClass);
+            UpdateAttributes();
 
             Update();
         }
@@ -297,12 +294,52 @@ namespace QuestFantasy.Characters
             }
 
             var jobBonuses = CurrentJob?.BaseAbilities ?? new Abilities();
-            var equipmentBonuses = _equipmentSystem?.GetAllEquipmentBonuses() ?? new Abilities();
+            var equipmentBonuses = GetClassAdjustedEquipmentBonuses();
 
-            Attributes.TotalAtk = jobBonuses.Atk + equipmentBonuses.Atk + _allocatedStatPoints.Atk;
-            Attributes.TotalDef = jobBonuses.Def + equipmentBonuses.Def + _allocatedStatPoints.Def;
-            Attributes.TotalSpd = jobBonuses.Spd + equipmentBonuses.Spd + _allocatedStatPoints.Spd;
-            Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit + _allocatedStatPoints.Vit;
+            int totalAtk = jobBonuses.Atk + equipmentBonuses.Atk + _allocatedStatPoints.Atk;
+            int totalDef = jobBonuses.Def + equipmentBonuses.Def + _allocatedStatPoints.Def;
+            int totalSpd = jobBonuses.Spd + equipmentBonuses.Spd + _allocatedStatPoints.Spd;
+            int totalVit = jobBonuses.Vit + equipmentBonuses.Vit + _allocatedStatPoints.Vit;
+
+            Attributes.Update(totalAtk, totalDef, totalSpd, totalVit);
+        }
+
+        private Abilities GetClassAdjustedEquipmentBonuses()
+        {
+            var bonuses = _equipmentSystem?.GetAllEquipmentBonuses() ?? new Abilities();
+            Weapon weapon = EquippedWeapon;
+            if (weapon?.WeaponAbilities == null || !IsPreferredWeaponForClass(PlayerClass, weapon.WeaponType))
+            {
+                return bonuses;
+            }
+
+            float extraRate = GameConstants.PLAYER_CLASS_WEAPON_MATCH_MULTIPLIER - 1f;
+            bonuses.Atk += Mathf.RoundToInt(weapon.WeaponAbilities.Atk * extraRate);
+            bonuses.Def += Mathf.RoundToInt(weapon.WeaponAbilities.Def * extraRate);
+            bonuses.Spd += Mathf.RoundToInt(weapon.WeaponAbilities.Spd * extraRate);
+            bonuses.Vit += Mathf.RoundToInt(weapon.WeaponAbilities.Vit * extraRate);
+            return bonuses;
+        }
+
+        private static bool IsPreferredWeaponForClass(PlayerClass cls, WeaponType weaponType)
+        {
+            switch (cls)
+            {
+                case PlayerClass.Archer:
+                    return weaponType == WeaponType.Bow;
+                case PlayerClass.Knight:
+                    return weaponType == WeaponType.Sword;
+                case PlayerClass.Mage:
+                    return weaponType == WeaponType.Staff;
+                default:
+                    return false;
+            }
+        }
+
+        private float GetEffectiveMoveSpeed()
+        {
+            int speedStat = Attributes?.TotalSpd ?? 0;
+            return Mathf.Max(1f, MoveSpeed + speedStat * SpeedMultiplier);
         }
 
         public override void TakeDamage(int damage, Character source = null)
@@ -322,7 +359,13 @@ namespace QuestFantasy.Characters
 
             _damageCooldownFrames = 6; // 0.1 seconds at 60 FPS processing
 
-            base.TakeDamage(damage, source);
+            int finalDamage = damage;
+            if (source != null && Attributes != null)
+            {
+                finalDamage = Mathf.Max(1, damage - Mathf.FloorToInt(Attributes.EffectiveDef * GameConstants.DEFENSE_DAMAGE_REDUCTION_FACTOR));
+            }
+
+            base.TakeDamage(finalDamage, source);
             if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
             {
                 _animationController?.PlayHitAnimation(_hitTexture, 0.2f);
@@ -396,14 +439,22 @@ namespace QuestFantasy.Characters
                 _map,
                 movementInput,
                 GetCollisionBodySizePixels(),
-                MoveSpeed,
+                GetEffectiveMoveSpeed(),
                 delta);
 
             // 2. Handle animations
             _animationController.Update(movementInput, delta);
 
             // 3. Handle combat and skills
-            _combatController.HandleSkillInput(this, _map);
+            if (_map.CombatEnabled)
+            {
+                _combatController.HandleSkillInput(this, _map);
+            }
+            else
+            {
+                _inputHandler.ConsumeUiSkillActivation();
+                _inputHandler.ConsumeSkillActivationInput();
+            }
 
             // 4. Handle environmental interactions
             if (_map.HasNearbyBox(Position, out Vector2 boxWorld))
@@ -491,6 +542,8 @@ namespace QuestFantasy.Characters
             }
 
             bool allocatedVit = false;
+            int previousMaxHp = Attributes?.HP?.MaxHP ?? 0;
+            int previousCurrentHp = Attributes?.HP?.CurrentHP ?? 0;
             switch ((statKey ?? string.Empty).Trim().ToLowerInvariant())
             {
                 case "atk":
@@ -514,10 +567,11 @@ namespace QuestFantasy.Characters
             UpdateAttributes();
             if (allocatedVit && Attributes?.HP != null)
             {
-                int maxHp = Attributes.HP.MaxHP + GameConstants.PLAYER_HP_STAT_BONUS;
-                int currentHp = Attributes.HP.CurrentHP + GameConstants.PLAYER_HP_STAT_BONUS;
-                Attributes.HP.SetMaxHPAndCurrentHP(maxHp, currentHp);
-                OnHpChanged?.Invoke(Attributes.HP.CurrentHP, Attributes.HP.MaxHP);
+                int gainedHp = Math.Max(0, Attributes.HP.MaxHP - previousMaxHp);
+                if (gainedHp > 0)
+                {
+                    Attributes.HP.SetMaxHPAndCurrentHP(Attributes.HP.MaxHP, previousCurrentHp + gainedHp);
+                }
             }
 
             OnStatPointsChanged?.Invoke();
@@ -543,22 +597,12 @@ namespace QuestFantasy.Characters
                 return false;
             }
 
-            int removedHpBonus = _allocatedStatPoints.Vit * GameConstants.PLAYER_HP_STAT_BONUS;
-            int currentHp = Attributes?.HP?.CurrentHP ?? 0;
-            int currentMaxHp = Attributes?.HP?.MaxHP ?? 100;
-
             _allocatedStatPoints.Atk = 0;
             _allocatedStatPoints.Def = 0;
             _allocatedStatPoints.Spd = 0;
             _allocatedStatPoints.Vit = 0;
 
             UpdateAttributes();
-
-            if (Attributes?.HP != null && removedHpBonus > 0)
-            {
-                int newMaxHp = Math.Max(1, currentMaxHp - removedHpBonus);
-                Attributes.HP.SetMaxHPAndCurrentHP(newMaxHp, Math.Min(currentHp, newMaxHp));
-            }
 
             OnStatPointsChanged?.Invoke();
             return true;
@@ -936,6 +980,7 @@ namespace QuestFantasy.Characters
         public void SetClass(PlayerClass cls, bool rebuildSkills = true)
         {
             PlayerClass = cls;
+            ApplyClassStats(cls);
             GD.Print($"[Player] Class changed to {PlayerClassData.GetDisplayName(cls)}");
 
             ApplyClassSprites(cls);
@@ -945,8 +990,14 @@ namespace QuestFantasy.Characters
                 ApplyClassSkills(cls);
             }
 
+            UpdateAttributes();
             OnClassChanged?.Invoke(cls);
             Update();
+        }
+
+        private void ApplyClassStats(PlayerClass cls)
+        {
+            CurrentJob = PlayerClassData.CreateJob(cls);
         }
 
         /// <summary>

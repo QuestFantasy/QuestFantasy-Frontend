@@ -21,6 +21,7 @@ namespace QuestFantasy.Environment
             RoomsX = 1;
             RoomsY = 1;
             DisableRoomExits = true;  // Prevent any auto-teleportation
+            CombatEnabled = false;
 
             // Manually create the lobby (no procedural generation)
             CreateStaticLobby();

@@ -39,6 +39,11 @@ namespace QuestFantasy.Prototype
         private readonly List<NPC> _lobbyNpcs = new List<NPC>();
         private Player _sharedPlayer;
         private Player _classSelectTarget;
+        private const int BlacksmithShopItemCount = 9;
+        private const int BlacksmithShopLevelOffset = 2;
+        private const int BlacksmithRefreshBaseCost = 50;
+        private const int BlacksmithRefreshCostPerLevel = 8;
+        private static List<Item> _blacksmithStock;
 
         public void Initialize(Player sharedPlayer, AuthApiClient apiClient = null, string authToken = null)
         {
@@ -187,7 +192,7 @@ namespace QuestFantasy.Prototype
             {
                 if (role == NpcRole.Blacksmith)
                 {
-                    npc.SetShopInventory(CreateBlacksmithStock());
+                    npc.SetShopInventory(GetBlacksmithStock(_sharedPlayer ?? _player));
                 }
                 else if (string.Equals(entityName, "Poet", StringComparison.OrdinalIgnoreCase)
                          || string.Equals(entityName, "Trader", StringComparison.OrdinalIgnoreCase))
@@ -242,10 +247,59 @@ namespace QuestFantasy.Prototype
             GD.Print($"[Lobby] Shop requested from {npc.EntityName}. Stock count: {npc.GetShopItems().Count}");
         }
 
-        private IEnumerable<Item> CreateBlacksmithStock()
+        private int GetShopRefreshCost(NPC npc, Player player)
         {
-            var stock = new List<Item>();
+            if (npc == null || npc.Role != NpcRole.Blacksmith)
+            {
+                return 0;
+            }
 
+            int playerLevel = Math.Max(1, (int)(player?.Level ?? _player?.Level ?? 1));
+            return BlacksmithRefreshBaseCost + playerLevel * BlacksmithRefreshCostPerLevel;
+        }
+
+        private bool OnShopRefreshRequested(NPC npc, Player player)
+        {
+            if (npc == null || player == null || npc.Role != NpcRole.Blacksmith)
+            {
+                return false;
+            }
+
+            int cost = GetShopRefreshCost(npc, player);
+            if (!player.SpendGold(cost))
+            {
+                return false;
+            }
+
+            _blacksmithStock = CreateBlacksmithStock(player);
+            npc.SetShopInventory(_blacksmithStock);
+            SyncRequested?.Invoke();
+            return true;
+        }
+
+        private List<Item> GetBlacksmithStock(Player player)
+        {
+            if (_blacksmithStock == null || _blacksmithStock.Count == 0)
+            {
+                _blacksmithStock = CreateBlacksmithStock(player);
+            }
+
+            return _blacksmithStock;
+        }
+
+        private List<Item> CreateBlacksmithStock(Player player)
+        {
+            int playerLevel = Math.Max(1, (int)(player?.Level ?? _player?.Level ?? 1));
+            var generatedStock = _equipmentFactory.GetShopEquipmentSet(
+                BlacksmithShopItemCount,
+                playerLevel,
+                BlacksmithShopLevelOffset);
+            if (generatedStock.Count > 0)
+            {
+                return generatedStock;
+            }
+
+            var stock = new List<Item>();
             AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/sword/basic-sword.png", "sword", 1));
             AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/chestplate/basic-chestplate.png", "chestplate", 1));
             AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/gloves/basic-gloves.png", "gloves", 1));
@@ -301,6 +355,8 @@ namespace QuestFantasy.Prototype
             _shopUI = new NpcShopUI();
             AddChild(_shopUI);
             _shopUI.Closed += OnShopClosed;
+            _shopUI.RefreshCostRequested += GetShopRefreshCost;
+            _shopUI.RefreshRequested += OnShopRefreshRequested;
         }
 
         private void SetupMarketplaceUI()

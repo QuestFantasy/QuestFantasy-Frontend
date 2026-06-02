@@ -39,6 +39,7 @@ public class Map : Node2D
     private static readonly RandomNumberGenerator _seedRandom = new RandomNumberGenerator();
     private static bool _seedRandomInitialized;
     public bool DisableRoomExits { get; set; } = false;  // Flag for lobby: disables room exit transitions
+    public bool CombatEnabled { get; set; } = true;
     public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Normal;
 
     public int WorldTileWidth => _data != null ? _data.WorldTileWidth : RoomsX * RoomTileSize;

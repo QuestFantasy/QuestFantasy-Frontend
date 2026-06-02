@@ -30,6 +30,16 @@ namespace QuestFantasy.Characters
         private bool _hasHitPlayerThisDash;
         private Texture _amassTexture;
 
+        protected override float HpMultiplier
+        {
+            get { return 0.9f; }
+        }
+
+        protected override float AttackMultiplier
+        {
+            get { return 1.1f; }
+        }
+
         protected override void LoadTextures()
         {
             _standTexture = GD.Load<Texture>("res://Assets/SpeedMonster/speed_slime_stand.png");

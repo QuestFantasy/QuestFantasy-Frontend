@@ -14,6 +14,8 @@ using QuestFantasy.UI;
 public class NpcShopUI : CanvasLayer
 {
     public event Action Closed;
+    public event Func<NPC, Player, int> RefreshCostRequested;
+    public event Func<NPC, Player, bool> RefreshRequested;
 
     private sealed class ShopItemSlot : PanelContainer
     {
@@ -180,6 +182,7 @@ public class NpcShopUI : CanvasLayer
     private ShopItemSlot _selectedSellSlot;
     private Item _previewedItem;
     private Button _closeButton;
+    private Button _refreshStockButton;
 
     private NPC _activeNpc;
     private Player _activePlayer;
@@ -217,6 +220,7 @@ public class NpcShopUI : CanvasLayer
             _statusLabel.Text = GetShopStatusText();
         }
 
+        UpdateRefreshButton();
         RebuildLists();
 
         SetInteractionButtonSuppressed(true);
@@ -377,6 +381,15 @@ public class NpcShopUI : CanvasLayer
             Align = Label.AlignEnum.Center
         };
         column.AddChild(titleLabel);
+
+        _refreshStockButton = new Button
+        {
+            Text = "Refresh Stock",
+            RectMinSize = new Vector2(0f, 32f),
+            Visible = false
+        };
+        _refreshStockButton.Connect("pressed", this, nameof(OnRefreshStockPressed));
+        column.AddChild(_refreshStockButton);
 
         scrollContainer = new ScrollContainer
         {
@@ -563,7 +576,39 @@ public class NpcShopUI : CanvasLayer
             return $"{_activeNpc.EntityName} has no items in stock yet. {goldText}";
         }
 
-        return $"Buy basic equipment from {_activeNpc.EntityName}. {goldText}";
+        return $"Buy level-scaled equipment from {_activeNpc.EntityName}. {goldText}";
+    }
+
+    private int GetActiveRefreshCost()
+    {
+        if (_activeNpc == null || _activePlayer == null)
+        {
+            return 0;
+        }
+
+        return Math.Max(0, RefreshCostRequested?.Invoke(_activeNpc, _activePlayer) ?? 0);
+    }
+
+    private void UpdateRefreshButton()
+    {
+        if (_refreshStockButton == null)
+        {
+            return;
+        }
+
+        bool canRefresh = _activeNpc != null
+            && _activeNpc.Role == NpcRole.Blacksmith
+            && RefreshRequested != null;
+
+        _refreshStockButton.Visible = canRefresh;
+        if (!canRefresh)
+        {
+            return;
+        }
+
+        int cost = GetActiveRefreshCost();
+        _refreshStockButton.Text = $"Refresh Stock ({cost}g)";
+        _refreshStockButton.Disabled = _activePlayer == null || _activePlayer.Gold < cost;
     }
 
     private void RebuildBuyList()
@@ -573,6 +618,7 @@ public class NpcShopUI : CanvasLayer
             return;
         }
 
+        UpdateRefreshButton();
         ClearBuySelection();
         ClearContainer(_buyGridContainer);
 
@@ -813,6 +859,7 @@ public class NpcShopUI : CanvasLayer
             ClearBuySelection();
             ResetPreviewPanel();
             RebuildLists();
+            UpdateRefreshButton();
             return;
         }
 
@@ -889,6 +936,7 @@ public class NpcShopUI : CanvasLayer
             ClearSellSelection();
             ResetPreviewPanel();
             RebuildLists();
+            UpdateRefreshButton();
             return;
         }
 
@@ -903,6 +951,37 @@ public class NpcShopUI : CanvasLayer
         if (_selectedBuySlot != null)
         {
             OnBuySlotActivated(_selectedBuySlot);
+        }
+    }
+
+    private void OnRefreshStockPressed()
+    {
+        if (_activeNpc == null || _activePlayer == null || RefreshRequested == null)
+        {
+            return;
+        }
+
+        int cost = GetActiveRefreshCost();
+        bool refreshed = RefreshRequested.Invoke(_activeNpc, _activePlayer);
+        if (!refreshed)
+        {
+            if (_statusLabel != null)
+            {
+                _statusLabel.Text = $"Could not refresh stock. Need {cost} gold.";
+            }
+
+            UpdateRefreshButton();
+            return;
+        }
+
+        ClearBuySelection();
+        ResetPreviewPanel();
+        RebuildLists();
+        UpdateRefreshButton();
+
+        if (_statusLabel != null)
+        {
+            _statusLabel.Text = $"Stock refreshed for {cost} gold. You have {_activePlayer.Gold} gold.";
         }
     }
 
@@ -1017,6 +1096,16 @@ public class NpcShopUI : CanvasLayer
         if (item == null || item.Price <= 0)
         {
             return 0;
+        }
+
+        if (item is Equipment equipment)
+        {
+            return EquipmentManager.GetShopPriceByRarity(equipment.Rarity, equipment.LevelRequirement);
+        }
+
+        if (item is Weapon weapon)
+        {
+            return EquipmentManager.GetShopPriceByRarity(weapon.Rarity, weapon.LevelRequirement);
         }
 
         return Math.Max(1, item.Price / 2);
