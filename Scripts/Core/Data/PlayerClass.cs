@@ -192,7 +192,7 @@ namespace QuestFantasy.Core.Data
                     abilities.Set(20, 5, 5, 5);
                     break;
                 case PlayerClass.Archer:
-                    abilities.Set(8, 8, 10, 9);
+                    abilities.Set(8, 7, 13, 7);
                     break;
                 case PlayerClass.Knight:
                     abilities.Set(10, 10, 5, 10);
