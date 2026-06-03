@@ -189,16 +189,16 @@ namespace QuestFantasy.Core.Data
             switch (cls)
             {
                 case PlayerClass.Mage:
-                    abilities.Set(8, 5, 5, 8);
+                    abilities.Set(20, 5, 5, 5);
                     break;
                 case PlayerClass.Archer:
-                    abilities.Set(10, 6, 6, 9);
+                    abilities.Set(8, 8, 10, 9);
                     break;
                 case PlayerClass.Knight:
-                    abilities.Set(14, 11, 4, 14);
+                    abilities.Set(10, 10, 5, 10);
                     break;
                 default:
-                    abilities.Set(10, 8, 5, 10);
+                    abilities.Set(5, 5, 5, 5);
                     break;
             }
 
