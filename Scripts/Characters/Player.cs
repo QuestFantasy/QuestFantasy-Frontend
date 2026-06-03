@@ -504,6 +504,7 @@ namespace QuestFantasy.Characters
             _animationController?.Revive();
             _respawnInvincibilityTimer = 3.0f;
             Modulate = new Color(1f, 0.9f, 0.4f, 1f);
+            EffectManager?.Clear(this);
             GD.Print("[Player] Respawned");
             Update();
         }
@@ -520,6 +521,7 @@ namespace QuestFantasy.Characters
             Attributes.HP.SetMaxHPAndCurrentHP(maxHp, maxHp);
             _animationController?.Revive();
             Modulate = new Color(1f, 1f, 1f, 1f);
+            EffectManager?.Clear(this);
         }
 
         public void SetLevel(int level)
