@@ -40,13 +40,13 @@ namespace QuestFantasy.Characters
         public int BaseAttack = 4;
 
         [Export]
-        public int AttackPerLevel = 1;
+        public float AttackPerLevel = 0.5f;
 
         [Export]
         public int BaseDefense = 0;
 
         [Export]
-        public int DefensePerTenLevels = 1;
+        public float DefensePerTenLevels = 0.5f;
 
         public int ExperienceReward { get; set; }
         public int LootGoldReward { get; set; }
@@ -583,6 +583,19 @@ namespace QuestFantasy.Characters
             get { return 1f; }
         }
 
+        private float GetDifficultyMultiplier()
+        {
+            DifficultyLevel mapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
+            switch (mapDiff)
+            {
+                case DifficultyLevel.Easy: return 0.5f;
+                case DifficultyLevel.Normal: return 1.0f;
+                case DifficultyLevel.Hard: return 3.0f;
+                case DifficultyLevel.Nightmare: return 10.0f;
+                default: return 1.0f;
+            }
+        }
+
         private int GetReferenceLevel()
         {
             int playerLevel = _player != null ? (int)_player.Level : (int)Level;
@@ -593,19 +606,20 @@ namespace QuestFantasy.Characters
         {
             int baseHp = Math.Max(1, BaseHp);
             int hpPerLevel = Math.Max(0, HpPerLevel);
-            return Mathf.Max(1, Mathf.RoundToInt((baseHp + referenceLevel * hpPerLevel) * HpMultiplier));
+            return Mathf.Max(1, Mathf.RoundToInt((baseHp + referenceLevel * hpPerLevel) * HpMultiplier * GetDifficultyMultiplier()));
         }
 
         private int GetScaledAttack(int referenceLevel)
         {
             int baseAttack = Math.Max(1, BaseAttack);
-            int attackPerLevel = Math.Max(0, AttackPerLevel);
-            return Mathf.Max(1, Mathf.RoundToInt((baseAttack + referenceLevel * attackPerLevel) * AttackMultiplier));
+            float attackPerLevel = Math.Max(0, AttackPerLevel);
+            return Mathf.Max(1, Mathf.RoundToInt((baseAttack + referenceLevel * attackPerLevel) * AttackMultiplier * GetDifficultyMultiplier()));
         }
 
         private int GetScaledDefense(int referenceLevel)
         {
-            return Math.Max(0, BaseDefense) + Math.Max(0, referenceLevel / 10) * Math.Max(0, DefensePerTenLevels);
+            float baseDefense = Math.Max(0, BaseDefense) + Math.Max(0, referenceLevel / 10) * Math.Max(0, DefensePerTenLevels);
+            return Mathf.RoundToInt(baseDefense * GetDifficultyMultiplier());
         }
 
         protected virtual bool TryHandleSpecialBehavior(float delta, float distanceToPlayer)
