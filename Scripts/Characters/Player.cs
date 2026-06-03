@@ -737,11 +737,18 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
+                float cdr = 0f;
+                if (Attributes != null)
+                {
+                    float spd = (float)Attributes.TotalSpd;
+                    cdr = 0.9f * (spd * spd) / (spd * spd + 5000f);
+                }
+
                 result.Add(new PlayerSkillSnapshot
                 {
                     SkillId = ResolveSkillId(skill),
                     Name = skill.Name,
-                    CooldownSeconds = skill.GetCooldownDuration(),
+                    CooldownSeconds = skill.GetCooldownDuration() * (1f - cdr),
                     RemainingCooldownSeconds = skill.CoolDown.RemainingTime,
                     DisplayOrder = i,
                 });

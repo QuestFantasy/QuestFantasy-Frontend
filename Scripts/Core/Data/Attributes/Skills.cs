@@ -75,7 +75,14 @@ namespace QuestFantasy.Core.Data.Attributes
                 return false;
 
             Effect(player, target);
-            CoolDown.Start(GetCooldownDuration());
+            float baseCooldown = GetCooldownDuration();
+            float cdr = 0f;
+            if (player != null && player.Attributes != null)
+            {
+                float spd = (float)player.Attributes.TotalSpd;
+                cdr = 0.9f * (spd * spd) / (spd * spd + 5000f);
+            }
+            CoolDown.Start(baseCooldown * (1f - cdr));
 
             // Render visual effect if renderer is available
             if (target != null && EffectRenderer != null)
