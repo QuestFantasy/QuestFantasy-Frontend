@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.UI;
 
 // Equipment slot definition
 public struct EquipSlotDef
@@ -51,6 +52,12 @@ public class BackpackUI : CanvasLayer
     private Control _panelRoot;
     private TextureRect _panelBackground;
     private Label _moneyValueLabel;
+    private PanelContainer _statsPanel;
+    private Label _statLevelValueLabel;
+    private Label _statHpValueLabel;
+    private Label _statAtkValueLabel;
+    private Label _statDefValueLabel;
+    private Label _statSpdValueLabel;
     private GridContainer _grid;
     private CenterContainer _gridCenter;
     private Label _pageLabel;
@@ -77,6 +84,7 @@ public class BackpackUI : CanvasLayer
     private int _selectedGlobalIndex = -1;
     private BackpackViewMode _viewMode = BackpackViewMode.Gear;
     private bool _viewDirty = true;
+    private bool _interactionButtonSuppressed = false;
     private int _lastItemCount = -1;
     private int _lastGold = -1;
 
@@ -110,6 +118,10 @@ public class BackpackUI : CanvasLayer
         {
             RefreshView();
         }
+        else
+        {
+            RefreshStatsPanel();
+        }
 
         if (!IsMouseHoveringAnyBackpackSlot())
         {
@@ -139,6 +151,8 @@ public class BackpackUI : CanvasLayer
         {
             _player.OnGoldChanged -= HandleGoldChanged;
         }
+
+        SetInteractionButtonSuppressed(false);
     }
 
     public void SetGameplayVisible(bool visible)
@@ -269,6 +283,8 @@ public class BackpackUI : CanvasLayer
         };
         _panelRoot.AddChild(_panelBackground);
 
+        BuildStatsPanel();
+
         var content = new VBoxContainer
         {
             AnchorLeft = 0f,
@@ -389,6 +405,101 @@ public class BackpackUI : CanvasLayer
         content.AddChild(footer);
     }
 
+    private void BuildStatsPanel()
+    {
+        _statsPanel = new PanelContainer
+        {
+            AnchorLeft = 0f,
+            AnchorRight = 0f,
+            AnchorTop = 0f,
+            AnchorBottom = 0f,
+            MarginLeft = -72f,
+            MarginTop = 122f,
+            MarginRight = 56f,
+            MarginBottom = 314f,
+            MouseFilter = Control.MouseFilterEnum.Stop,
+        };
+
+        var panelStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.08f, 0.09f, 0.14f, 0.84f),
+            BorderColor = new Color(0.72f, 0.86f, 1f, 0.72f),
+            BorderWidthTop = 2,
+            BorderWidthRight = 2,
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomLeft = 6,
+            CornerRadiusBottomRight = 6,
+            ContentMarginLeft = 10,
+            ContentMarginRight = 10,
+            ContentMarginTop = 8,
+            ContentMarginBottom = 8,
+        };
+        _statsPanel.AddStyleboxOverride("panel", panelStyle);
+
+        var statsContent = new VBoxContainer
+        {
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = (int)Control.SizeFlags.ExpandFill,
+        };
+        statsContent.AddConstantOverride("separation", 3);
+        _statsPanel.AddChild(statsContent);
+
+        var title = new Label
+        {
+            Text = "STATS",
+            Align = Label.AlignEnum.Center,
+            RectMinSize = new Vector2(0f, 20f),
+        };
+        title.AddColorOverride("font_color", new Color(0.82f, 0.92f, 1f));
+        title.AddColorOverride("font_color_shadow", new Color(0f, 0f, 0f, 0.75f));
+        statsContent.AddChild(title);
+
+        _statLevelValueLabel = AddStatRow(statsContent, "LV", new Color(1f, 0.92f, 0.45f));
+        _statHpValueLabel = AddStatRow(statsContent, "HP", new Color(1f, 0.58f, 0.58f));
+        _statAtkValueLabel = AddStatRow(statsContent, "ATK", new Color(1f, 0.78f, 0.48f));
+        _statDefValueLabel = AddStatRow(statsContent, "DEF", new Color(0.68f, 0.86f, 1f));
+        _statSpdValueLabel = AddStatRow(statsContent, "SPD", new Color(0.62f, 1f, 0.78f));
+
+        _panelRoot.AddChild(_statsPanel);
+    }
+
+    private Label AddStatRow(VBoxContainer parent, string statName, Color valueColor)
+    {
+        var row = new HBoxContainer
+        {
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+            RectMinSize = new Vector2(0f, 20f),
+        };
+        row.AddConstantOverride("separation", 6);
+
+        var nameLabel = new Label
+        {
+            Text = statName,
+            RectMinSize = new Vector2(36f, 18f),
+            Align = Label.AlignEnum.Left,
+            Valign = Label.VAlign.Center,
+        };
+        nameLabel.AddColorOverride("font_color", new Color(0.75f, 0.78f, 0.86f));
+        row.AddChild(nameLabel);
+
+        var valueLabel = new Label
+        {
+            Text = "--",
+            Align = Label.AlignEnum.Right,
+            Valign = Label.VAlign.Center,
+            SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+        };
+        valueLabel.AddColorOverride("font_color", valueColor);
+        valueLabel.AddColorOverride("font_color_shadow", new Color(0f, 0f, 0f, 0.8f));
+        row.AddChild(valueLabel);
+
+        parent.AddChild(row);
+        return valueLabel;
+    }
+
     private void EnsureToggleInputAction()
     {
         if (!InputMap.HasAction("toggle_inventory"))
@@ -430,6 +541,7 @@ public class BackpackUI : CanvasLayer
         _panelRoot.Visible = visible;
         if (visible)
         {
+            SetInteractionButtonSuppressed(true);
             _viewDirty = true;
             SyncRequested?.Invoke();   // Ask Main to sync so items get their instance_id.
             RefreshView();
@@ -437,6 +549,25 @@ public class BackpackUI : CanvasLayer
         else
         {
             EquipmentPreview.Instance?.HidePreview();
+            SetInteractionButtonSuppressed(false);
+        }
+    }
+
+    private void SetInteractionButtonSuppressed(bool suppressed)
+    {
+        if (_interactionButtonSuppressed == suppressed)
+        {
+            return;
+        }
+
+        _interactionButtonSuppressed = suppressed;
+        if (suppressed)
+        {
+            InteractionButtonUI.PushSuppression();
+        }
+        else
+        {
+            InteractionButtonUI.PopSuppression();
         }
     }
 
@@ -445,6 +576,7 @@ public class BackpackUI : CanvasLayer
         if (_player == null)
         {
             _moneyValueLabel.Text = "0";
+            RefreshStatsPanel();
             _cachedItems.Clear();
             RebuildSlots(_cachedItems);
             RebuildEquipSlots();
@@ -472,8 +604,51 @@ public class BackpackUI : CanvasLayer
         _viewDirty = false;
 
         UpdateModeControls();
+        RefreshStatsPanel();
         RebuildSlots(_cachedItems);
         RebuildEquipSlots();
+    }
+
+    private void RefreshStatsPanel()
+    {
+        if (_statLevelValueLabel == null)
+        {
+            return;
+        }
+
+        if (_player == null || _player.Attributes == null)
+        {
+            SetStatValues("--", "--", "--", "--", "--");
+            return;
+        }
+
+        var attributes = _player.Attributes;
+        string hpText = attributes.HP != null
+            ? $"{attributes.HP.CurrentHP}/{attributes.HP.MaxHP}"
+            : "--";
+
+        SetStatValues(
+            Math.Max(1L, _player.Level).ToString(),
+            hpText,
+            FormatEffectiveStat(attributes.EffectiveAtk, attributes.TotalAtk),
+            FormatEffectiveStat(attributes.EffectiveDef, attributes.TotalDef),
+            attributes.TotalSpd.ToString());
+    }
+
+    private void SetStatValues(string level, string hp, string atk, string def, string spd)
+    {
+        _statLevelValueLabel.Text = level;
+        _statHpValueLabel.Text = hp;
+        _statAtkValueLabel.Text = atk;
+        _statDefValueLabel.Text = def;
+        _statSpdValueLabel.Text = spd;
+    }
+
+    private string FormatEffectiveStat(int effectiveValue, int totalValue)
+    {
+        return effectiveValue == totalValue
+            ? totalValue.ToString()
+            : $"{effectiveValue} ({totalValue})";
     }
 
     private void RebuildEquipSlots()
@@ -521,8 +696,9 @@ public class BackpackUI : CanvasLayer
         };
 
         Color borderCol = hasItem
-            ? new Color(0.55f, 0.75f, 1f, 0.9f)
+            ? GetItemBorderColor(equipped)
             : new Color(0.25f, 0.25f, 0.35f, 0.7f);
+        int borderWidth = hasItem ? 2 : 1;
 
         var style = new StyleBoxFlat
         {
@@ -530,10 +706,10 @@ public class BackpackUI : CanvasLayer
                 ? new Color(0.12f, 0.15f, 0.25f, 0.9f)
                 : new Color(0.06f, 0.07f, 0.12f, 0.7f),
             BorderColor = borderCol,
-            BorderWidthTop = 1,
-            BorderWidthBottom = 1,
-            BorderWidthLeft = 1,
-            BorderWidthRight = 1,
+            BorderWidthTop = borderWidth,
+            BorderWidthBottom = borderWidth,
+            BorderWidthLeft = borderWidth,
+            BorderWidthRight = borderWidth,
             CornerRadiusTopLeft = 6,
             CornerRadiusTopRight = 6,
             CornerRadiusBottomLeft = 6,
@@ -673,6 +849,12 @@ public class BackpackUI : CanvasLayer
 
         if (item is Weapon weapon)
         {
+            if (!CanEquipItem(weapon, out string reason))
+            {
+                GD.Print($"[BackpackUI] Cannot equip weapon: {reason}");
+                return;
+            }
+
             // If weapon already equipped, swap back to inventory
             Weapon oldWeapon = _player.EquippedWeapon;
             _player.RemoveItem(item);
@@ -688,6 +870,12 @@ public class BackpackUI : CanvasLayer
             if (eq.EquipmentType == EquipmentType.None || eq.EquipmentType == EquipmentType.Other)
             {
                 GD.Print("[BackpackUI] Cannot equip item with no valid slot.");
+                return;
+            }
+
+            if (!CanEquipItem(eq, out string reason))
+            {
+                GD.Print($"[BackpackUI] Cannot equip armor: {reason}");
                 return;
             }
 
@@ -734,6 +922,9 @@ public class BackpackUI : CanvasLayer
 
     private Control BuildSlot(int globalIndex, Item item)
     {
+        bool isSelected = globalIndex == _selectedGlobalIndex;
+        int borderWidth = isSelected ? 3 : GetItemBorderWidth(item);
+
         var frame = new PanelContainer
         {
             RectMinSize = new Vector2(SlotSize, SlotSize),
@@ -743,13 +934,11 @@ public class BackpackUI : CanvasLayer
         var style = new StyleBoxFlat
         {
             BgColor = new Color(0.10f, 0.11f, 0.16f, 0.87f),
-            BorderColor = globalIndex == _selectedGlobalIndex
-                ? new Color(1f, 0.88f, 0.35f, 1f)
-                : new Color(0.3f, 0.36f, 0.45f, 0.95f),
-            BorderWidthTop = globalIndex == _selectedGlobalIndex ? 2 : 1,
-            BorderWidthRight = globalIndex == _selectedGlobalIndex ? 2 : 1,
-            BorderWidthBottom = globalIndex == _selectedGlobalIndex ? 2 : 1,
-            BorderWidthLeft = globalIndex == _selectedGlobalIndex ? 2 : 1,
+            BorderColor = GetItemBorderColor(item),
+            BorderWidthTop = borderWidth,
+            BorderWidthRight = borderWidth,
+            BorderWidthBottom = borderWidth,
+            BorderWidthLeft = borderWidth,
             CornerRadiusTopLeft = 6,
             CornerRadiusTopRight = 6,
             CornerRadiusBottomLeft = 6,
@@ -800,6 +989,67 @@ public class BackpackUI : CanvasLayer
         frame.Connect("mouse_exited", this, nameof(OnSlotMouseExited));
 
         return frame;
+    }
+
+    private Color GetItemBorderColor(Item item)
+    {
+        if (item is Equipment equipment)
+        {
+            return EquipmentManager.RarityColor(equipment.Rarity);
+        }
+
+        if (item is Weapon weapon)
+        {
+            return EquipmentManager.RarityColor(weapon.Rarity);
+        }
+
+        return new Color(0.3f, 0.36f, 0.45f, 0.95f);
+    }
+
+    private int GetItemBorderWidth(Item item)
+    {
+        return item is Equipment || item is Weapon ? 2 : 1;
+    }
+
+    private bool CanEquipItem(Item item, out string reason)
+    {
+        reason = string.Empty;
+        if (_player == null)
+        {
+            reason = "No player available.";
+            return false;
+        }
+
+        if (item is Equipment equipment)
+        {
+            if (equipment.EquipmentType == EquipmentType.None || equipment.EquipmentType == EquipmentType.Other)
+            {
+                reason = "Invalid equipment slot.";
+                return false;
+            }
+
+            if (!equipment.CanUse(_player))
+            {
+                reason = $"Requires Lv.{Math.Max(1, equipment.LevelRequirement)}.";
+                return false;
+            }
+
+            return true;
+        }
+
+        if (item is Weapon weapon)
+        {
+            if (!weapon.CanUse(_player))
+            {
+                reason = $"Requires Lv.{Math.Max(1, weapon.LevelRequirement)}.";
+                return false;
+            }
+
+            return true;
+        }
+
+        reason = "Item is not equippable.";
+        return false;
     }
 
     private Texture GetItemTexture(Item item)
@@ -860,7 +1110,37 @@ public class BackpackUI : CanvasLayer
             return $"{ticket.Name}\n{ticket.Difficulty} entry ticket\n{idLine}";
         }
 
+        if (item is Equipment equipment)
+        {
+            return $"{equipment.Name}\n{BuildEquipmentMeta(equipment.Rarity, equipment.LevelRequirement, equipment.EquipmentType.ToString())}\n{BuildEquipmentStats(equipment.EquipmentAbilities)}\n{idLine}";
+        }
+
+        if (item is Weapon weapon)
+        {
+            return $"{weapon.Name}\n{BuildEquipmentMeta(weapon.Rarity, weapon.LevelRequirement, weapon.WeaponType.ToString())}\n{BuildEquipmentStats(weapon.WeaponAbilities)}\n{idLine}";
+        }
+
         return $"{item.Name}\n{idLine}";
+    }
+
+    private string BuildEquipmentMeta(int rarity, int levelRequirement, string category)
+    {
+        string rarityName = EquipmentManager.RarityDisplayName(rarity);
+        string levelText = $"Lv.{Math.Max(1, levelRequirement)}";
+        string playerLevelText = _player == null
+            ? string.Empty
+            : $"  You: Lv.{Math.Max(1L, _player.Level)}";
+        return $"{category} • {rarityName} • Req {levelText}{playerLevelText}";
+    }
+
+    private string BuildEquipmentStats(QuestFantasy.Core.Data.Attributes.Abilities abilities)
+    {
+        if (abilities == null)
+        {
+            return "No stat bonus.";
+        }
+
+        return $"ATK +{abilities.Atk}  DEF +{abilities.Def}\nSPD +{abilities.Spd}  HP +{abilities.Vit}";
     }
 
     private Texture LoadSpriteFromPath(string spritePath)
@@ -947,7 +1227,15 @@ public class BackpackUI : CanvasLayer
 
         if (_equipButton != null)
         {
-            _equipButton.Disabled = _viewMode != BackpackViewMode.Gear;
+            bool canEquip = false;
+            if (_viewMode == BackpackViewMode.Gear
+                && _selectedGlobalIndex >= 0
+                && _selectedGlobalIndex < _cachedItems.Count)
+            {
+                canEquip = CanEquipItem(_cachedItems[_selectedGlobalIndex], out _);
+            }
+
+            _equipButton.Disabled = !canEquip;
         }
     }
 

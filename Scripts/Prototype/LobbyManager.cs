@@ -38,6 +38,12 @@ namespace QuestFantasy.Prototype
         private readonly EquipmentManager _equipmentFactory = new EquipmentManager();
         private readonly List<NPC> _lobbyNpcs = new List<NPC>();
         private Player _sharedPlayer;
+        private Player _classSelectTarget;
+        private const int BlacksmithShopItemCount = 9;
+        private const int BlacksmithShopLevelOffset = 2;
+        private const int BlacksmithRefreshBaseCost = 50;
+        private const int BlacksmithRefreshCostPerLevel = 8;
+        private static List<Item> _blacksmithStock;
 
         public void Initialize(Player sharedPlayer, AuthApiClient apiClient = null, string authToken = null)
         {
@@ -97,6 +103,7 @@ namespace QuestFantasy.Prototype
             GD.Print("[Lobby] Player spawned at: " + _player.Position);
 
             _player.SetMap(_lobbyMap);
+            _player.RestoreFullHp();
 
             // Set camera bounds to entire lobby with padding
             float lobbyWidth = _lobbyMap.WorldPixelWidth;
@@ -185,7 +192,7 @@ namespace QuestFantasy.Prototype
             {
                 if (role == NpcRole.Blacksmith)
                 {
-                    npc.SetShopInventory(CreateBlacksmithStock());
+                    npc.SetShopInventory(GetBlacksmithStock(_sharedPlayer ?? _player));
                 }
                 else if (string.Equals(entityName, "Poet", StringComparison.OrdinalIgnoreCase)
                          || string.Equals(entityName, "Trader", StringComparison.OrdinalIgnoreCase))
@@ -240,10 +247,59 @@ namespace QuestFantasy.Prototype
             GD.Print($"[Lobby] Shop requested from {npc.EntityName}. Stock count: {npc.GetShopItems().Count}");
         }
 
-        private IEnumerable<Item> CreateBlacksmithStock()
+        private int GetShopRefreshCost(NPC npc, Player player)
         {
-            var stock = new List<Item>();
+            if (npc == null || npc.Role != NpcRole.Blacksmith)
+            {
+                return 0;
+            }
 
+            int playerLevel = Math.Max(1, (int)(player?.Level ?? _player?.Level ?? 1));
+            return BlacksmithRefreshBaseCost + playerLevel * BlacksmithRefreshCostPerLevel;
+        }
+
+        private bool OnShopRefreshRequested(NPC npc, Player player)
+        {
+            if (npc == null || player == null || npc.Role != NpcRole.Blacksmith)
+            {
+                return false;
+            }
+
+            int cost = GetShopRefreshCost(npc, player);
+            if (!player.SpendGold(cost))
+            {
+                return false;
+            }
+
+            _blacksmithStock = CreateBlacksmithStock(player);
+            npc.SetShopInventory(_blacksmithStock);
+            SyncRequested?.Invoke();
+            return true;
+        }
+
+        private List<Item> GetBlacksmithStock(Player player)
+        {
+            if (_blacksmithStock == null || _blacksmithStock.Count == 0)
+            {
+                _blacksmithStock = CreateBlacksmithStock(player);
+            }
+
+            return _blacksmithStock;
+        }
+
+        private List<Item> CreateBlacksmithStock(Player player)
+        {
+            int playerLevel = Math.Max(1, (int)(player?.Level ?? _player?.Level ?? 1));
+            var generatedStock = _equipmentFactory.GetShopEquipmentSet(
+                BlacksmithShopItemCount,
+                playerLevel,
+                BlacksmithShopLevelOffset);
+            if (generatedStock.Count > 0)
+            {
+                return generatedStock;
+            }
+
+            var stock = new List<Item>();
             AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/sword/basic-sword.png", "sword", 1));
             AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/chestplate/basic-chestplate.png", "chestplate", 1));
             AddIfNotNull(stock, _equipmentFactory.CreateFromAssetWithCategory("Assets/Equipments/gloves/basic-gloves.png", "gloves", 1));
@@ -299,6 +355,8 @@ namespace QuestFantasy.Prototype
             _shopUI = new NpcShopUI();
             AddChild(_shopUI);
             _shopUI.Closed += OnShopClosed;
+            _shopUI.RefreshCostRequested += GetShopRefreshCost;
+            _shopUI.RefreshRequested += OnShopRefreshRequested;
         }
 
         private void SetupMarketplaceUI()
@@ -314,11 +372,13 @@ namespace QuestFantasy.Prototype
             AddChild(_classSelectUI);
             _classSelectUI.ClassSelected += OnClassSelected;
             _classSelectUI.SkillLoadoutChanged += OnSkillLoadoutChanged;
+            _classSelectUI.StatPointRequested += OnStatPointRequested;
+            _classSelectUI.StatPointsResetRequested += OnStatPointsResetRequested;
         }
 
         private void OnSkillLoadoutChanged(List<string> orderedSkillIds)
         {
-            Player target = _player;
+            Player target = _classSelectTarget ?? _player;
             if (target == null)
             {
                 return;
@@ -337,17 +397,29 @@ namespace QuestFantasy.Prototype
             }
 
             Player target = player ?? _player;
+            _classSelectTarget = target;
             PlayerClass current = target?.PlayerClass ?? PlayerClass.Adventurer;
             int level = (int)(target?.Level ?? 1);
             var equippedSkills = target?.GetEquippedSkillIds();
 
-            _classSelectUI.Show(current, level, equippedSkills);
+            _classSelectUI.Show(
+                current,
+                level,
+                equippedSkills,
+                target?.Attributes?.TotalAtk ?? 0,
+                target?.Attributes?.TotalDef ?? 0,
+                target?.Attributes?.TotalSpd ?? 0,
+                target?.Attributes?.HP?.MaxHP ?? 0,
+                target?.AllocatedAtkPoints ?? 0,
+                target?.AllocatedDefPoints ?? 0,
+                target?.AllocatedSpdPoints ?? 0,
+                target?.AllocatedVitPoints ?? 0);
             GD.Print($"[Lobby] Class selector opened by {npc.EntityName}. Current class: {current}, Player Level: {level}");
         }
 
         private void OnClassSelected(PlayerClass newClass)
         {
-            Player target = _player;
+            Player target = _classSelectTarget ?? _player;
             if (target == null)
             {
                 return;
@@ -356,6 +428,42 @@ namespace QuestFantasy.Prototype
             target.SetClass(newClass);
             GD.Print($"[Lobby] Player class set to {newClass}");
             ClassChangeRequested?.Invoke(newClass);
+        }
+
+        private bool OnStatPointRequested(string statKey)
+        {
+            Player target = _classSelectTarget ?? _player;
+            if (target == null)
+            {
+                return false;
+            }
+
+            bool applied = target.AllocateStatPoint(statKey);
+            if (applied)
+            {
+                GD.Print($"[Lobby] Allocated stat point to {statKey}. Remaining: {target.AvailableStatPoints}");
+                SyncRequested?.Invoke();
+            }
+
+            return applied;
+        }
+
+        private bool OnStatPointsResetRequested()
+        {
+            Player target = _classSelectTarget ?? _player;
+            if (target == null)
+            {
+                return false;
+            }
+
+            bool reset = target.ResetStatAllocations();
+            if (reset)
+            {
+                GD.Print($"[Lobby] Reset stat allocations. Available: {target.AvailableStatPoints}");
+                SyncRequested?.Invoke();
+            }
+
+            return reset;
         }
 
         private void OnShopClosed()

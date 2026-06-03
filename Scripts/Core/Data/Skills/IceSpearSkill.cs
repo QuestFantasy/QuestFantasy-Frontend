@@ -33,7 +33,7 @@ namespace QuestFantasy.Core.Data.Skills
                 player,
                 target,
                 MaxRange,
-                onHitEffect: () => new FreezeEffect(1.0f), // 1 second freeze
+                onHitEffect: () => new FreezeEffect(2f), // 2 second freeze
                 onHitChance: 1.0f); // Always freeze
         }
     }

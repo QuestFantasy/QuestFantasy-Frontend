@@ -82,7 +82,7 @@ public static class PlayerItemSnapshotCodec
         if (item is Equipment equipment)
         {
             baseDict["equipment_type"] = equipment.EquipmentType.ToString();
-            baseDict["rarity"] = Math.Max(1, equipment.Rarity);
+            baseDict["rarity"] = EquipmentManager.ClampRarity(equipment.Rarity);
             baseDict["level_requirement"] = Math.Max(1, equipment.LevelRequirement);
             baseDict["source"] = equipment.Source ?? string.Empty;
             baseDict["sprite_path"] = NormalizeSpritePathForStorage(equipment.SpritePath, equipment.Sprite);
@@ -93,7 +93,7 @@ public static class PlayerItemSnapshotCodec
         if (item is Weapon weapon)
         {
             baseDict["weapon_type"] = weapon.WeaponType.ToString();
-            baseDict["rarity"] = Math.Max(1, weapon.Rarity);
+            baseDict["rarity"] = EquipmentManager.ClampRarity(weapon.Rarity);
             baseDict["level_requirement"] = Math.Max(1, weapon.LevelRequirement);
             baseDict["source"] = weapon.Source ?? string.Empty;
             baseDict["sprite_path"] = NormalizeSpritePathForStorage(weapon.SpritePath, weapon.Sprite);
@@ -139,7 +139,7 @@ public static class PlayerItemSnapshotCodec
                 Quantity = ReadInt(data, "quantity", 1, 1),
                 Price = ReadInt(data, "price", 0, 0),
                 EquipmentType = ReadEnum(ReadString(data, "equipment_type", "Other"), EquipmentType.Other),
-                Rarity = ReadInt(data, "rarity", 1, 1),
+                Rarity = EquipmentManager.ClampRarity(ReadInt(data, "rarity", 1, 1)),
                 LevelRequirement = ReadInt(data, "level_requirement", 1, 1),
                 Source = ReadString(data, "source", string.Empty),
                 SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", string.Empty)),
@@ -159,7 +159,7 @@ public static class PlayerItemSnapshotCodec
                 Quantity = ReadInt(data, "quantity", 1, 1),
                 Price = ReadInt(data, "price", 0, 0),
                 WeaponType = ReadEnum(ReadString(data, "weapon_type", "Sword"), WeaponType.Sword),
-                Rarity = ReadInt(data, "rarity", 1, 1),
+                Rarity = EquipmentManager.ClampRarity(ReadInt(data, "rarity", 1, 1)),
                 LevelRequirement = ReadInt(data, "level_requirement", 1, 1),
                 Source = ReadString(data, "source", string.Empty),
                 SpritePath = NormalizeSpritePathForRuntime(ReadString(data, "sprite_path", string.Empty)),
@@ -396,11 +396,17 @@ public static class PlayerItemSnapshotCodec
 
 public class PlayerProfileSnapshot
 {
+    private const string StatAllocationsKey = "stat_allocations";
+
     public int Level { get; set; } = 1;
     public int Experience { get; set; } = 0;
     public int HpMax { get; set; } = 100;
     public int HpCurrent { get; set; } = 100;
     public int Gold { get; set; } = 0;
+    public int StatAtkPoints { get; set; } = 0;
+    public int StatDefPoints { get; set; } = 0;
+    public int StatSpdPoints { get; set; } = 0;
+    public int StatVitPoints { get; set; } = 0;
     public bool Ignored { get; set; } = false;
     public string IgnoreReason { get; set; } = string.Empty;
     public bool HasInventoryItemsPayload { get; set; } = false;
@@ -448,6 +454,12 @@ public class PlayerProfileSnapshot
         {
             snapshot.HasEquippedItemsPayload = true;
             snapshot.EquippedItemsPayload = equippedDict;
+            snapshot.ReadStatAllocations(equippedDict);
+        }
+
+        if (data.Contains(StatAllocationsKey) && data[StatAllocationsKey] is Godot.Collections.Dictionary statDict)
+        {
+            snapshot.ReadStatAllocations(statDict);
         }
 
         if (data.Contains("skills") && data["skills"] is Godot.Collections.Array rawSkills)
@@ -510,6 +522,9 @@ public class PlayerProfileSnapshot
 
     public Godot.Collections.Dictionary ToUpdatePayload(string sessionId, int sequence)
     {
+        var equippedItems = EquippedItemsPayload ?? new Godot.Collections.Dictionary();
+        equippedItems[StatAllocationsKey] = BuildStatAllocationsPayload();
+
         return new Godot.Collections.Dictionary
         {
             ["session_id"] = sessionId ?? string.Empty,
@@ -522,9 +537,39 @@ public class PlayerProfileSnapshot
             ["class_name"] = string.IsNullOrWhiteSpace(ClassName) ? "adventurer" : ClassName,
             ["inventory_items"] = InventoryItems ?? new Godot.Collections.Array(),
             ["discarded_items"] = DiscardedItems ?? new Godot.Collections.Array(),
-            ["equipped_items"] = EquippedItemsPayload ?? new Godot.Collections.Dictionary(),
+            ["equipped_items"] = equippedItems,
             ["skills"] = EncodeSkills(Skills),
         };
+    }
+
+    private Godot.Collections.Dictionary BuildStatAllocationsPayload()
+    {
+        return new Godot.Collections.Dictionary
+        {
+            ["atk"] = Math.Max(0, StatAtkPoints),
+            ["def"] = Math.Max(0, StatDefPoints),
+            ["spd"] = Math.Max(0, StatSpdPoints),
+            ["vit"] = Math.Max(0, StatVitPoints),
+        };
+    }
+
+    private void ReadStatAllocations(Godot.Collections.Dictionary data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        Godot.Collections.Dictionary source = data;
+        if (data.Contains(StatAllocationsKey) && data[StatAllocationsKey] is Godot.Collections.Dictionary nested)
+        {
+            source = nested;
+        }
+
+        StatAtkPoints = ReadInt(source, "atk", StatAtkPoints, min: 0);
+        StatDefPoints = ReadInt(source, "def", StatDefPoints, min: 0);
+        StatSpdPoints = ReadInt(source, "spd", StatSpdPoints, min: 0);
+        StatVitPoints = ReadInt(source, "vit", StatVitPoints, min: 0);
     }
 
     private static string ReadString(Godot.Collections.Dictionary data, string key, string fallback)

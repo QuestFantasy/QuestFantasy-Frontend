@@ -5,6 +5,7 @@ using Godot;
 
 using QuestFantasy.Characters;
 using QuestFantasy.Core.Data.Items;
+using QuestFantasy.UI;
 
 /// <summary>
 /// Player-to-player marketplace UI.
@@ -26,6 +27,7 @@ public class MarketplaceUI : CanvasLayer
     private PanelContainer _panel;
     private Label _titleLabel;
     private Label _goldLabel;
+    private bool _interactionButtonSuppressed = false;
     private Label _statusLabel;
     private TabContainer _tabs;
     private bool _isVisible;
@@ -82,6 +84,7 @@ public class MarketplaceUI : CanvasLayer
 
     public new void Show()
     {
+        SetInteractionButtonSuppressed(true);
         _isVisible = true;
         _root.Visible = true;
         _panel.Visible = true;
@@ -102,7 +105,31 @@ public class MarketplaceUI : CanvasLayer
         }
         if (_root != null) _root.Visible = false;
         if (_panel != null) _panel.Visible = false;
+        SetInteractionButtonSuppressed(false);
         GetTree().Paused = false;
+    }
+
+    public override void _ExitTree()
+    {
+        SetInteractionButtonSuppressed(false);
+    }
+
+    private void SetInteractionButtonSuppressed(bool suppressed)
+    {
+        if (_interactionButtonSuppressed == suppressed)
+        {
+            return;
+        }
+
+        _interactionButtonSuppressed = suppressed;
+        if (suppressed)
+        {
+            InteractionButtonUI.PushSuppression();
+        }
+        else
+        {
+            InteractionButtonUI.PopSuppression();
+        }
     }
 
     public override void _Process(float delta)

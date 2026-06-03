@@ -55,16 +55,31 @@ namespace QuestFantasy.UI
         private Label _subtitleLabel;
         private Control _classTabContent;
         private Control _skillTabContent;
+        private Control _statsTabContent;
         private Button _tabClassBtn;
         private Button _tabSkillsBtn;
+        private Button _tabStatsBtn;
         private Panel[] _cardPanels;
 
         // Skill UI References
         private Label[] _skillSlotLabels;
         private Panel[] _skillCardPanels;
 
+        // Stat allocation UI References
+        private Label _availableStatPointsLabel;
+        private readonly Dictionary<string, int> _statValues = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> _statAllocations = new Dictionary<string, int>();
+        private readonly Dictionary<string, Label> _statValueLabels = new Dictionary<string, Label>();
+        private readonly Dictionary<string, Label> _statAllocationLabels = new Dictionary<string, Label>();
+        private readonly Dictionary<string, Button> _statPlusButtons = new Dictionary<string, Button>();
+        private Button _statResetButton;
+        private bool _interactionButtonSuppressed = false;
+
         public event Action<PlayerClass> ClassSelected;
         public event Action<List<string>> SkillLoadoutChanged;
+        public delegate bool StatPointRequestHandler(string statKey);
+        public event StatPointRequestHandler StatPointRequested;
+        public event Func<bool> StatPointsResetRequested;
 
         private static readonly PlayerClass[] AllClasses =
         {
@@ -106,11 +121,31 @@ namespace QuestFantasy.UI
             _root.Visible = false;
         }
 
-        public void Show(PlayerClass currentClass, int playerLevel, IReadOnlyList<string> currentEquippedSkills = null)
+        public void Show(
+            PlayerClass currentClass,
+            int playerLevel,
+            IReadOnlyList<string> currentEquippedSkills = null,
+            int totalAtk = 0,
+            int totalDef = 0,
+            int totalSpd = 0,
+            int totalHp = 0,
+            int allocatedAtk = 0,
+            int allocatedDef = 0,
+            int allocatedSpd = 0,
+            int allocatedVit = 0)
         {
             _currentClass = currentClass;
             _selectedClass = currentClass;
             _playerLevel = playerLevel;
+            SetStatState(
+                totalAtk,
+                totalDef,
+                totalSpd,
+                totalHp,
+                allocatedAtk,
+                allocatedDef,
+                allocatedSpd,
+                allocatedVit);
 
             _equippedSkillIds.Clear();
             if (currentEquippedSkills != null)
@@ -130,6 +165,7 @@ namespace QuestFantasy.UI
             }
             RefreshCardHighlights();
             SwitchTab(0);
+            SetInteractionButtonSuppressed(true);
             _root.Visible = true;
         }
 
@@ -139,6 +175,13 @@ namespace QuestFantasy.UI
             {
                 _root.Visible = false;
             }
+
+            SetInteractionButtonSuppressed(false);
+        }
+
+        public override void _ExitTree()
+        {
+            SetInteractionButtonSuppressed(false);
         }
 
         // ── Layout ────────────────────────────────────────────────────────
@@ -186,6 +229,11 @@ namespace QuestFantasy.UI
             _tabSkillsBtn.Connect("pressed", this, nameof(OnTabPressed), new Godot.Collections.Array { 1 });
             tabsBox.AddChild(_tabSkillsBtn);
 
+            _tabStatsBtn = CreateStyledButton("📈 Attributes", TabNormal, TabSelected);
+            _tabStatsBtn.SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill;
+            _tabStatsBtn.Connect("pressed", this, nameof(OnTabPressed), new Godot.Collections.Array { 2 });
+            tabsBox.AddChild(_tabStatsBtn);
+
             _classTabContent = new Control();
             _classTabContent.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
             _classTabContent.MarginTop = 50f;
@@ -197,8 +245,15 @@ namespace QuestFantasy.UI
             _skillTabContent.Visible = false;
             panel.AddChild(_skillTabContent);
 
+            _statsTabContent = new Control();
+            _statsTabContent.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
+            _statsTabContent.MarginTop = 50f;
+            _statsTabContent.Visible = false;
+            panel.AddChild(_statsTabContent);
+
             BuildClassTabContent();
             BuildSkillTabContent();
+            BuildStatsTabContent();
         }
 
         private void BuildClassTabContent()
@@ -312,6 +367,94 @@ namespace QuestFantasy.UI
             saveBtn.RectMinSize = new Vector2(142f, 42f);
             saveBtn.Connect("pressed", this, nameof(OnSaveLoadoutPressed));
             _skillTabContent.AddChild(saveBtn);
+        }
+
+        private void BuildStatsTabContent()
+        {
+            var header = new VBoxContainer();
+            header.SetAnchorsAndMarginsPreset(Control.LayoutPreset.TopWide);
+            header.MarginLeft = 48f;
+            header.MarginRight = -48f;
+            header.MarginTop = 16f;
+            header.MarginBottom = 88f;
+            header.AddConstantOverride("separation", 6);
+            _statsTabContent.AddChild(header);
+
+            _availableStatPointsLabel = MakeLabel("Available Points: 0", 28f, HeaderColor, center: true);
+            header.AddChild(_availableStatPointsLabel);
+
+            var statsPanel = new Panel();
+            statsPanel.SetAnchorsAndMarginsPreset(Control.LayoutPreset.TopWide);
+            statsPanel.MarginLeft = 145f;
+            statsPanel.MarginRight = -145f;
+            statsPanel.MarginTop = 105f;
+            statsPanel.MarginBottom = 360f;
+            statsPanel.AddStyleboxOverride("panel", MakeCardStyle(CardBgNormal, CardBorderNormal));
+            _statsTabContent.AddChild(statsPanel);
+
+            var rowsBox = new VBoxContainer();
+            rowsBox.SetAnchorsAndMarginsPreset(Control.LayoutPreset.Wide);
+            rowsBox.MarginLeft = 18f;
+            rowsBox.MarginRight = -18f;
+            rowsBox.MarginTop = 18f;
+            rowsBox.MarginBottom = -18f;
+            rowsBox.AddConstantOverride("separation", 10);
+            statsPanel.AddChild(rowsBox);
+
+            AddStatAllocationRow(rowsBox, "atk", "ATK", "Damage");
+            AddStatAllocationRow(rowsBox, "def", "DEF", "Defense");
+            AddStatAllocationRow(rowsBox, "spd", "SPD", "Speed");
+            AddStatAllocationRow(rowsBox, "vit", "HP", "Max HP");
+
+            float footerY = PanelHeight - FooterHeight - 50f;
+            _statResetButton = CreateStyledButton("Reset", BtnCloseBg, BtnCloseHover);
+            _statResetButton.RectPosition = new Vector2(PanelWidth / 2f - 120f, footerY);
+            _statResetButton.RectMinSize = new Vector2(112f, 42f);
+            _statResetButton.Connect("pressed", this, nameof(OnResetStatsPressed));
+            _statsTabContent.AddChild(_statResetButton);
+
+            var closeBtn = CreateStyledButton("Done", BtnCloseBg, BtnCloseHover);
+            closeBtn.RectPosition = new Vector2(PanelWidth / 2f + 8f, footerY);
+            closeBtn.RectMinSize = new Vector2(112f, 42f);
+            closeBtn.Connect("pressed", this, nameof(OnClosePressed));
+            _statsTabContent.AddChild(closeBtn);
+        }
+
+        private void AddStatAllocationRow(VBoxContainer parent, string statKey, string statName, string statDescription)
+        {
+            var row = new HBoxContainer
+            {
+                RectMinSize = new Vector2(0f, 44f),
+                SizeFlagsHorizontal = (int)Control.SizeFlags.ExpandFill,
+            };
+            row.AddConstantOverride("separation", 12);
+
+            var nameLabel = MakeLabel(statName, 42f, CardTitleColor, center: false);
+            nameLabel.RectMinSize = new Vector2(58f, 42f);
+            row.AddChild(nameLabel);
+
+            var descLabel = MakeLabel(statDescription, 42f, SubHeaderColor, center: false);
+            descLabel.RectMinSize = new Vector2(120f, 42f);
+            row.AddChild(descLabel);
+
+            var valueLabel = MakeLabel("0", 42f, HeaderColor, center: true);
+            valueLabel.RectMinSize = new Vector2(72f, 42f);
+            row.AddChild(valueLabel);
+
+            var allocationLabel = MakeLabel("+0", 42f, SkillLabelColor, center: true);
+            allocationLabel.RectMinSize = new Vector2(62f, 42f);
+            row.AddChild(allocationLabel);
+
+            var plusButton = CreateStyledButton("+", BtnConfirmBg, BtnConfirmHover);
+            plusButton.RectMinSize = new Vector2(44f, 42f);
+            plusButton.Connect("pressed", this, nameof(OnStatPlusPressed), new Godot.Collections.Array { statKey });
+            row.AddChild(plusButton);
+
+            _statValueLabels[statKey] = valueLabel;
+            _statAllocationLabels[statKey] = allocationLabel;
+            _statPlusButtons[statKey] = plusButton;
+
+            parent.AddChild(row);
         }
 
         // ── Card builder ──────────────────────────────────────────────────
@@ -477,19 +620,80 @@ namespace QuestFantasy.UI
             };
         }
 
+        private void SetStatState(
+            int totalAtk,
+            int totalDef,
+            int totalSpd,
+            int totalHp,
+            int allocatedAtk,
+            int allocatedDef,
+            int allocatedSpd,
+            int allocatedVit)
+        {
+            _statValues["atk"] = Math.Max(0, totalAtk);
+            _statValues["def"] = Math.Max(0, totalDef);
+            _statValues["spd"] = Math.Max(0, totalSpd);
+            _statValues["vit"] = Math.Max(0, totalHp);
+
+            _statAllocations["atk"] = Math.Max(0, allocatedAtk);
+            _statAllocations["def"] = Math.Max(0, allocatedDef);
+            _statAllocations["spd"] = Math.Max(0, allocatedSpd);
+            _statAllocations["vit"] = Math.Max(0, allocatedVit);
+        }
+
+        private int GetAvailableStatPoints()
+        {
+            return Math.Max(0, _playerLevel - GetSpentStatPoints());
+        }
+
+        private int GetSpentStatPoints()
+        {
+            int spent = 0;
+            foreach (int value in _statAllocations.Values)
+            {
+                spent += Math.Max(0, value);
+            }
+
+            return Math.Max(0, spent);
+        }
+
+        private void SetInteractionButtonSuppressed(bool suppressed)
+        {
+            if (_interactionButtonSuppressed == suppressed)
+            {
+                return;
+            }
+
+            _interactionButtonSuppressed = suppressed;
+            if (suppressed)
+            {
+                InteractionButtonUI.PushSuppression();
+            }
+            else
+            {
+                InteractionButtonUI.PopSuppression();
+            }
+        }
+
         // ── Signal handlers ───────────────────────────────────────────────
 
         private void SwitchTab(int tabIndex)
         {
             _classTabContent.Visible = (tabIndex == 0);
             _skillTabContent.Visible = (tabIndex == 1);
+            _statsTabContent.Visible = (tabIndex == 2);
 
             _tabClassBtn.AddStyleboxOverride("normal", MakeButtonStyle(tabIndex == 0 ? TabSelected : TabNormal));
             _tabSkillsBtn.AddStyleboxOverride("normal", MakeButtonStyle(tabIndex == 1 ? TabSelected : TabNormal));
+            _tabStatsBtn.AddStyleboxOverride("normal", MakeButtonStyle(tabIndex == 2 ? TabSelected : TabNormal));
 
             if (tabIndex == 1)
             {
                 RefreshSkillTab();
+            }
+            else if (tabIndex == 2)
+            {
+                RefreshStatsTab();
             }
         }
 
@@ -564,6 +768,62 @@ namespace QuestFantasy.UI
                 }
             }
             RefreshSkillTab();
+        }
+
+        private void OnStatPlusPressed(string statKey)
+        {
+            if (GetAvailableStatPoints() <= 0)
+            {
+                return;
+            }
+
+            bool applied = StatPointRequested?.Invoke(statKey) ?? false;
+            if (!applied)
+            {
+                return;
+            }
+
+            if (!_statValues.ContainsKey(statKey))
+            {
+                _statValues[statKey] = 0;
+            }
+
+            if (!_statAllocations.ContainsKey(statKey))
+            {
+                _statAllocations[statKey] = 0;
+            }
+
+            _statValues[statKey] += statKey == "vit" ? GameConstants.PLAYER_HP_STAT_BONUS : 1;
+            _statAllocations[statKey] += 1;
+            RefreshStatsTab();
+        }
+
+        private void OnResetStatsPressed()
+        {
+            if (GetSpentStatPoints() <= 0)
+            {
+                return;
+            }
+
+            bool reset = StatPointsResetRequested?.Invoke() ?? false;
+            if (!reset)
+            {
+                return;
+            }
+
+            foreach (string statKey in new[] { "atk", "def", "spd", "vit" })
+            {
+                int allocatedValue = _statAllocations.ContainsKey(statKey) ? _statAllocations[statKey] : 0;
+                int totalValue = _statValues.ContainsKey(statKey) ? _statValues[statKey] : 0;
+                int statBonus = statKey == "vit"
+                    ? allocatedValue * GameConstants.PLAYER_HP_STAT_BONUS
+                    : allocatedValue;
+
+                _statValues[statKey] = Math.Max(0, totalValue - statBonus);
+                _statAllocations[statKey] = 0;
+            }
+
+            RefreshStatsTab();
         }
 
         // ── Highlight refresh ─────────────────────────────────────────────
@@ -658,6 +918,41 @@ namespace QuestFantasy.UI
                     gridBox.AddChild(card);
                     _skillCardPanels[i] = card;
                 }
+            }
+        }
+
+        private void RefreshStatsTab()
+        {
+            int availablePoints = GetAvailableStatPoints();
+            if (_availableStatPointsLabel != null)
+            {
+                _availableStatPointsLabel.Text = $"Available Points: {availablePoints}";
+            }
+
+            foreach (string statKey in new[] { "atk", "def", "spd", "vit" })
+            {
+                int totalValue = _statValues.ContainsKey(statKey) ? _statValues[statKey] : 0;
+                int allocatedValue = _statAllocations.ContainsKey(statKey) ? _statAllocations[statKey] : 0;
+
+                if (_statValueLabels.ContainsKey(statKey))
+                {
+                    _statValueLabels[statKey].Text = totalValue.ToString();
+                }
+
+                if (_statAllocationLabels.ContainsKey(statKey))
+                {
+                    _statAllocationLabels[statKey].Text = $"+{allocatedValue}";
+                }
+
+                if (_statPlusButtons.ContainsKey(statKey))
+                {
+                    _statPlusButtons[statKey].Disabled = availablePoints <= 0;
+                }
+            }
+
+            if (_statResetButton != null)
+            {
+                _statResetButton.Disabled = GetSpentStatPoints() <= 0;
             }
         }
 

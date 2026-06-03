@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
+using QuestFantasy.Core.Data.Attributes;
+
 namespace QuestFantasy.Core.Data
 {
     /// <summary>
@@ -178,6 +180,44 @@ namespace QuestFantasy.Core.Data
                 default:
                     return "The all-rounder.\nCommands sword, bow, and magic freely.";
             }
+        }
+
+        /// <summary>Returns the base stats for each class before equipment and free stat points.</summary>
+        public static Abilities GetBaseAbilities(PlayerClass cls)
+        {
+            var abilities = new Abilities();
+            switch (cls)
+            {
+                case PlayerClass.Mage:
+                    abilities.Set(20, 5, 5, 5);
+                    break;
+                case PlayerClass.Archer:
+                    abilities.Set(8, 7, 13, 7);
+                    break;
+                case PlayerClass.Knight:
+                    abilities.Set(10, 10, 5, 10);
+                    break;
+                default:
+                    abilities.Set(5, 5, 5, 5);
+                    break;
+            }
+
+            return abilities;
+        }
+
+        /// <summary>Creates the runtime job descriptor used by Player attribute calculation.</summary>
+        public static Jobs CreateJob(PlayerClass cls)
+        {
+            var abilities = GetBaseAbilities(cls);
+            var job = new Jobs();
+            job.Initialize(
+                GetDisplayName(cls),
+                GetDescription(cls),
+                abilities.Atk,
+                abilities.Def,
+                abilities.Spd,
+                abilities.Vit);
+            return job;
         }
 
         /// <summary>Returns the skill names shown in the class-select UI.</summary>

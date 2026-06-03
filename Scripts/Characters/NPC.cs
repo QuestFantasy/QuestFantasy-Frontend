@@ -119,6 +119,12 @@ namespace QuestFantasy.Characters
         {
             try
             {
+                if (InteractionButtonUI.IsSuppressed)
+                {
+                    SetInRangeState(false);
+                    return;
+                }
+
                 _nearbyPlayer = ResolveNearbyPlayer();
                 if (_nearbyPlayer == null)
                 {

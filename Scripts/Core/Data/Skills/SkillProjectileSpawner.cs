@@ -250,6 +250,7 @@ namespace QuestFantasy.Core.Data.Skills
         private int _damageMax;
         private bool _isAoe;
         private float _aoeRadius;
+        private bool _isIceSpear = false;
         private Texture _projectileTexture;
         private Texture[] _flightFrames;
         private Texture[] _impactFrames;
@@ -529,10 +530,11 @@ namespace QuestFantasy.Core.Data.Skills
                 _damageMin = 5,
                 _damageMax = 9,
                 _isAoe = false,
+                _isIceSpear = true,
                 _onHitEffect = onHitEffect,
                 _onHitChance = onHitChance,
                 _projectileTexture = GD.Load<Texture>("res://Assets/SkillAnimation/ice_spear-1.png"),
-                _projectileScale = 0.3f,
+                _projectileScale = 0.22f,
                 _impactScale = 0.35f,
                 _flightFrameDuration = 0.1f,
                 _impactFrameDuration = 0.08f,
@@ -827,7 +829,31 @@ namespace QuestFantasy.Core.Data.Skills
             _impactTimer = 0f;
             _impactFrameIndex = 0;
 
-            if (_isAoe)
+            if (_isIceSpear)
+            {
+                if (directHitTarget != null)
+                {
+                    ApplyDamage(directHitTarget);
+                }
+
+                float iceAoeRadius = 50f;
+                foreach (Character enemy in EnumerateEnemyCharacters())
+                {
+                    if (enemy == null || enemy?.Attributes?.HP == null || !enemy.Attributes.HP.IsAlive)
+                        continue;
+
+                    if (enemy.GlobalPosition.DistanceTo(impactPosition) <= iceAoeRadius)
+                    {
+                        if (_onHitEffect != null)
+                        {
+                            StatusEffectHelper.TryApplyWithChance(enemy, _onHitEffect, _onHitChance);
+                        }
+                    }
+                }
+                _impactScale = 0.5f;
+                _impactFrameDuration = 0.8f;
+            }
+            else if (_isAoe)
             {
                 DamageInRadius(impactPosition, _aoeRadius);
             }
@@ -841,6 +867,10 @@ namespace QuestFantasy.Core.Data.Skills
                 _sprite.Texture = _impactFrames[0] ?? _sprite.Texture;
                 _sprite.Scale = new Vector2(_impactScale, _impactScale);
                 _sprite.Rotation = 0f;
+                if (_isIceSpear)
+                {
+                    _sprite.Modulate = new Color(1f, 1f, 1f, 0.7f);
+                }
             }
         }
 

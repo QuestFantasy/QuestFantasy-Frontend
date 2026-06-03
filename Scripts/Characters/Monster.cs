@@ -26,6 +26,28 @@ namespace QuestFantasy.Characters
 
         [Export]
         public int DropLevelOffset = 1;
+
+        [Export]
+        public float ItemDropChance = 0.5f;
+
+        [Export]
+        public int BaseHp = 40;
+
+        [Export]
+        public int HpPerLevel = 8;
+
+        [Export]
+        public int BaseAttack = 4;
+
+        [Export]
+        public float AttackPerLevel = 0.5f;
+
+        [Export]
+        public int BaseDefense = 0;
+
+        [Export]
+        public float DefensePerTenLevels = 0.5f;
+
         public int ExperienceReward { get; set; }
         public int LootGoldReward { get; set; }
 
@@ -206,9 +228,9 @@ namespace QuestFantasy.Characters
                 return;
             }
 
-            // Fixed for current assignment spec
-            Attributes.TotalAtk = 1;
-            Attributes.TotalDef = 0;
+            int referenceLevel = GetReferenceLevel();
+            Attributes.TotalAtk = GetScaledAttack(referenceLevel);
+            Attributes.TotalDef = GetScaledDefense(referenceLevel);
         }
 
         public override void TakeDamage(int damage, Character source = null)
@@ -541,9 +563,63 @@ namespace QuestFantasy.Characters
         {
             if (Attributes != null)
             {
-                Attributes.TotalAtk = 1;
-                Attributes.HP.SetMaxHPAndCurrentHP(50);
+                int referenceLevel = GetReferenceLevel();
+                Level = referenceLevel;
+                Attributes.TotalAtk = GetScaledAttack(referenceLevel);
+                Attributes.TotalDef = GetScaledDefense(referenceLevel);
+                int hp = GetScaledHp(referenceLevel);
+                Attributes.TotalVit = Mathf.Max(1, Mathf.CeilToInt(hp / 10f));
+                Attributes.HP.SetMaxHPAndCurrentHP(hp);
             }
+        }
+
+        protected virtual float HpMultiplier
+        {
+            get { return 1f; }
+        }
+
+        protected virtual float AttackMultiplier
+        {
+            get { return 1f; }
+        }
+
+        private float GetDifficultyMultiplier()
+        {
+            DifficultyLevel mapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
+            switch (mapDiff)
+            {
+                case DifficultyLevel.Easy: return 0.5f;
+                case DifficultyLevel.Normal: return 1.0f;
+                case DifficultyLevel.Hard: return 3.0f;
+                case DifficultyLevel.Nightmare: return 10.0f;
+                default: return 1.0f;
+            }
+        }
+
+        private int GetReferenceLevel()
+        {
+            int playerLevel = _player != null ? (int)_player.Level : (int)Level;
+            return Mathf.Max(1, playerLevel);
+        }
+
+        private int GetScaledHp(int referenceLevel)
+        {
+            int baseHp = Math.Max(1, BaseHp);
+            int hpPerLevel = Math.Max(0, HpPerLevel);
+            return Mathf.Max(1, Mathf.RoundToInt((baseHp + referenceLevel * hpPerLevel) * HpMultiplier * GetDifficultyMultiplier()));
+        }
+
+        private int GetScaledAttack(int referenceLevel)
+        {
+            int baseAttack = Math.Max(1, BaseAttack);
+            float attackPerLevel = Math.Max(0, AttackPerLevel);
+            return Mathf.Max(1, Mathf.RoundToInt((baseAttack + referenceLevel * attackPerLevel) * AttackMultiplier * GetDifficultyMultiplier()));
+        }
+
+        private int GetScaledDefense(int referenceLevel)
+        {
+            float baseDefense = Math.Max(0, BaseDefense) + Math.Max(0, referenceLevel / 10) * Math.Max(0, DefensePerTenLevels);
+            return Mathf.RoundToInt(baseDefense * GetDifficultyMultiplier());
         }
 
         protected virtual bool TryHandleSpecialBehavior(float delta, float distanceToPlayer)
@@ -696,7 +772,7 @@ namespace QuestFantasy.Characters
             var coinDrop = new QuestFantasy.Items.CoinDrop();
             int pLevel = _player != null ? (int)_player.Level : (int)Level;
             DifficultyLevel mapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
-            coinDrop.Initialize(pLevel, mapDiff, 0.1f, _player);
+            coinDrop.Initialize(pLevel, mapDiff, 0.3f, _player);
             coinDrop.Position = GlobalPosition + new Vector2((float)_random.NextDouble() * 40f - 20f, (float)_random.NextDouble() * 40f - 20f);
             parent.AddChild(coinDrop);
             GD.PrintS($"[Monster] Spawned Coin drop at {coinDrop.Position}");
@@ -707,88 +783,66 @@ namespace QuestFantasy.Characters
             // Find EquipmentManager early so consumable/ticket drops can match equipment scale
             var manager = FindEquipmentManager();
 
+            float itemDropChance = Mathf.Clamp(ItemDropChance, 0f, 1f);
+            if (rng.Randf() >= itemDropChance)
+            {
+                GD.PrintS("[Monster] Item drop roll failed.");
+                return;
+            }
+
+            Item itemDrop = RollSingleItemDrop(rng, manager, mapDiff);
+
+            if (itemDrop == null)
+            {
+                GD.PrintS("[Monster] Item drop roll passed, but no item was available.");
+                return;
+            }
+
+            float itemScale = manager != null ? manager.PickupSpriteScale : 0.5f;
+            var itemPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
+            LootItemFactory.SpawnPickup(parent, itemDrop, itemPos, itemScale, "monster_item");
+            GD.PrintS($"[Monster] Spawned item drop: {itemDrop.Name} at {itemPos}");
+        }
+
+        private Item RollSingleItemDrop(RandomNumberGenerator rng, EquipmentManager manager, DifficultyLevel mapDiff)
+        {
             Item potionDrop = LootItemFactory.RollPotion(rng, 0.08f);
             if (potionDrop != null)
             {
-                var potionPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
-                float scale = manager != null ? manager.PickupSpriteScale : 0.5f;
-                LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, scale, "monster_potion");
-                GD.PrintS($"[Monster] Spawned potion drop: {potionDrop.Name} at {potionPos}");
+                return potionDrop;
             }
 
             Item ticketDrop = LootItemFactory.RollTicket(rng, mapDiff, 1f);
             if (ticketDrop != null)
             {
-                var ticketPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
-                float tscale = manager != null ? manager.PickupSpriteScale : 0.5f;
-                LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, tscale, "monster_ticket");
-                GD.PrintS($"[Monster] Spawned ticket drop: {ticketDrop.Name} at {ticketPos}");
-            }
-            if (manager == null)
-            {
-                GD.PrintS("[Monster] No EquipmentManager found; skipping equipment drops.");
-                return;
+                return ticketDrop;
             }
 
-            int minD = Math.Max(0, MinDrops);
-            int maxD = Math.Max(minD, MaxDrops);
-            int drops = rng.RandiRange(minD, maxD);
-            if (drops <= 0)
+            if (manager == null)
             {
-                return;
+                GD.PrintS("[Monster] No EquipmentManager found; skipping equipment item drop.");
+                return null;
             }
 
             int playerLevel = _player != null ? (int)_player.Level : (int)Level;
-            var options = manager.GetEquipmentSet(DropOptionCount, playerLevel, DropLevelOffset);
+            var options = manager.GetEquipmentSet(Math.Max(1, DropOptionCount), playerLevel, DropLevelOffset);
             var optList = new System.Collections.Generic.List<Item>();
-            foreach (var o in options)
+            foreach (var option in options)
             {
-                if (o is Item it) optList.Add(it);
+                if (option is Item item)
+                {
+                    optList.Add(item);
+                }
             }
 
             if (optList.Count == 0)
             {
-                GD.PrintS("[Monster] No equipment options available for drops.");
-                return;
+                GD.PrintS("[Monster] No equipment options available for item drop.");
+                return null;
             }
 
-            // Shuffle
-            var shuffled = new System.Collections.Generic.List<Item>(optList);
-            for (int s = shuffled.Count - 1; s > 0; s--)
-            {
-                int j = (int)rng.RandiRange(0, s);
-                var tmp = shuffled[s];
-                shuffled[s] = shuffled[j];
-                shuffled[j] = tmp;
-            }
-
-            int take = Math.Min(drops, shuffled.Count);
-            for (int i = 0; i < take; i++)
-            {
-                var it = shuffled[i];
-                if (it == null) continue;
-
-                var pickup = new EquipmentPickup();
-                pickup.ItemData = it;
-                // Try to use manager configured pickup scale
-                pickup.SpriteScale = manager.PickupSpriteScale;
-                var offset = new Vector2(rng.Randf() * 120f - 60f, rng.Randf() * 120f - 60f);
-                pickup.Position = GlobalPosition + offset;
-
-                string baseName = "equipment";
-                var spriteTex = (it is Equipment pe) ? pe.Sprite : (it is Weapon pw ? pw.Sprite : null);
-                if (spriteTex != null)
-                {
-                    var rp = spriteTex.ResourcePath;
-                    if (!string.IsNullOrEmpty(rp))
-                    {
-                        baseName = System.IO.Path.GetFileNameWithoutExtension(rp).Replace(' ', '_');
-                    }
-                }
-                pickup.Name = $"Pickup_{baseName}_monster_{i}";
-                parent.AddChild(pickup);
-                GD.PrintS($"[Monster] Spawned drop: {pickup.Name} at {pickup.Position}");
-            }
+            int index = rng.RandiRange(0, optList.Count - 1);
+            return optList[index];
         }
 
         private EquipmentManager FindEquipmentManager()

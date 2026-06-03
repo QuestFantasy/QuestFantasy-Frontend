@@ -55,6 +55,7 @@ namespace QuestFantasy.Characters
         private PlayerEquipmentSystem _equipmentSystem;
         private PlayerAnimationConfig _animationConfig;
         private PlayerConfigValidator.PlayerConfig _playerConfig;
+        private readonly Abilities _allocatedStatPoints = new Abilities();
 
         // Death state
         private Texture _deadTexture;
@@ -73,6 +74,12 @@ namespace QuestFantasy.Characters
         public int Gold => _inventorySystem?.Gold ?? 0;
         public Weapon EquippedWeapon => _equipmentSystem?.EquippedWeapon;
         public EquippedItems EquippedItems => _equipmentSystem?.EquippedItems;
+        public int AllocatedAtkPoints => _allocatedStatPoints.Atk;
+        public int AllocatedDefPoints => _allocatedStatPoints.Def;
+        public int AllocatedSpdPoints => _allocatedStatPoints.Spd;
+        public int AllocatedVitPoints => _allocatedStatPoints.Vit;
+        public int SpentStatPoints => _allocatedStatPoints.GetTotal();
+        public int AvailableStatPoints => Math.Max(0, (int)Math.Max(1, Level) - SpentStatPoints);
 
         // Events - delegated from subsystems
         public event Action<int> OnExperienceChanged;
@@ -80,6 +87,7 @@ namespace QuestFantasy.Characters
         public event Action<Item> OnInventoryChanged;
         public event Action<int> OnLevelChanged;
         public event Action<int, int> OnHpChanged;
+        public event Action OnStatPointsChanged;
         public event Action OnDied;
         public event Action<Vector2, string> OnRoomEntered;
 
@@ -214,11 +222,8 @@ namespace QuestFantasy.Characters
             _deadTexture = GD.Load<Texture>("res://Assets/Characters/adventurer/down.png");
             _hitTexture = GD.Load<Texture>("res://Assets/Characters/adventurer/hit.png");
 
-            // Set stats according to requirements
-            if (Attributes != null)
-            {
-                Attributes.TotalAtk = 1;
-            }
+            ApplyClassStats(PlayerClass);
+            UpdateAttributes();
 
             Update();
         }
@@ -289,12 +294,52 @@ namespace QuestFantasy.Characters
             }
 
             var jobBonuses = CurrentJob?.BaseAbilities ?? new Abilities();
-            var equipmentBonuses = _equipmentSystem?.GetAllEquipmentBonuses() ?? new Abilities();
+            var equipmentBonuses = GetClassAdjustedEquipmentBonuses();
 
-            Attributes.TotalAtk = jobBonuses.Atk + equipmentBonuses.Atk;
-            Attributes.TotalDef = jobBonuses.Def + equipmentBonuses.Def;
-            Attributes.TotalSpd = jobBonuses.Spd + equipmentBonuses.Spd;
-            Attributes.TotalVit = jobBonuses.Vit + equipmentBonuses.Vit;
+            int totalAtk = jobBonuses.Atk + equipmentBonuses.Atk + _allocatedStatPoints.Atk;
+            int totalDef = jobBonuses.Def + equipmentBonuses.Def + _allocatedStatPoints.Def;
+            int totalSpd = jobBonuses.Spd + equipmentBonuses.Spd + _allocatedStatPoints.Spd;
+            int totalVit = jobBonuses.Vit + equipmentBonuses.Vit + _allocatedStatPoints.Vit;
+
+            Attributes.Update(totalAtk, totalDef, totalSpd, totalVit);
+        }
+
+        private Abilities GetClassAdjustedEquipmentBonuses()
+        {
+            var bonuses = _equipmentSystem?.GetAllEquipmentBonuses() ?? new Abilities();
+            Weapon weapon = EquippedWeapon;
+            if (weapon?.WeaponAbilities == null || !IsPreferredWeaponForClass(PlayerClass, weapon.WeaponType))
+            {
+                return bonuses;
+            }
+
+            float extraRate = GameConstants.PLAYER_CLASS_WEAPON_MATCH_MULTIPLIER - 1f;
+            bonuses.Atk += Mathf.RoundToInt(weapon.WeaponAbilities.Atk * extraRate);
+            bonuses.Def += Mathf.RoundToInt(weapon.WeaponAbilities.Def * extraRate);
+            bonuses.Spd += Mathf.RoundToInt(weapon.WeaponAbilities.Spd * extraRate);
+            bonuses.Vit += Mathf.RoundToInt(weapon.WeaponAbilities.Vit * extraRate);
+            return bonuses;
+        }
+
+        private static bool IsPreferredWeaponForClass(PlayerClass cls, WeaponType weaponType)
+        {
+            switch (cls)
+            {
+                case PlayerClass.Archer:
+                    return weaponType == WeaponType.Bow;
+                case PlayerClass.Knight:
+                    return weaponType == WeaponType.Sword;
+                case PlayerClass.Mage:
+                    return weaponType == WeaponType.Staff;
+                default:
+                    return false;
+            }
+        }
+
+        private float GetEffectiveMoveSpeed()
+        {
+            int speedStat = Attributes?.TotalSpd ?? 0;
+            return Mathf.Max(1f, MoveSpeed + speedStat * SpeedMultiplier);
         }
 
         public override void TakeDamage(int damage, Character source = null)
@@ -314,7 +359,13 @@ namespace QuestFantasy.Characters
 
             _damageCooldownFrames = 6; // 0.1 seconds at 60 FPS processing
 
-            base.TakeDamage(damage, source);
+            int finalDamage = damage;
+            if (source != null && Attributes != null)
+            {
+                finalDamage = Mathf.Max(1, damage - Mathf.FloorToInt(Attributes.EffectiveDef * GameConstants.DEFENSE_DAMAGE_REDUCTION_FACTOR));
+            }
+
+            base.TakeDamage(finalDamage, source);
             if (!_isDead && Attributes?.HP != null && Attributes.HP.IsAlive)
             {
                 _animationController?.PlayHitAnimation(_hitTexture, 0.2f);
@@ -388,14 +439,22 @@ namespace QuestFantasy.Characters
                 _map,
                 movementInput,
                 GetCollisionBodySizePixels(),
-                MoveSpeed,
+                GetEffectiveMoveSpeed(),
                 delta);
 
             // 2. Handle animations
             _animationController.Update(movementInput, delta);
 
             // 3. Handle combat and skills
-            _combatController.HandleSkillInput(this, _map);
+            if (_map.CombatEnabled)
+            {
+                _combatController.HandleSkillInput(this, _map);
+            }
+            else
+            {
+                _inputHandler.ConsumeUiSkillActivation();
+                _inputHandler.ConsumeSkillActivationInput();
+            }
 
             // 4. Handle environmental interactions
             if (_map.HasNearbyBox(Position, out Vector2 boxWorld))
@@ -445,8 +504,24 @@ namespace QuestFantasy.Characters
             _animationController?.Revive();
             _respawnInvincibilityTimer = 3.0f;
             Modulate = new Color(1f, 0.9f, 0.4f, 1f);
+            EffectManager?.Clear(this);
             GD.Print("[Player] Respawned");
             Update();
+        }
+
+        public void RestoreFullHp()
+        {
+            if (Attributes?.HP == null)
+            {
+                return;
+            }
+
+            _isDead = false;
+            int maxHp = Attributes.HP.MaxHP;
+            Attributes.HP.SetMaxHPAndCurrentHP(maxHp, maxHp);
+            _animationController?.Revive();
+            Modulate = new Color(1f, 1f, 1f, 1f);
+            EffectManager?.Clear(this);
         }
 
         public void SetLevel(int level)
@@ -461,6 +536,87 @@ namespace QuestFantasy.Characters
             OnLevelChanged?.Invoke(normalized);
         }
 
+        public bool AllocateStatPoint(string statKey)
+        {
+            if (AvailableStatPoints <= 0)
+            {
+                return false;
+            }
+
+            bool allocatedVit = false;
+            int previousMaxHp = Attributes?.HP?.MaxHP ?? 0;
+            int previousCurrentHp = Attributes?.HP?.CurrentHP ?? 0;
+            switch ((statKey ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "atk":
+                    _allocatedStatPoints.Atk += 1;
+                    break;
+                case "def":
+                    _allocatedStatPoints.Def += 1;
+                    break;
+                case "spd":
+                    _allocatedStatPoints.Spd += 1;
+                    break;
+                case "vit":
+                    _allocatedStatPoints.Vit += 1;
+                    allocatedVit = true;
+                    break;
+                default:
+                    GD.PrintErr($"[Player] Unknown stat allocation key: {statKey}");
+                    return false;
+            }
+
+            UpdateAttributes();
+            if (allocatedVit && Attributes?.HP != null)
+            {
+                int gainedHp = Math.Max(0, Attributes.HP.MaxHP - previousMaxHp);
+                if (gainedHp > 0)
+                {
+                    Attributes.HP.SetMaxHPAndCurrentHP(Attributes.HP.MaxHP, previousCurrentHp + gainedHp);
+                }
+            }
+
+            OnStatPointsChanged?.Invoke();
+            return true;
+        }
+
+        public void ApplyStatAllocations(int atk, int def, int spd, int vit)
+        {
+            int remaining = Math.Max(1, (int)Math.Max(1, Level));
+            _allocatedStatPoints.Atk = ConsumeStatAllocation(Math.Max(0, atk), ref remaining);
+            _allocatedStatPoints.Def = ConsumeStatAllocation(Math.Max(0, def), ref remaining);
+            _allocatedStatPoints.Spd = ConsumeStatAllocation(Math.Max(0, spd), ref remaining);
+            _allocatedStatPoints.Vit = ConsumeStatAllocation(Math.Max(0, vit), ref remaining);
+
+            UpdateAttributes();
+            OnStatPointsChanged?.Invoke();
+        }
+
+        public bool ResetStatAllocations()
+        {
+            if (SpentStatPoints <= 0)
+            {
+                return false;
+            }
+
+            _allocatedStatPoints.Atk = 0;
+            _allocatedStatPoints.Def = 0;
+            _allocatedStatPoints.Spd = 0;
+            _allocatedStatPoints.Vit = 0;
+
+            UpdateAttributes();
+
+            OnStatPointsChanged?.Invoke();
+            return true;
+        }
+
+        private static int ConsumeStatAllocation(int requested, ref int remaining)
+        {
+            int applied = Math.Min(requested, Math.Max(0, remaining));
+            remaining -= applied;
+            return applied;
+        }
+
         public void ApplyProfile(PlayerProfileSnapshot snapshot)
         {
             if (snapshot == null)
@@ -469,6 +625,11 @@ namespace QuestFantasy.Characters
             }
 
             SetLevel(snapshot.Level);
+            ApplyStatAllocations(
+                snapshot.StatAtkPoints,
+                snapshot.StatDefPoints,
+                snapshot.StatSpdPoints,
+                snapshot.StatVitPoints);
             Attributes?.HP?.SetMaxHPAndCurrentHP(snapshot.HpMax, snapshot.HpCurrent);
             _inventorySystem?.SetSnapshot(snapshot.Experience, snapshot.Gold);
 
@@ -542,6 +703,10 @@ namespace QuestFantasy.Characters
                 Gold = Gold,
                 HpMax = Attributes?.HP?.MaxHP ?? 100,
                 HpCurrent = Attributes?.HP?.CurrentHP ?? 100,
+                StatAtkPoints = _allocatedStatPoints.Atk,
+                StatDefPoints = _allocatedStatPoints.Def,
+                StatSpdPoints = _allocatedStatPoints.Spd,
+                StatVitPoints = _allocatedStatPoints.Vit,
                 Skills = GetSkillSnapshots().ToList(),
                 InventoryItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Inventory?.Items),
                 DiscardedItems = PlayerItemSnapshotCodec.EncodeMany(_inventorySystem?.Discarded?.Items),
@@ -572,11 +737,18 @@ namespace QuestFantasy.Characters
                     continue;
                 }
 
+                float cdr = 0f;
+                if (Attributes != null)
+                {
+                    float spd = (float)Attributes.TotalSpd;
+                    cdr = 0.9f * (spd * spd) / (spd * spd + 5000f);
+                }
+
                 result.Add(new PlayerSkillSnapshot
                 {
                     SkillId = ResolveSkillId(skill),
                     Name = skill.Name,
-                    CooldownSeconds = skill.GetCooldownDuration(),
+                    CooldownSeconds = skill.GetCooldownDuration() * (1f - cdr),
                     RemainingCooldownSeconds = skill.CoolDown.RemainingTime,
                     DisplayOrder = i,
                 });
@@ -817,6 +989,7 @@ namespace QuestFantasy.Characters
         public void SetClass(PlayerClass cls, bool rebuildSkills = true)
         {
             PlayerClass = cls;
+            ApplyClassStats(cls);
             GD.Print($"[Player] Class changed to {PlayerClassData.GetDisplayName(cls)}");
 
             ApplyClassSprites(cls);
@@ -826,8 +999,14 @@ namespace QuestFantasy.Characters
                 ApplyClassSkills(cls);
             }
 
+            UpdateAttributes();
             OnClassChanged?.Invoke(cls);
             Update();
+        }
+
+        private void ApplyClassStats(PlayerClass cls)
+        {
+            CurrentJob = PlayerClassData.CreateJob(cls);
         }
 
         /// <summary>

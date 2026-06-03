@@ -12,6 +12,16 @@ namespace QuestFantasy.Characters
         private const float BurnDurationSeconds = 15f;
         private const float BurnDamageMultiplier = 0.5f;
 
+        protected override float HpMultiplier
+        {
+            get { return 0.85f; }
+        }
+
+        protected override float AttackMultiplier
+        {
+            get { return 0.9f; }
+        }
+
         protected override void LoadTextures()
         {
             _standTexture = GD.Load<Texture>("res://Assets/FireMonster/fire_slime_stand.png");

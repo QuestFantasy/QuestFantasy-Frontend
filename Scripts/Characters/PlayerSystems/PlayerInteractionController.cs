@@ -43,6 +43,11 @@ namespace QuestFantasy.Characters.PlayerSystems
         /// </summary>
         public void HandleInteractionInput(Map map, Vector2 playerPosition)
         {
+            if (InteractionButtonUI.IsSuppressed)
+            {
+                return;
+            }
+
             bool keyPressed = _inputHandler.IsInteractPressed();
             bool buttonPressed = InteractionButtonUI.IsPressed();
 

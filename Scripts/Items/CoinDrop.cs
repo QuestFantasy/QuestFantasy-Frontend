@@ -40,10 +40,10 @@ namespace QuestFantasy.Items
             float difficultyMultiplier = 1f;
             switch (difficulty)
             {
-                case DifficultyLevel.Easy: difficultyMultiplier = 0.5f; break;
+                case DifficultyLevel.Easy: difficultyMultiplier = 0.75f; break;
                 case DifficultyLevel.Normal: difficultyMultiplier = 1.0f; break;
-                case DifficultyLevel.Hard: difficultyMultiplier = 5.0f; break;
-                case DifficultyLevel.Nightmare: difficultyMultiplier = 20.0f; break;
+                case DifficultyLevel.Hard: difficultyMultiplier = 2.0f; break;
+                case DifficultyLevel.Nightmare: difficultyMultiplier = 4.0f; break;
             }
 
             var rng = new RandomNumberGenerator();
