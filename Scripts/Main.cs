@@ -10,7 +10,7 @@ using QuestFantasy.UI;
 public class Main : Node2D
 {
 
-    [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public string BackendBaseUrl = BackendDefaults.BackendBaseUrl;
     [Export] public bool EnableMobileInputUI = true; // Force enable virtual D-pad for testing
 
     private AuthFlowController _authFlowController;

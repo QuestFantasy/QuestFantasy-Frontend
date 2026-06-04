@@ -8,7 +8,7 @@ using Godot;
 /// </summary>
 public class AuthFlowController : Node
 {
-    [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public string BackendBaseUrl = BackendDefaults.BackendBaseUrl;
 
     public event Action Authenticated;
     public event Action LoggedOut;
