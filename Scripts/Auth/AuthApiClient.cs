@@ -251,7 +251,7 @@ public class AuthApiClient : Node
         BuyMarketplaceListing
     }
 
-    [Export] public string BackendBaseUrl = "http://127.0.0.1:8000";
+    [Export] public string BackendBaseUrl = BackendDefaults.BackendBaseUrl;
     [Export] public bool OfflineMode = false;
 
     private HTTPRequest _request;
