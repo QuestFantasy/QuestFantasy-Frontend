@@ -769,19 +769,83 @@ namespace QuestFantasy.Characters
             parent.AddChild(expPickup);
             GD.PrintS($"[Monster] Spawned EXP drop at {expPickup.Position}");
 
+            DifficultyLevel mapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
+            int playerLevel = _player != null ? (int)_player.Level : (int)Level;
+            var manager = FindEquipmentManager();
+
+            if (Main.Instance != null)
+            {
+                string token = Main.Instance.GetAuthToken();
+                if (Main.Instance.PlayerDataApiClient != null && !string.IsNullOrEmpty(token))
+                {
+                    Main.Instance.PlayerDataApiClient.GenerateDrops(token, playerLevel, "monster", mapDiff.ToString(), result => {
+                        if (result.NetworkOk && result.ResponseCode == 200 && result.ArrayData != null)
+                        {
+                            SpawnServerDrops(parent, GlobalPosition, manager, result.ArrayData);
+                        }
+                        else
+                        {
+                            GD.PrintErr("[Monster] Failed to generate secure drops from server. Falling back to local generation...");
+                            SpawnLocalDrops(parent, GlobalPosition, manager, mapDiff);
+                        }
+                    });
+                    return;
+                }
+            }
+
+            SpawnLocalDrops(parent, GlobalPosition, manager, mapDiff);
+        }
+
+        private void SpawnServerDrops(Node parent, Vector2 centerPosition, EquipmentManager manager, Godot.Collections.Array drops)
+        {
+            var rng = new RandomNumberGenerator();
+            rng.Randomize();
+
+            for (int i = 0; i < drops.Count; i++)
+            {
+                if (!(drops[i] is Godot.Collections.Dictionary drop))
+                {
+                    continue;
+                }
+
+                string instanceId = drop.Contains("instance_id") ? drop["instance_id"]?.ToString() : string.Empty;
+                string itemType = drop.Contains("item_type") ? drop["item_type"]?.ToString() : string.Empty;
+
+                if (itemType == "gold")
+                {
+                    int goldAmount = drop.Contains("gold_amount") ? Convert.ToInt32(drop["gold_amount"]) : 0;
+                    var coinDrop = new QuestFantasy.Items.CoinDrop();
+                    coinDrop.InitializeSecure(instanceId, goldAmount, _player);
+                    coinDrop.Position = centerPosition + new Vector2(rng.Randf() * 40f - 20f, rng.Randf() * 40f - 20f);
+                    parent.AddChild(coinDrop);
+                    GD.PrintS($"[Monster] Spawned Secure Coin drop of value {goldAmount} at {coinDrop.Position}");
+                }
+                else if (drop.Contains("item_data") && drop["item_data"] is Godot.Collections.Dictionary itemDataDict)
+                {
+                    itemDataDict["instance_id"] = instanceId;
+                    Item item = PlayerItemSnapshotCodec.Decode(itemDataDict);
+                    if (item != null)
+                    {
+                        float pscale = manager != null ? manager.PickupSpriteScale : 0.5f;
+                        var itemPos = centerPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
+                        LootItemFactory.SpawnPickup(parent, item, itemPos, pscale, "secure_monster");
+                        GD.PrintS($"[Monster] Spawned secure pickup: {item.Name} at {itemPos}");
+                    }
+                }
+            }
+        }
+
+        private void SpawnLocalDrops(Node parent, Vector2 centerPosition, EquipmentManager manager, DifficultyLevel mapDiff)
+        {
             var coinDrop = new QuestFantasy.Items.CoinDrop();
             int pLevel = _player != null ? (int)_player.Level : (int)Level;
-            DifficultyLevel mapDiff = _map != null ? _map.Difficulty : DifficultyLevel.Normal;
             coinDrop.Initialize(pLevel, mapDiff, 0.3f, _player);
-            coinDrop.Position = GlobalPosition + new Vector2((float)_random.NextDouble() * 40f - 20f, (float)_random.NextDouble() * 40f - 20f);
+            coinDrop.Position = centerPosition + new Vector2((float)_random.NextDouble() * 40f - 20f, (float)_random.NextDouble() * 40f - 20f);
             parent.AddChild(coinDrop);
             GD.PrintS($"[Monster] Spawned Coin drop at {coinDrop.Position}");
 
             var rng = new RandomNumberGenerator();
             rng.Randomize();
-
-            // Find EquipmentManager early so consumable/ticket drops can match equipment scale
-            var manager = FindEquipmentManager();
 
             float itemDropChance = Mathf.Clamp(ItemDropChance, 0f, 1f);
             if (rng.Randf() >= itemDropChance)
@@ -791,7 +855,6 @@ namespace QuestFantasy.Characters
             }
 
             Item itemDrop = RollSingleItemDrop(rng, manager, mapDiff);
-
             if (itemDrop == null)
             {
                 GD.PrintS("[Monster] Item drop roll passed, but no item was available.");
@@ -799,7 +862,7 @@ namespace QuestFantasy.Characters
             }
 
             float itemScale = manager != null ? manager.PickupSpriteScale : 0.5f;
-            var itemPos = GlobalPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
+            var itemPos = centerPosition + new Vector2(rng.Randf() * 100f - 50f, rng.Randf() * 100f - 50f);
             LootItemFactory.SpawnPickup(parent, itemDrop, itemPos, itemScale, "monster_item");
             GD.PrintS($"[Monster] Spawned item drop: {itemDrop.Name} at {itemPos}");
         }

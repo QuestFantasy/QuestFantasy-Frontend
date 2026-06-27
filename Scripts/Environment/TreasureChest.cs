@@ -111,33 +111,90 @@ public class TreasureChest : Node
     // Returns the list of spawned EquipmentPickup nodes.
     public Godot.Collections.Array OpenChest(Node parent, Vector2 centerPosition, EquipmentManager manager, int playerLevel)
     {
-        var spawned = new Godot.Collections.Array();
-        if (manager == null || parent == null)
-            return spawned;
+        DifficultyLevel mapDiff = DifficultyLevel.Normal;
+        if (parent is Map parentMap) mapDiff = parentMap.Difficulty;
 
+        if (Main.Instance != null)
+        {
+            string token = Main.Instance.GetAuthToken();
+            if (Main.Instance.PlayerDataApiClient != null && !string.IsNullOrEmpty(token))
+            {
+                Main.Instance.PlayerDataApiClient.GenerateDrops(token, playerLevel, "chest", mapDiff.ToString(), result => {
+                    if (result.NetworkOk && result.ResponseCode == 200 && result.ArrayData != null)
+                    {
+                        SpawnServerDrops(parent, centerPosition, manager, result.ArrayData);
+                    }
+                    else
+                    {
+                        GD.PrintErr("[TreasureChest] Failed to generate secure drops from server. Falling back to local generation...");
+                        SpawnLocalDrops(parent, centerPosition, manager, playerLevel, mapDiff);
+                    }
+                });
+                return new Godot.Collections.Array();
+            }
+        }
+
+        SpawnLocalDrops(parent, centerPosition, manager, playerLevel, mapDiff);
+        return new Godot.Collections.Array();
+    }
+
+    private void SpawnServerDrops(Node parent, Vector2 centerPosition, EquipmentManager manager, Godot.Collections.Array drops)
+    {
+        var rng = new RandomNumberGenerator();
+        rng.Randomize();
+
+        for (int i = 0; i < drops.Count; i++)
+        {
+            if (!(drops[i] is Godot.Collections.Dictionary drop))
+            {
+                continue;
+            }
+
+            string instanceId = drop.Contains("instance_id") ? drop["instance_id"]?.ToString() : string.Empty;
+            string itemType = drop.Contains("item_type") ? drop["item_type"]?.ToString() : string.Empty;
+
+            if (itemType == "gold")
+            {
+                int goldAmount = drop.Contains("gold_amount") ? Convert.ToInt32(drop["gold_amount"]) : 0;
+                var player = FindPlayerRecursive(parent);
+                var coinDrop = new QuestFantasy.Items.CoinDrop();
+                coinDrop.InitializeSecure(instanceId, goldAmount, player);
+                coinDrop.Position = centerPosition + new Vector2(rng.Randf() * 40f - 20f, rng.Randf() * 40f - 20f);
+                parent.AddChild(coinDrop);
+                GD.PrintS($"[TreasureChest] Spawned Secure Coin drop of value {goldAmount} at {coinDrop.Position}");
+            }
+            else if (drop.Contains("item_data") && drop["item_data"] is Godot.Collections.Dictionary itemDataDict)
+            {
+                itemDataDict["instance_id"] = instanceId;
+                Item item = PlayerItemSnapshotCodec.Decode(itemDataDict);
+                if (item != null)
+                {
+                    float pscale = manager != null ? manager.PickupSpriteScale : 0.5f;
+                    var offset = new Vector2(rng.Randf() * 200f - 100f, rng.Randf() * 200f - 100f);
+                    var itemPos = centerPosition + offset;
+                    LootItemFactory.SpawnPickup(parent, item, itemPos, pscale, "secure_chest");
+                    GD.PrintS($"[TreasureChest] Spawned secure pickup: {item.Name} at {itemPos}");
+                }
+            }
+        }
+    }
+
+    private void SpawnLocalDrops(Node parent, Vector2 centerPosition, EquipmentManager manager, int playerLevel, DifficultyLevel mapDiff)
+    {
         int minD = Math.Max(0, MinDrops);
         int maxD = Math.Max(minD, MaxDrops);
-        // Use RandomNumberGenerator to avoid casting overflow from GD.Randi
         var rng = new RandomNumberGenerator();
         rng.Randomize();
         int drops = rng.RandiRange(minD, maxD);
 
-        GD.PrintS($"[TreasureChest] drop range min={minD} max={maxD} -> drops={drops}");
-
-        // Use the provided manager to get equipment options (avoid relying on _manager field)
-        var options = manager.GetEquipmentSet(OptionCount, playerLevel, LevelOffset);
-        GD.PrintS($"[TreasureChest] Opening chest: drops={drops}, options={options.Count}");
-
-        // Convert options to a typed list
+        var options = manager != null ? manager.GetEquipmentSet(OptionCount, playerLevel, LevelOffset) : new System.Collections.Generic.List<Item>();
         var optList = new System.Collections.Generic.List<object>();
         foreach (var o in options)
         {
             optList.Add(o);
         }
 
-        // Shuffle optList and take unique items up to available count
         var shuffled = new System.Collections.Generic.List<object>(optList);
-        // Fisher-Yates shuffle
         for (int s = shuffled.Count - 1; s > 0; s--)
         {
             int j = rng.RandiRange(0, s);
@@ -155,11 +212,10 @@ public class TreasureChest : Node
 
             var pickup = new EquipmentPickup();
             pickup.ItemData = it;
-            pickup.SpriteScale = manager.PickupSpriteScale;
+            pickup.SpriteScale = manager != null ? manager.PickupSpriteScale : 0.1f;
             var offset = new Vector2(rng.Randf() * 200f - 100f, rng.Randf() * 200f - 100f);
             pickup.Position = centerPosition + offset;
 
-            // deterministic node name based on sprite/resource name
             string baseName = "equipment";
             var spriteTex = (pickup.ItemData is QuestFantasy.Core.Data.Items.Equipment pe) ? pe.Sprite : (pickup.ItemData is QuestFantasy.Core.Data.Items.Weapon pw ? pw.Sprite : null);
             if (spriteTex != null)
@@ -172,16 +228,7 @@ public class TreasureChest : Node
             }
             pickup.Name = $"Pickup_{baseName}_{i}";
             parent.AddChild(pickup);
-            spawned.Add(pickup);
-            GD.PrintS($"[TreasureChest] Spawned pickup: {pickup.Name} at {pickup.Position}");
-            if (pickup.ItemData == null || (pickup.ItemData is QuestFantasy.Core.Data.Items.Equipment e2 && e2.Sprite == null) || (pickup.ItemData is QuestFantasy.Core.Data.Items.Weapon w2 && w2.Sprite == null))
-            {
-                GD.PrintS($"[TreasureChest] WARNING: pickup {pickup.Name} has no sprite or item is null");
-            }
         }
-
-        DifficultyLevel mapDiff = DifficultyLevel.Normal;
-        if (parent is Map parentMap) mapDiff = parentMap.Difficulty;
 
         Item potionDrop = LootItemFactory.RollPotion(rng, 0.18f);
         if (potionDrop != null)
@@ -189,7 +236,6 @@ public class TreasureChest : Node
             var potionPos = centerPosition + new Vector2(rng.Randf() * 180f - 90f, rng.Randf() * 180f - 90f);
             float pscale = manager != null ? manager.PickupSpriteScale : 0.5f;
             LootItemFactory.SpawnPickup(parent, potionDrop, potionPos, pscale, "chest_potion");
-            GD.PrintS($"[TreasureChest] Spawned potion drop: {potionDrop.Name} at {potionPos}");
         }
 
         Item ticketDrop = LootItemFactory.RollTicket(rng, mapDiff, 2f);
@@ -198,17 +244,12 @@ public class TreasureChest : Node
             var ticketPos = centerPosition + new Vector2(rng.Randf() * 180f - 90f, rng.Randf() * 180f - 90f);
             float tscale = manager != null ? manager.PickupSpriteScale : 0.5f;
             LootItemFactory.SpawnPickup(parent, ticketDrop, ticketPos, tscale, "chest_ticket");
-            GD.PrintS($"[TreasureChest] Spawned ticket drop: {ticketDrop.Name} at {ticketPos}");
         }
 
-        // Spawn CoinDrop
         var player = FindPlayerRecursive(parent);
         var coinDrop = new QuestFantasy.Items.CoinDrop();
         coinDrop.Initialize(playerLevel, mapDiff, 1.0f, player);
         coinDrop.Position = centerPosition + new Vector2(rng.Randf() * 40f - 20f, rng.Randf() * 40f - 20f);
         parent.AddChild(coinDrop);
-        GD.PrintS($"[TreasureChest] Spawned Coin drop at {coinDrop.Position}");
-
-        return spawned;
     }
 }

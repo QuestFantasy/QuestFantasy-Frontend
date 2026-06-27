@@ -24,11 +24,23 @@ namespace QuestFantasy.Items
         private const float FrameDuration = 0.05f;
         private int _currentFrame = 0;
 
+        public string InstanceId { get; set; } = string.Empty;
+        public int Value => _value;
+
         public void Initialize(int playerLevel, DifficultyLevel difficulty, float entityMultiplier, Player player, float spawnDelay = 0f)
         {
             _player = player;
             _spawnTimer = spawnDelay;
             CalculateValue(playerLevel, difficulty, entityMultiplier);
+        }
+
+        public void InitializeSecure(string instanceId, int value, Player player, float spawnDelay = 0f)
+        {
+            _player = player;
+            _spawnTimer = spawnDelay;
+            InstanceId = instanceId;
+            _value = value;
+            GD.Print($"[CoinDrop] Securely initialized coin value: {_value} (ID: {InstanceId})");
         }
 
         private void CalculateValue(int playerLevel, DifficultyLevel difficulty, float entityMultiplier)
@@ -112,6 +124,11 @@ namespace QuestFantasy.Items
                     {
                         // Needs AddGold method on player or inventory system
                         _player.AddGold(_value);
+                        if (Main.Instance != null && !string.IsNullOrEmpty(InstanceId))
+                        {
+                            Main.Instance.ClaimDrop(InstanceId);
+                            Main.Instance.TransmitPlayerProfile("pickup_gold");
+                        }
                         QueueFree();
                         return;
                     }
