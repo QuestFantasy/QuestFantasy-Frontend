@@ -119,7 +119,8 @@ public class TreasureChest : Node
             string token = Main.Instance.GetAuthToken();
             if (Main.Instance.PlayerDataApiClient != null && !string.IsNullOrEmpty(token))
             {
-                Main.Instance.PlayerDataApiClient.GenerateDrops(token, playerLevel, "chest", mapDiff.ToString(), result => {
+                Main.Instance.PlayerDataApiClient.GenerateDrops(token, playerLevel, "chest", mapDiff.ToString(), result =>
+                {
                     if (result.NetworkOk && result.ResponseCode == 200 && result.ArrayData != null)
                     {
                         SpawnServerDrops(parent, centerPosition, manager, result.ArrayData);

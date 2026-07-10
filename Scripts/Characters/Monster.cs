@@ -778,7 +778,8 @@ namespace QuestFantasy.Characters
                 string token = Main.Instance.GetAuthToken();
                 if (Main.Instance.PlayerDataApiClient != null && !string.IsNullOrEmpty(token))
                 {
-                    Main.Instance.PlayerDataApiClient.GenerateDrops(token, playerLevel, "monster", mapDiff.ToString(), result => {
+                    Main.Instance.PlayerDataApiClient.GenerateDrops(token, playerLevel, "monster", mapDiff.ToString(), result =>
+                    {
                         if (result.NetworkOk && result.ResponseCode == 200 && result.ArrayData != null)
                         {
                             SpawnServerDrops(parent, GlobalPosition, manager, result.ArrayData);

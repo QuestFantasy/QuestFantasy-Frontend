@@ -385,7 +385,8 @@ public class Main : Node2D
             return;
         }
         GD.Print("[ProgressSync] Cheated state or sync error detected. Force-fetching authoritative server profile to rollback...");
-        _playerDataApiClient.FetchPlayerProfile(token, res => {
+        _playerDataApiClient.FetchPlayerProfile(token, res =>
+        {
             if (res.NetworkOk && res.IsSuccessStatus(200))
             {
                 var snapshot = PlayerProfileSnapshot.FromDictionary(res.Data);
@@ -416,7 +417,7 @@ public class Main : Node2D
         _activeSyncMutationVersion = _localMutationVersion;
         var payload = snapshot.ToUpdatePayload(_syncSessionId, _syncSequence);
         payload["reason"] = reason;
-        
+
         var claimedArray = new Godot.Collections.Array();
         foreach (var claimId in _pendingClaimIds)
         {
