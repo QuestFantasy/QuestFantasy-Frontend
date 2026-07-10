@@ -27,6 +27,24 @@ public class Main : Node2D
     private readonly EquipmentManager _equipManagerRef = new EquipmentManager();
     private readonly TreasureChest _chestRef = new TreasureChest();
     private readonly Godot.Collections.Array<Monster> _spawnedMonsters = new Godot.Collections.Array<Monster>();
+    public static Main Instance { get; private set; }
+    public AuthApiClient PlayerDataApiClient => _playerDataApiClient;
+    private readonly System.Collections.Generic.List<string> _pendingClaimIds = new System.Collections.Generic.List<string>();
+
+    public string GetAuthToken()
+    {
+        return _authFlowController?.CurrentSession?.Token;
+    }
+
+    public void ClaimDrop(string instanceId)
+    {
+        if (string.IsNullOrEmpty(instanceId)) return;
+        if (!_pendingClaimIds.Contains(instanceId))
+        {
+            _pendingClaimIds.Add(instanceId);
+        }
+    }
+
     private readonly string _syncSessionId = Guid.NewGuid().ToString("N");
     private int _syncSequence = 0;
     private int _localMutationVersion = 0;
@@ -52,6 +70,7 @@ public class Main : Node2D
 
     public override void _Ready()
     {
+        Instance = this;
         GD.Print("遊戲開始了，正在讀取登入畫面...");
         SetProcess(true);
         GetTree().Connect("node_added", this, nameof(OnSceneNodeAdded));
@@ -331,6 +350,12 @@ public class Main : Node2D
 
     private void HandleLoggedOut()
     {
+        string token = _authFlowController?.CurrentSession?.Token;
+        if (!string.IsNullOrEmpty(token) && _playerDataApiClient != null)
+        {
+            _playerDataApiClient.ClearDrops(token, null);
+        }
+
         _isProfileFetchPending = false;
         _profileFetchTimeoutTimer?.Stop();
         _progressIndicator?.SetState(ProgressSyncIndicator.SyncState.Hidden);
@@ -352,7 +377,27 @@ public class Main : Node2D
         GD.Print("[Main] Logged out - all game states cleaned");
     }
 
-    private void TransmitPlayerProfile(string reason)
+    private void FetchProfileAndRollback()
+    {
+        string token = _authFlowController?.CurrentSession?.Token;
+        if (string.IsNullOrWhiteSpace(token) || _playerDataApiClient == null)
+        {
+            return;
+        }
+        GD.Print("[ProgressSync] Cheated state or sync error detected. Force-fetching authoritative server profile to rollback...");
+        _playerDataApiClient.FetchPlayerProfile(token, res =>
+        {
+            if (res.NetworkOk && res.IsSuccessStatus(200))
+            {
+                var snapshot = PlayerProfileSnapshot.FromDictionary(res.Data);
+                GD.Print($"[ProgressSync] Authoritative profile loaded. Level={snapshot.Level}, HP={snapshot.HpCurrent}/{snapshot.HpMax}, EXP={snapshot.Experience}, Gold={snapshot.Gold}. Applying rollback...");
+                _player?.ApplyProfile(snapshot);
+                _pendingClaimIds.Clear();
+            }
+        });
+    }
+
+    public void TransmitPlayerProfile(string reason)
     {
         if (_player == null || _playerDataApiClient == null || _playerDataApiClient.IsBusy)
         {
@@ -372,7 +417,15 @@ public class Main : Node2D
         _activeSyncMutationVersion = _localMutationVersion;
         var payload = snapshot.ToUpdatePayload(_syncSessionId, _syncSequence);
         payload["reason"] = reason;
-        GD.Print($"[ProgressSync] Sending profile. reason={reason}, seq={_syncSequence}, level={snapshot.Level}, hp={snapshot.HpCurrent}/{snapshot.HpMax}, exp={snapshot.Experience}, gold={snapshot.Gold}.");
+
+        var claimedArray = new Godot.Collections.Array();
+        foreach (var claimId in _pendingClaimIds)
+        {
+            claimedArray.Add(claimId);
+        }
+        payload["claimed_drops"] = claimedArray;
+
+        GD.Print($"[ProgressSync] Sending profile. reason={reason}, seq={_syncSequence}, level={snapshot.Level}, hp={snapshot.HpCurrent}/{snapshot.HpMax}, exp={snapshot.Experience}, gold={snapshot.Gold}. Claimed drops count: {claimedArray.Count}");
         _progressIndicator?.SetState(ProgressSyncIndicator.SyncState.Saving);
 
         if (!_playerDataApiClient.UpdatePlayerProfile(token, payload, OnPlayerProfileSynced))
@@ -388,7 +441,8 @@ public class Main : Node2D
         _progressIndicator?.SetState(ProgressSyncIndicator.SyncState.Hidden);
         if (!result.NetworkOk || !result.IsSuccessStatus(200) || _player == null)
         {
-            GD.PrintErr($"[ProgressSync] Sync failed. NetworkOk={result.NetworkOk}, Code={result.ResponseCode}, playerReady={_player != null}.");
+            GD.PrintErr($"[ProgressSync] Sync failed. NetworkOk={result.NetworkOk}, Code={result.ResponseCode}, playerReady={_player != null}. Force-rolling back local state...");
+            FetchProfileAndRollback();
             return;
         }
 
@@ -403,11 +457,15 @@ public class Main : Node2D
             }
 
             GD.Print($"[ProgressSync] Sync applied. Level={snapshot.Level}, HP={snapshot.HpCurrent}/{snapshot.HpMax}, EXP={snapshot.Experience}, Gold={snapshot.Gold}.");
+            _pendingClaimIds.Clear(); // Clear claims on successful sync
             _player.ApplyProfile(snapshot);
             return;
         }
 
         GD.Print($"[ProgressSync] Sync ignored by server. reason={snapshot.IgnoreReason}.");
+        // Force-rollback local cheated state to the valid server snapshot
+        _pendingClaimIds.Clear(); // Clear claims since we roll back
+        _player.ApplyProfile(snapshot);
     }
 
     private void DestroyPlayableWorld()
@@ -657,6 +715,12 @@ public class Main : Node2D
         // Sync to backend so the server has the latest state
         TransmitPlayerProfile("return_to_lobby");
 
+        string token = _authFlowController?.CurrentSession?.Token;
+        if (!string.IsNullOrEmpty(token) && _playerDataApiClient != null)
+        {
+            _playerDataApiClient.ClearDrops(token, null);
+        }
+
         DestroyPlayableWorld();
 
         // Rebuild the lobby for another session
@@ -736,6 +800,7 @@ public class Main : Node2D
             return;
         }
 
+        ClaimDrop(item.InstanceId);
         MarkLocalMutation();
         EquipmentPreview.Instance?.HidePreview();
         targetPickup.QueueFree();

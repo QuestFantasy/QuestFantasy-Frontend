@@ -248,7 +248,9 @@ public class AuthApiClient : Node
         FetchMarketplaceListings,
         CreateMarketplaceListing,
         CancelMarketplaceListing,
-        BuyMarketplaceListing
+        BuyMarketplaceListing,
+        GenerateDrops,
+        ClearDrops
     }
 
     [Export] public string BackendBaseUrl = BackendDefaults.BackendBaseUrl;
@@ -450,6 +452,39 @@ public class AuthApiClient : Node
             callback);
     }
 
+    public bool GenerateDrops(string token, int playerLevel, string dropSource, string difficulty, Action<AuthApiResult> callback)
+    {
+        var payload = new Godot.Collections.Dictionary
+        {
+            ["action"] = "generate",
+            ["player_level"] = playerLevel,
+            ["drop_source"] = dropSource,
+            ["difficulty"] = difficulty
+        };
+        return SendRequest(
+            AuthRequestKind.GenerateDrops,
+            "/api/player/drop/",
+            HTTPClient.Method.Post,
+            payload,
+            token,
+            callback);
+    }
+
+    public bool ClearDrops(string token, Action<AuthApiResult> callback)
+    {
+        var payload = new Godot.Collections.Dictionary
+        {
+            ["action"] = "clear"
+        };
+        return SendRequest(
+            AuthRequestKind.ClearDrops,
+            "/api/player/drop/",
+            HTTPClient.Method.Post,
+            payload,
+            token,
+            callback);
+    }
+
     private bool SendRequest(
         AuthRequestKind kind,
         string endpointPath,
@@ -600,6 +635,41 @@ public class AuthApiClient : Node
                         result.Data[key] = payload[key];
                     }
                 }
+                break;
+
+            case AuthRequestKind.GenerateDrops:
+                result.ArrayData = new Godot.Collections.Array();
+                // Mock Gold Drop
+                result.ArrayData.Add(new Godot.Collections.Dictionary
+                {
+                    ["instance_id"] = Guid.NewGuid().ToString("N"),
+                    ["item_type"] = "gold",
+                    ["gold_amount"] = 35,
+                    ["item_data"] = null
+                });
+                // Mock Item Drop (Hp Potion S)
+                result.ArrayData.Add(new Godot.Collections.Dictionary
+                {
+                    ["instance_id"] = Guid.NewGuid().ToString("N"),
+                    ["item_type"] = "potion",
+                    ["gold_amount"] = 0,
+                    ["item_data"] = new Godot.Collections.Dictionary
+                    {
+                        ["item_id"] = "hp_potion_s",
+                        ["name"] = "Small HP Potion",
+                        ["description"] = "Restores 5 HP.",
+                        ["item_type"] = "potion",
+                        ["quantity"] = 1,
+                        ["price"] = 10,
+                        ["sprite_path"] = "res://Assets/items/hp_potion_S.png",
+                        ["heal_amount"] = 5,
+                        ["removes_burn"] = false
+                    }
+                });
+                break;
+
+            case AuthRequestKind.ClearDrops:
+                // ResponseCode 200 OK, empty Data/ArrayData is fine
                 break;
 
             case AuthRequestKind.Logout:
